@@ -1,0 +1,152 @@
+---
+title: "Structured Independent Edge Model"
+author: "Eric Bridgeford"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, warning=FALSE, echo=FALSE}
+require(graphstats)
+require(mgc)
+require(ggplot2)
+require(latex2exp)
+```
+
+# Basics
+
+## Setting
+
+Let $g=(V,E)$ be a graph, where $V$ is the set of vertices that is shared for all $i$, and $E_i$ is the set of binary undirected edges between pairs of vertices.  Let $A$ be a binary adjacency matrix where $a_{uv}=1$ if and only if there is an edge between $u$ and $v$, that is, $(uv) \in E$. 
+Assume $g$ is a realization of a random graph $G \sim F$, which is sampled from a distribution $F$.   
+
+## Statistical Model
+
+\begin{align*}
+  A \sim SIEM(Q,\tau)
+\end{align*}
+
+where $\tau$ is a grouping of the $|E|$ edges in $G$ into $C$ non-overlapping communities, that is,  
+$\cup_{i=1}^{C} \tau_i  =E$, and $\tau_i \cap \tau_j = \emptyset$ for all $i \neq j$. 
+
+## Hypothesis Testing
+
+Our hypothesis test can be stated as follows:
+\begin{align*}
+	H_0&: !R(x_{1}, x_{2}) \\
+	H_A&: R(x_{1}, x_{2}).
+\end{align*}
+
+where $R(x_1, x_2)$ is a relation between $x_1$ and $x_2$, and $!R(x_1, x_2)$ is the opposite of the relation between $x_1$ and $x_2$.
+
+Welch's T-Test ~\cite{welch47} for testing whether populations have equal means given that they have different variances in the univariate case provides out test statistic:
+
+\begin{align*}
+    T_{observed} = \frac{x_1 - x_2}{\sqrt{\frac{s_{1}^2}{n_{1}} + \frac{s_{2}^2}{n_{2}}}},
+\end{align*}
+\noindent
+where $s_1 = \sigma_{\hat{x}_1},\;s_2 = \sigma_{\hat{x}_2}$. 
+
+The null distribution, and therefore p-value, is available from R, using the \texttt{TDist} family of functions from the \texttt{stats} package:
+
+\begin{align*}
+  p = 1 - \int_{-\infty}^{T_{observed}} p(x, \nu)dx
+\end{align*}
+
+where $\nu$ is the number of degrees of freedom.
+
+# Example
+
+In our below example, we simulate a graph where $p_{c_1} = 0.3$ and $p_{c_2} = 0.7$:
+
+```{r, fig.width=5, fig.height=3.5}
+nv <- 20  # number of vertices in simulated graph
+X <- array(0, dim=c(nv, nv))  # simulated graph initialized
+com <- array(0, dim=c(nv, nv))  # probability at each edge
+Es <- list()
+split <- sample(nv^2, nv^2, replace=FALSE)  # sample edges in random order
+pedge <- data.frame(community=c(), result=c(), p=c())
+
+Es[[1]] <- split[1:(nv^2/2)]  # first half in edge-community 1
+Es[[2]] <- split[(nv^2/2+1):(nv^2)]  # second half in edge-community 2
+
+p <- c(.3, .7)  # probabilities between community 1 and 2 are vastly different
+
+for (i in 1:length(Es)) {
+  X[Es[[i]]] <- rbinom(n=length(Es[[i]]), prob=p[i], size=1)
+  com[Es[[i]]] <- i
+  pedge <- rbind(pedge, data.frame(community=c(i), result=c("true"), p=c(p[i])))
+  pedge <- rbind(pedge, data.frame(community=c(i), result=c("sampled"), p=c(sum(X[Es[[i]]])/length(Es[[i]]))))
+}
+
+pedge$community <- factor(pedge$community)
+ggplot(pedge, aes(x=community, y=p, fill=result)) +
+  geom_bar(stat="identity", width=.5, position = "dodge") +
+  ggtitle("Comparing True vs. Sim Edge Community, Sample 1")
+mgc.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
+                     ylabel = "vertex", title = "Community Each Edge is from, Sample 1", ffactor=TRUE)
+mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
+                     ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 1")
+```
+
+## One Sample Test
+
+Given a graph from a single sample, we might be interested in whether two estimators within that single sample differ. For example, we can detect the probability of an edge in one community singificantly exceeding the probability of an edge in another community for our example graph:
+
+```{r, fig.width=5, fig.height=3.5}
+model <- gs.siem.fit(X, Es)  # fit siem model
+os_pval <- array(0, dim=c(2, 2))
+for (i in 1:length(Es)) {
+  for (j in 1:length(Es)) {
+    os_pval[i, j] <- gs.siem.sample_test(model$pr[i], model$pr[j], model$var[i],
+                                         model$var[j], 1, alt='greater')$p
+  }
+}
+
+mgc.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i$"),
+                     ylabel = TeX("$c_j$"), title = TeX("$p$-value that $p_{c_i} > p_{c_j}$, Sample 1"),
+                     limits=c(0, 1), vfactor=TRUE)
+```
+
+as we can see, with $\alpha = 0.05$, we reject the null in favor of the alternative for the combination $p_{c_2} > p_{c_1}$, which intuitively makes sense under the parameters we estimated previously as $p_{c_2} = 0.7$ and $p_{c_1} = 0.3$.
+
+## Two Sample Test
+
+In our below example, we simulate a second graph where $p_{c_1} = 0.5$ and $p_{c_2} = 0.6$:
+
+Given a second graph from a different sample, we may be interested in whether two estimators across the 2 samples differ. For example, we might be interested in whether the difference in the estimator of the probability of an edge in $c_2$ exceeds the probability of an edge in $c_1$ from sample 1 to sample 2. That is, whether $\delta_{s_1} = x_{c_1, 1} - x_{c_2. 1} > \delta_{s_2} = x_{c_1, 2} - x_{c_2. 2}$:
+
+```{r, fig.height=3.5, fig.width=5}
+X2 <- array(0, dim=c(nv, nv))  # simulated graph initialized
+com2 <- array(0, dim=c(nv, nv))  # probability at each edge
+pedge <- data.frame(community=c(), result=c(), p=c())
+
+p2 <- c(.5, .6)  # probabilities between community 1 and 2 are vastly different
+
+for (i in 1:length(Es)) {
+  X2[Es[[i]]] <- rbinom(n=length(Es[[i]]), prob=p2[i], size=1)
+  com[Es[[i]]] <- i
+  pedge <- rbind(pedge, data.frame(community=c(i), result=c("true"), p=c(p2[i])))
+  pedge <- rbind(pedge, data.frame(community=c(i), result=c("sampled"), p=c(sum(X[Es[[i]]])/length(Es[[i]]))))
+}
+
+pedge$community <- factor(pedge$community)
+ggplot(pedge, aes(x=community, y=p, fill=result)) +
+  geom_bar(stat="identity", width=.5, position = "dodge") +
+  ggtitle("Comparing True vs. Sim Edge Community, Sample 2")
+mgc.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
+                     ylabel = "vertex", title = "Community Each Edge is from, Sample 2", ffactor=TRUE)
+mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
+                     ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 2")
+```
+
+```{r}
+model2 <- gs.siem.fit(X2, Es)  # fit siem model
+gs.siem.sample_test(model$dpr[2, 1], model2$dpr[2, 1], model2$dvar[2, 1],
+                    model2$dvar[2, 1], 2, alt='greater')$p
+```
+
+and we can see that at $\alpha=0.05$ we detect a significant difference between the two.
