@@ -16,51 +16,11 @@ require(ggplot2)
 require(latex2exp)
 ```
 
-# Basics
-
-## Setting
-
-Let $g=(V,E)$ be a graph, where $V$ is the set of vertices that is shared for all $i$, and $E_i$ is the set of binary undirected edges between pairs of vertices.  Let $A$ be a binary adjacency matrix where $a_{uv}=1$ if and only if there is an edge between $u$ and $v$, that is, $(uv) \in E$. 
-Assume $g$ is a realization of a random graph $G \sim F$, which is sampled from a distribution $F$.   
-
-## Statistical Model
-
-\begin{align*}
-  A \sim SIEM(Q,\tau)
-\end{align*}
-
-where $\tau$ is a grouping of the $|E|$ edges in $G$ into $C$ non-overlapping communities, that is,  
-$\cup_{i=1}^{C} \tau_i  =E$, and $\tau_i \cap \tau_j = \emptyset$ for all $i \neq j$. 
-
-## Hypothesis Testing
-
-Our hypothesis test can be stated as follows:
-\begin{align*}
-	H_0&: !R(x_{1}, x_{2}) \\
-	H_A&: R(x_{1}, x_{2}).
-\end{align*}
-
-where $R(x_1, x_2)$ is a relation between $x_1$ and $x_2$, and $!R(x_1, x_2)$ is the opposite of the relation between $x_1$ and $x_2$.
-
-Welch's T-Test ~\cite{welch47} for testing whether populations have equal means given that they have different variances in the univariate case provides out test statistic:
-
-\begin{align*}
-    T_{observed} = \frac{x_1 - x_2}{\sqrt{\frac{s_{1}^2}{n_{1}} + \frac{s_{2}^2}{n_{2}}}},
-\end{align*}
-\noindent
-where $s_1 = \sigma_{\hat{x}_1},\;s_2 = \sigma_{\hat{x}_2}$. 
-
-The null distribution, and therefore p-value, is available from R, using the \texttt{TDist} family of functions from the \texttt{stats} package:
-
-\begin{align*}
-  p = 1 - \int_{-\infty}^{T_{observed}} p(x, \nu)dx
-\end{align*}
-
-where $\nu$ is the number of degrees of freedom.
-
+For a vignette including the model, see [model](http://docs.neurodata.io/graphstats/siem/siem.html).
 # Example
 
-In our below example, we simulate a graph where $p_{c_1} = 0.3$ and $p_{c_2} = 0.7$:
+
+In our below example, we simulate a graph where p~c1~ = 0.3 and p~c2~ = 0.7:
 
 ```{r, fig.width=5, fig.height=3.5}
 nv <- 20  # number of vertices in simulated graph
@@ -111,13 +71,13 @@ mgc.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i
                      limits=c(0, 1), vfactor=TRUE)
 ```
 
-as we can see, with $\alpha = 0.05$, we reject the null in favor of the alternative for the combination $p_{c_2} > p_{c_1}$, which intuitively makes sense under the parameters we estimated previously as $p_{c_2} = 0.7$ and $p_{c_1} = 0.3$.
+as we can see, with a = 0.05, we reject the null in favor of the alternative for the combination p~c2~ > p~c1~, which intuitively makes sense under the parameters we estimated previously as p~c2~ = 0.7 and p~c2~ = 0.3.
 
 ## Two Sample Test
 
-In our below example, we simulate a second graph where $p_{c_1} = 0.5$ and $p_{c_2} = 0.6$:
+In our below example, we simulate a second graph where p~c1~ = 0.5 and p~c2~ = 0.6:
 
-Given a second graph from a different sample, we may be interested in whether two estimators across the 2 samples differ. For example, we might be interested in whether the difference in the estimator of the probability of an edge in $c_2$ exceeds the probability of an edge in $c_1$ from sample 1 to sample 2. That is, whether $\delta_{s_1} = x_{c_1, 1} - x_{c_2. 1} > \delta_{s_2} = x_{c_1, 2} - x_{c_2. 2}$:
+Given a second graph from a different sample, we may be interested in whether two estimators across the 2 samples differ. For example, we might be interested in whether the difference in the estimator of the probability of an edge in c~2~ exceeds the probability of an edge in c~1~ from sample 1 to sample 2. That is, whether d~s1~ = x~c1,1~ - x~c2,1~ > d~s2~ = x~c1,2~ - x~c2,2~:
 
 ```{r, fig.height=3.5, fig.width=5}
 X2 <- array(0, dim=c(nv, nv))  # simulated graph initialized
@@ -149,4 +109,4 @@ gs.siem.sample_test(model$dpr[2, 1], model2$dpr[2, 1], model2$dvar[2, 1],
                     model2$dvar[2, 1], 2, alt='greater')$p
 ```
 
-and we can see that at $\alpha=0.05$ we detect a significant difference between the two.
+and we can see that at a=0.05 we detect a significant difference between the two.
