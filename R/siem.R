@@ -1,14 +1,19 @@
 #' Structured Independent Edge Model, Single Sample
 #'
 #' An independent-edge generalization of the traditional Stochastic Block Model.
-#' @param X [v, v] the binary graphs with v vertices as a collection of adjacency matrices.
+#' @param X [v, v] the binary graph with v vertices.
 #' @param Es [[e]] a numbered list where each element corresponds to a community of edges. Each community should consist of the 1-dimensional indices of an edge.
-#' @param alt='greater' the alternative hypothesis for the p-value.
+#' @param alt='greater' the alternative hypothesis for each edge test.
+#' \itemize{
+#' \item{'greater'}{p corresponds to H0: x1 <= x2, HA: x1 > x2. R(x1, x2) = x1 > x2}
+#' \item{'neq'}{p corresponds to H0: x1 = x2, HA: x1 != x2. R(x1, x2) = x1 != x2}
+#' \item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2. R(x1, x2) = x1 < x2}
+#' }
 #' @return pr [e] a probability array corresponding to the probability of an edge connecting each edge community.
 #' @return var [e] the variance of the probabilities estimated between edge communities.
 #' @return dpr [e, e] an array consisting of the paired differences in probability where dpr_{ij} = pr_i - pr_j.
 #' @return dvar [e, e] an array consisting of the variance of the estimate of the paired differences in probability, where dvar_{ij} = var_i + var_j.
-#' @return pv [e, e] pv_{ij} is the p-value of false rejection of H0 that pr_i !? pr_j in favor of HA that pr_j ? pr_i.
+#' @return pv [e, e] pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).
 #' @author Eric Bridgeford
 #' @export
 gs.siem.fit <- function(X, Es, alt='greater') {
@@ -54,11 +59,11 @@ gs.siem.fit <- function(X, Es, alt='greater') {
 #' }
 #' @param alt='greater' the alternative hypothesis for each edge test.
 #' \itemize{
-#' \item{'greater'}{p corresponds to H0: x1 <= x2, HA: x1 > x2}
-#' \item{'neq'}{p corresponds to H0: x1 = x2, HA: x1 != x2}
-#' \item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2}
+#' \item{'greater'}{p corresponds to H0: x1 <= x2, HA: x1 > x2. R(x1, x2) = x1 > x2}
+#' \item{'neq'}{p corresponds to H0: x1 = x2, HA: x1 != x2. R(x1, x2) = x1 != x2}
+#' \item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2. R(x1, x2) = x1 < x2}
 #' }
-#' @return p is the p-value of false rejection of H0 that x1 !? x2 in favor of HA that x1 ? x2.
+#' @return p is the p-value of false rejection of H0 that !R(x1, x2) in favor of HA that R(x1, x2).
 #' @export
 gs.siem.sample_test <- function(x1, x2, var1, var2, nsamp, alt='greater') {
   num <- (x1 - x2)
