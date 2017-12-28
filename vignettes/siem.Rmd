@@ -16,7 +16,8 @@ require(ggplot2)
 require(latex2exp)
 ```
 
-For a vignette including the model, see [model](http://docs.neurodata.io/graphstats/siem/siem.html).
+For a walkthrough including the model, see [model](http://docs.neurodata.io/graphstats/siem/siem.html).
+
 # Example
 
 
