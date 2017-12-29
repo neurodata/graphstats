@@ -1,0 +1,488 @@
+---
+title: "Bernoulli Coherent Subgraph Estimation"
+author: "Eric Bridgeford"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bernoulli Incoherent Subgraph Classifier}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  header-includes:
+   - \usepackage{amsfonts}
+   - \usepackage{amsmath}
+   - \usepackage[linesnumbered,lined,boxed,commentsnumbered]{algorithm2e}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+```
+
+In this tutorial, we discuss our estimator of a bernoulli distribution per edge for a given graph, and the strategies to identify a coherent subgraph from the data. Using our estimators, we develop a Bayes Plugin Classifier. 
+
+# Framework
+
+## Setting
+
++ $\mathbb{G}: \Omega \rightarrow \mathcal{G}$ is a graph-valued RV with samples $G_i \sim \mathbb{G}$.
++ For each $G_i \in \mathcal{G}$, we have $G_i = (V, E_i)$; that is, each $G_i$ is defined by a set of vertices $V$ and a set of edges $E_i$, where $w_i: V \times V \rightarrow \{0, 1\}$, and $w_i(e_{uv}) \in \{0, 1\}$. That is, each graph has binary edges. Our graphs should also be undirected.
++ We have a collection of classes $\mathcal{Y}$ where the collection of graphs in class $y_i$ have a class-conditional difference with the collection of graphs in class $y_j$ for $i \neq j$.
++ $\mathbb{A}_y: \Omega \rightarrow \mathcal{A}_y$, a adjacency-matrix-valued RV with samples $A_{i | y_i = y} \sim \mathbb{A}_y$, where $\mathcal{A}_y$ is the space of possible adjacency-matrices and $A_{i | y_i = y} \in \mathcal{A}_y$.
++ $A_{i | y_i = y} \in \mathcal{A}_y$, and $\mathcal{A}_y \subseteq \mathbb{R}^{V \times V}$. 
++ Each graph $G_i$ can be represented as an adjacency-matrix $A_i$.
++ Within each graph, there exists some collection of vertices called the signal vertices that capture the class-conditional difference in the data. From the edges incident the signal vertices, the edges $\mathcal{S}$ called the subgraph contain the bulk of the class differences. This type of graph contains what is known as a coherent subgraph.
+
+## Statistical Goal
+
+Identify the sufficient parameters to characterize the distribution of connected and disconnected edges. Identify the edges that are most likely to show a class-conditional difference from the edges incident the signal vertices, the subgraph. Use the subgraph and the related estimators to produce a bayes-plugin classifier that allows us to accurately predict the class of items.
+
+## Model
+
+Assume that the edge weights can be characterized by a bernoulli RV; that is:
+
+\begin{align}
+  \mathbb{A}_{uv} \sim Bern(p_{uv})
+\end{align}
+
+where $p_{uv|y}$ is the probability of edge $e_{uv}$ being connected in class $y$.
+
+Then our likelihood function is simply:
+
+\begin{align}
+  L_{\mathbb{A}, Y}(A_i, y; \theta) &= \prod_{(u, v) \in \mathcal{S}} Bern(w_i(e_{uv}); p_{uv | y}) \\
+  &= \prod_{(u, v) \in \mathcal{S}} p_{uv | y}^{w_i(e_{uv})}(1 - p_{uv | y})^{1 - w_i(e_{uv})}
+\end{align}
+
+where $\mathcal{S}$ is our subgraph.
+
+# Estimators
+
+## Bernoulli Parameters
+
+Using MLE, it is easy to see that:
+
+\begin{align}
+  \hat{p}_{uv | y} = \frac{1}{n} \sum_{i | y_i = y} w_i(e_{uv})
+\end{align}
+
+where $w_i(e_{uv}) \in \{0, 1\}$ is the binary edge weight of edge $e_{uv}$. 
+
+Note that if $w_i(e_{uv}) = 0 \;\forall i$, then $p_{uv} = 0$, which is undesirable since we only have a finite sample (and successive samples where $w_i(e_{uv})) \neq 0$ would lead to poor model performance), and vice versa for $p_{uv} = 1$ when $w_i(e_{uv}) = 0 \;\forall i$. Then consider the smoothed estimator:
+
+\begin{align}
+  \hat{p}_{uv | y} = \begin{cases}
+    n_n & max_{i | y_i = y}(w_i(e_{uv})) = 0 \\
+    1-n_n & max_{i | y_i = y}(w_i(e_{uv})) = 1 \\
+    \hat{p}_{uv | y} & else
+  \end{cases}
+\end{align}
+
+## Priors
+
+Here, we take the maximum likelihood estimators for the prior probabilities, which assuming our data is sampled iid from our population, should suffice:
+
+\begin{align}
+  \hat{\pi}_y = \frac{n_y}{n}
+\end{align}
+
+where $n_y = \sum_{i =1}^n \mathbb{I}\{y_i = y\}$.
+
+## Coherent Subgraph
+
+To estimate the coherent subgraph, we  consider the following algorithm:
+
+coherent_subgraph(G, e, s):
+  + assemble a contingency matrix, per edge, counting the number of occurences of a graph from each class having or not having a connection.
+  + compute the p-value of Fisher's exact test on the contingency matrix for each edge to produce the test statistic $T_{uv}$. The $p$ value signifies the probability of the null hypothesis, that there is no class-conditional difference present for edge $uv$, versus the alternative that there is a class-conditional difference present for edge $uv$.
+  + for $p$ in sort(unique_p_vals, increasing):  # all of the unique p-values in our contingency matrix ordered by significance
+    + compute the signal of each vertex as the number of edges incident the given vertex with test-statistics less than the iteration of $p$ we are on. That is, $s_i = \sum_{u \in [V]} \mathbb{I}\{T_{u v_i} \leq p \}.
+    + order the vertices $s_i^{(1)} \geq s_j^{(2)} \geq ...$ and take the top $s$ as our signal vertices $V^*$.
+    + Check whether $\sum_{i=1}^{\left|V^*\right|} \geq e$. If so, continue. If not, increment to the next value of $p$.
+    + order the test statistics in increasing order, such that $T^{(1)}_{uv} \leq T^{(2)}_{u'v'} \leq ...$ for all the edges where $v_i, v_j, ...$ are our signal vertices $V^*$.
+    + choose the first $e$ edges as a coherent estimator of the signal-subgraph $\hat{\mathcal{S}}$.
+
+## Classification
+
+We can use our Bernoulli probabilities to explicitly define a Bayes-Plugin classifier:
+
+\begin{align}
+  h_*(G; \mathcal{T}) = \textrm{argmax}_{y \in Y} \prod_{(u, v) \in \hat{\mathcal{S}}} \hat{p}_{uv | y}^{a_{uv}}(1 - \hat{p}_{uv | y})^{1 - a_{uv}}\hat{\pi}_y
+\end{align}
+
+where $a_{uv}$ is the $(u, v)$ edge of graph $G$, and $h_*(\cdot; \mathcal{T})$ is the hypothesis of the model constructed given training set $\mathcal{T}$. 
+
+# Evaluation
+
+## Cross-validated Error
+
+We will evaluate our model performance with the cross-validated error:
+
+\begin{align}
+  \hat{L}_{\hat{h}(\cdot, \mathcal{T}_n)} &= \frac{1}{C} \sum_{i=1}^C \frac{1}{\left| \mathcal{T}_n \setminus \mathcal{T}_C \right|} \sum_{G \notin \mathcal{T}_C} \mathbb{I}\left\{\hat{h} \left(G; \mathcal{T}_C \right)\right\}
+\end{align}
+
+where $\mathcal{T}_C$ is the set of graphs that we trained our model on.
+
+Additionally, we can estimate a $p$ value using Monte Carlo permutations. We perform this by randomly permuting our labels $n$ times, and then using the permuted labels to construct our estimators and our bayes-plugin classifier. We then feed in our testing data and similarly compute a loss for each of our $n$ permutations. We report our $p$ value as the fraction of Monte Carlo permutations that perform better than our classifier given the correctly labelled data.
+
+## Misclassification Rate
+
+During our simulations, since we are constructing simulated data, we will know ahead of time whether an edge is or is not part of the subgraph. To quantify this performance, we consider the edge-misclassification rate:
+
+\begin{align}
+  R_n^x = \frac{1}{\left|\mathcal{S}\right|} \sum_{(u, v) \in \mathcal{S}}\mathbb{I}\left\{(u, v) \notin \hat{\mathcal{S}}\right\}
+\end{align}
+
+or the fraction of edges that are part of the true subgraph $\mathcal{S}$ but not the estimated subgraph $\mathcal{\hat{S}}$.
+
+# Simulations
+
+## Easy Example
+
+In this example, we will explore a very simple coherent subgraph. We choose a single signal vertex (1), and add a class-conditional variation:
+
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+require(subgraphing)
+require(ggplot2)
+require(reshape2)
+require(fmriutils)
+require(Rmisc)
+
+lseq <- function(from, to, n) {
+  return(round(exp(seq(log(from), log(to), length.out = n))))
+}
+xdim <- 9
+ydim <- 9
+c <- 2  # number of classes
+p <- array(NaN, dim=c(xdim, ydim, c))
+
+ns = 100
+
+# define the signal edges for our signal vertices
+signal_edges_1 <- c(2,3,4,5,7,9)  # signal edges for vertex 3
+p1 <- array(runif(xdim*ydim), dim=c(xdim, ydim))
+p1[upper.tri(p1, diag=FALSE)] <- 0
+p2 <- p1  # we will change our signal edges in vertices 1 and 3 to have a class-conditional difference
+# add signal to vertex 1 of random magnitude
+p2[1,signal_edges_1] <- p2[1, signal_edges_1] + rnorm(length(signal_edges_1), mean=0, sd=.2)
+
+p1 <- p1 + t(p1) - diag(diag(p1))
+p2 <- p2 + t(p2) - diag(diag(p2))
+# fix the limits to be valid probabilities and smooth
+p1[p1 > 1] <- 1 - 1/(10*ns); p1[p1 < 0] <- 1/(10*ns); p2[p2 > 1] <- 1 - 1/(10*ns); p2[p2 < 0] <- 1/(10*ns)
+p[,,1] <- p1
+p[,,2] <- p2
+
+
+samp <- array(NaN, dim=c(xdim, xdim, ns*2))
+samp[,,1:ns] <- sg.bern.sample_graph(p[,,1], s=ns)
+samp[,,(ns+1):(2*ns)] <- sg.bern.sample_graph(p[,,2], s=ns)
+
+Y <-array(NaN, dim=c(ns*2))
+Y[1:ns] <- 0
+Y[(ns+1):(2*ns)] <- 1
+
+
+plot_p1 <- fmriu.plot.plot_square(p[,,1], title="True P, class 1", xlabel="vertex", ylabel="vertex", legend="p")
+plot_p2 <- fmriu.plot.plot_square(p[,,2], title="True P, class 2", xlabel="vertex", ylabel="vertex", legend="p")
+sg <- array(0, dim=c(xdim, xdim))
+
+plot_diff <- fmriu.plot.plot_square(abs(p[,,1] - p[,,2]), title="P, class 1 - P, class 2", xlabel="vertex", ylabel="vertex", legend="p1 - p2")
+sg[1, signal_edges_1] <- 1
+sg <- sg + t(sg) - diag(diag(sg))
+plot_sg <- fmriu.plot.plot_square(sg, title="True Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+multiplot(plot_p1, plot_p2, plot_diff, plot_sg, cols = 2)
+```
+As we can see, the variation is in the edges incident vertex 1.
+
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+# approximate estimators and contingency table
+train <- sg.bern.subgraph_train(samp, Y, 12, coherent=1, tstat = "fisher")
+
+# visualize the two probability matrices
+plot_p1 <- fmriu.plot.plot_square(train$p[,,1], title="Est P, class 1", xlabel="vertex", ylabel="vertex", legend="p")
+plot_p2 <- fmriu.plot.plot_square(train$p[,,2], title="Est P, class 2", xlabel="vertex", ylabel="vertex", legend="p")
+plot_diff <- fmriu.plot.plot_square(abs(train$p[,,1] - train$p[,,2]), title="P, class 1 - P, class 2", xlabel="vertex", ylabel="vertex", legend="p1 - p2")
+estsg <- array(0, dim=c(xdim, xdim))
+estsg[train$edges] <- 1
+plot_sg <- fmriu.plot.plot_square(estsg, title="Estimated Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+multiplot(plot_p1, plot_p2, plot_diff, plot_sg, cols = 2)
+```
+
+We correctly identify the signal vertices, as evinced by the fact that all of the signal edges found are incident to vertex 1. We get perfect estimation of the subgraph. 
+
+## Harder Example
+
+Starting from our previous simulation, we will now add 0-mean gaussian noise with $\sigma=.15$ to our probability matrices to simulate minor class variation in all of the edges. Additionally, with probability $p=.1$ we will rewire (that is, change the connection from connected to unconnected, or vice versa) each edge for each graph. Theoretically, since the edges that have signal are concentrated in only 2 vertices, running the signal subgraph classifier and indicating a coherency of 2 should give us a good approximation of our subgraph. We first visualize a single example with $n=100$: 
+
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+require(subgraphing)
+require(ggplot2)
+require(reshape2)
+require(fmriutils)
+require(Rmisc)
+
+lseq <- function(from, to, n) {
+  return(round(exp(seq(log(from), log(to), length.out = n))))
+}
+
+# define the signal edges for our signal vertices
+signal_edges_1 <- c(2,3, 4,5, 6, 7,9)  # signal edges for vertex 3
+signal_edges_3 <- c(4,5, 6, 7, 8, 9)  # signal edges for vertex 1
+p1 <- array(runif(xdim*ydim), dim=c(xdim, ydim))
+p1[upper.tri(p1, diag=FALSE)] <- 0
+p2 <- p1  # we will change our signal edges in vertices 1 and 3 to have a class-conditional difference
+# add signal to vertex 1 of random magnitude
+p2[1,signal_edges_1] <- p2[1, signal_edges_1] + rnorm(length(signal_edges_1), mean=0, sd=.15)
+# add signal to vertex 3 of random magnitude
+p2[3, signal_edges_3] <- p2[3, signal_edges_3] + rnorm(length(signal_edges_3), mean=0, sd=.15)
+p1 <- p1 + t(p1) - diag(diag(p1))
+p2 <- p2 + t(p2) - diag(diag(p2))
+# fix the limits to be valid probabilities and smooth
+p1[p1 > 1] <- 1 - 1/(10*ns); p1[p1 < 0] <- 1/(10*ns); p2[p2 > 1] <- 1 - 1/(10*ns); p2[p2 < 0] <- 1/(10*ns)
+p[,,1] <- p1
+p[,,2] <- p2
+
+ns = 100
+
+samp <- array(NaN, dim=c(xdim, xdim, ns*2))
+samp[,,1:ns] <- sg.bern.sample_graph(p[,,1], s=ns, rewire=.1)
+samp[,,(ns+1):(2*ns)] <- sg.bern.sample_graph(p[,,2], s=ns, rewire=.1)
+
+Y <-array(NaN, dim=c(ns*2))
+Y[1:ns] <- 0
+Y[(ns+1):(2*ns)] <- 1
+
+
+plot_p1 <- fmriu.plot.plot_square(p[,,1], title="True P, class 1", xlabel="vertex", ylabel="vertex", legend="p")
+plot_p2 <- fmriu.plot.plot_square(p[,,2], title="True P, class 2", xlabel="vertex", ylabel="vertex", legend="p")
+sg <- array(0, dim=c(xdim, xdim))
+
+plot_diff <- fmriu.plot.plot_square(abs(p[,,1] - p[,,2]), title="P, class 1 - P, class 2", xlabel="vertex", ylabel="vertex", legend="p1 - p2")
+sg[1, signal_edges_1] <- 1
+sg[3, signal_edges_3] <- 1
+sg <- sg + t(sg) - diag(diag(sg))
+plot_sg <- fmriu.plot.plot_square(sg, title="True Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+multiplot(plot_p1, plot_p2, plot_diff, plot_sg, cols = 2)
+```
+As we can see, the true subgraph is concentrated about vertices 1 and 3, as these vertices contain all of the class-conditional difference observed.
+
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+# approximate estimators and contingency table, given the prior that there are 23 signal vertices
+train <- sg.bern.subgraph_train(samp, Y, 26, coherent=2, tstat = "fisher")
+
+# visualize the two probability matrices
+plot_p1 <- fmriu.plot.plot_square(train$p[,,1], title="Est P, class 1", xlabel="vertex", ylabel="vertex", legend="p")
+plot_p2 <- fmriu.plot.plot_square(train$p[,,2], title="Est P, class 2", xlabel="vertex", ylabel="vertex", legend="p")
+plot_diff <- fmriu.plot.plot_square(abs(train$p[,,1] - train$p[,,2]), title="P, class 1 - P, class 2", xlabel="vertex", ylabel="vertex", legend="p1 - p2")
+estsg <- array(0, dim=c(xdim, xdim))
+estsg[train$edges] <- 1
+plot_sg <- fmriu.plot.plot_square(estsg, title="Estimated Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+multiplot(plot_p1, plot_p2, plot_diff, plot_sg, cols = 2)
+```
+
+Despite not getting a perfect subgraph, we still end up getting most of the edges right, and correctly estimated that vertices 1 and 3 were our signal vertices.
+
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+ns <- lseq(10, 500, 8)
+nes <- c(20, 26, 30)
+results <- data.frame(n=c(), nedges=c(), error=c(), miss_edge=c())
+for (sim in 1:10) {
+  print(sim)
+  # define the signal edges for our signal vertices
+  signal_edges_1 <- c(2, 3, 4, 5, 7, 9)  # signal edges for vertex 3
+  signal_edges_3 <- c(4,5, 6, 8, 9)  # signal edges for vertex 1
+  p1 <- array(runif(xdim*ydim), dim=c(xdim, ydim))
+  p1[upper.tri(p1, diag=FALSE)] <- 0
+  p2 <- p1  # we will change our signal edges in vertices 1 and 3 to have a class-conditional difference
+  # add signal to vertex 1 of random magnitude
+  p2[1,signal_edges_1] <- p2[1, signal_edges_1] + rnorm(length(signal_edges_1), mean=0, sd=.15)
+  # add signal to vertex 3 of random magnitude
+  p2[3, signal_edges_3] <- p2[3, signal_edges_3] + rnorm(length(signal_edges_3), mean=0, sd=.15)
+  p1 <- p1 + t(p1) - diag(diag(p1))
+  p2 <- p2 + t(p2) - diag(diag(p2))
+  # fix the limits to be valid probabilities and smooth
+  p1[p1 > 1] <- 1 - 1/(10*ns); p1[p1 < 0] <- 1/(10*ns); p2[p2 > 1] <- 1 - 1/(10*ns); p2[p2 < 0] <- 1/(10*ns)
+  p[,,1] <- p1
+  p[,,2] <- p2
+  
+  for (n in ns) {
+    samp <- array(NaN, dim=c(xdim, ydim, n*2))
+    samp[,,1:n] <- sg.bern.sample_graph(p[,,1], s=n, rewire=.1)
+    samp[,,(n+1):(2*n)] <- sg.bern.sample_graph(p[,,2], s=n, rewire=.1)
+    
+    Y <-array(NaN, dim=c(n*2))
+    Y[1:n] <- 0
+    Y[(n+1):(2*n)] <- 1
+    for (ne in nes) {
+      class_res <- sg.bern.xval_classifier(samp=samp, Y=Y, nedge=ne, tstat="fisher", coherent = 2, xval="loo")
+      true_edges <- c(2, 3, 4, 5, 6, 7, 9, 10, 19, 28, 37, 46, 55, 73, 21, 22, 23, 24, 25, 26, 27, 30, 39, 48, 57, 66, 75)
+      miss_edge <- 1 - 1/length(true_edges)*sum(true_edges %in% class_res$edges)
+      results <- rbind(results, data.frame(n=n, nedges=ne, error=class_res$error, miss_edge=miss_edge))    
+    }
+  }
+}
+```
+
+```{r, fig.width=7, fig.height=6, warning=FALSE, message=FALSE}
+results$nedges <- factor(results$nedges)
+me_plot <- ggplot(results, aes(x=n, y=miss_edge, color=nedges, group=nedges)) +
+  geom_point() +
+  stat_summary(fun.y = mean, geom = "line", size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", size=2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  ggtitle("Proportion of Edges Missed by Incoherent Subgraph Estimator") +
+  xlab("Number of Training Examples per Class") +
+  ylab("Missed-Edge Rate") +
+  theme(text=element_text(size=12))
+
+xv_plot <- ggplot(results, aes(x=n, y=error, color=nedges, group=nedges)) +
+  geom_point() +
+  stat_summary(fun.y = mean, geom = "line", size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", size=2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  ggtitle("Error of Model Estimated with Leave-One-Out Cross Validation") +
+  xlab("Number of Training Examples per Class") +
+  ylab("Cross-Validated Error") +
+  theme(text=element_text(size=12))
+
+multiplot(me_plot, xv_plot, cols=1)
+```
+
+We can clearly see that, like the incoherent estimator, we are not able to get a great classifier, but our performance converges faster indicating we can obtain similar classification accuracy with fewer examples given that we have some idea of the coherency ahead of time.
+
+## Negative Simulation
+
+In this simulation, we illustrate the downside of the coherent subgraph model. The key difference between the coherent and the incoherent classifier is that the coherent classifier requires knowledge of the number of coherent vertices ahead of time, and miscalculating the number of signal edges can have negative performance implications. If we overestimate the number of signal vertices, we may end up with edges being chosen from too many possible vertices and get a classifier that performs little better than our incoherent estimator. If we underestimate the number of signal vertices, we may end up with the edges only representing a small portion of the best edges, leading to a classifier that may perform even worse than that of an incoherent estimator. Below, we model a similar situation to above, but this time we restrict ourselves to 10 signal vertices. We start with a simple demo:
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+
+# define the signal edges for our signal vertices
+signal_edges_1 <- c(2,3,4,5, 6, 7,9)  # signal edges for vertex 3
+signal_edges_3 <- c(3, 4,5, 6, 7, 8, 9)  # signal edges for vertex 1
+p1 <- array(runif(xdim*ydim), dim=c(xdim, ydim))
+p1[upper.tri(p1, diag=FALSE)] <- 0
+p2 <- p1  # we will change our signal edges in vertices 1 and 3 to have a class-conditional difference
+# add signal to vertex 1 of random magnitude
+p2[1,signal_edges_1] <- p2[1, signal_edges_1] + rnorm(length(signal_edges_1), mean=0, sd=.15)
+# add signal to vertex 3 of random magnitude
+p2[3, signal_edges_3] <- p2[3, signal_edges_3] + rnorm(length(signal_edges_3), mean=0, sd=.15)
+p1 <- p1 + t(p1) - diag(diag(p1))
+p2 <- p2 + t(p2) - diag(diag(p2))
+# fix the limits to be valid probabilities and smooth
+p1[p1 > 1] <- 1 - 1/(10*ns); p1[p1 < 0] <- 1/(10*ns); p2[p2 > 1] <- 1 - 1/(10*ns); p2[p2 < 0] <- 1/(10*ns)
+p[,,1] <- p1
+p[,,2] <- p2
+
+ns = 100
+
+samp <- array(NaN, dim=c(xdim, xdim, ns*2))
+samp[,,1:ns] <- sg.bern.sample_graph(p[,,1], s=ns, rewire=.1)
+samp[,,(ns+1):(2*ns)] <- sg.bern.sample_graph(p[,,2], s=ns, rewire=.1)
+
+Y <-array(NaN, dim=c(ns*2))
+Y[1:ns] <- 0
+Y[(ns+1):(2*ns)] <- 1
+
+
+plot_p1 <- fmriu.plot.plot_square(p[,,1], title="True P, class 1", xlabel="vertex", ylabel="vertex", legend="p")
+plot_p2 <- fmriu.plot.plot_square(p[,,2], title="True P, class 2", xlabel="vertex", ylabel="vertex", legend="p")
+sg <- array(0, dim=c(xdim, xdim))
+
+plot_diff <- fmriu.plot.plot_square(abs(p[,,1] - p[,,2]), title="P, class 1 - P, class 2", xlabel="vertex", ylabel="vertex", legend="p1 - p2")
+sg[1, signal_edges_1] <- 1
+sg[3, signal_edges_3] <- 1
+sg <- sg + t(sg) - diag(diag(sg))
+plot_sg <- fmriu.plot.plot_square(sg, title="True Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+multiplot(plot_p1, plot_p2, plot_diff, plot_sg, cols = 2)
+```
+As we can see, the true subgraph is concentrated about vertices 1 and 3, as these vertices contain all of the class-conditional difference observed.
+
+```{r, fig.width=6, fig.height=6, warning=FALSE, message=FALSE}
+# approximate estimators and contingency table, given the prior that there are 23 signal vertices
+train <- sg.bern.subgraph_train(samp, Y, 27, coherent=9, tstat = "fisher")
+
+# visualize the two probability matrices
+plot_p1 <- fmriu.plot.plot_square(train$p[,,1], title="Est P, class 1", xlabel="vertex", ylabel="vertex", legend="p")
+plot_p2 <- fmriu.plot.plot_square(train$p[,,2], title="Est P, class 2", xlabel="vertex", ylabel="vertex", legend="p")
+plot_diff <- fmriu.plot.plot_square(abs(train$p[,,1] - train$p[,,2]), title="P, class 1 - P, class 2", xlabel="vertex", ylabel="vertex", legend="p1 - p2")
+estsg <- array(0, dim=c(xdim, xdim))
+estsg[train$edges] <- 1
+plot_sg <- fmriu.plot.plot_square(estsg, title="Estimated Coh Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+# approximate estimators and contingency table, given the prior that there are 27 signal vertices
+train <- sg.bern.subgraph_train(samp, Y, 27, coherent=FALSE, tstat = "fisher")
+estsg <- array(0, dim=c(xdim, xdim))
+estsg[train$edges] <- 1
+plot_sg_inc <- fmriu.plot.plot_square(estsg, title="Estimated Inc Subgraph", xlabel="vertex", ylabel="vertex", legend="edge")
+multiplot(plot_p1, plot_p2, plot_diff, plot_sg, plot_sg_inc, cols = 2)
+```
+
+We have no coherency to our model, and essentially have just estimated an incoherent subgraph from the data. 
+
+As we can see below, we obtain similar performance to that of the negative performing example in `bern_incoherent_subgraph_estimation`, and do not see the faster convergence like we did for the example above:
+
+```{r, fig.width=6, fig.height=4, warning=FALSE, message=FALSE}
+ns <- lseq(10, 500, 8)
+nes <- c(20, 26, 30)
+results <- data.frame(n=c(), nedges=c(), error=c(), miss_edge=c())
+for (sim in 1:10) {
+  print(sim)
+  # define the signal edges for our signal vertices
+  signal_edges_1 <- c(2, 3, 4, 5, 7, 9)  # signal edges for vertex 3
+  signal_edges_3 <- c(4,5, 6, 8, 9)  # signal edges for vertex 1
+  p1 <- array(runif(xdim*ydim), dim=c(xdim, ydim))
+  p1[upper.tri(p1, diag=FALSE)] <- 0
+  p2 <- p1  # we will change our signal edges in vertices 1 and 3 to have a class-conditional difference
+  # add signal to vertex 1 of random magnitude
+  p2[1,signal_edges_1] <- p2[1, signal_edges_1] + rnorm(length(signal_edges_1), mean=0, sd=.15)
+  # add signal to vertex 3 of random magnitude
+  p2[3, signal_edges_3] <- p2[3, signal_edges_3] + rnorm(length(signal_edges_3), mean=0, sd=.15)
+  p1 <- p1 + t(p1) - diag(diag(p1))
+  p2 <- p2 + t(p2) - diag(diag(p2))
+  # fix the limits to be valid probabilities and smooth
+  p1[p1 > 1] <- 1 - 1/(10*ns); p1[p1 < 0] <- 1/(10*ns); p2[p2 > 1] <- 1 - 1/(10*ns); p2[p2 < 0] <- 1/(10*ns)
+  p[,,1] <- p1
+  p[,,2] <- p2
+  
+  for (n in ns) {
+    samp <- array(NaN, dim=c(xdim, ydim, n*2))
+    samp[,,1:n] <- sg.bern.sample_graph(p[,,1], s=n, rewire=.1)
+    samp[,,(n+1):(2*n)] <- sg.bern.sample_graph(p[,,2], s=n, rewire=.1)
+    
+    Y <-array(NaN, dim=c(n*2))
+    Y[1:n] <- 0
+    Y[(n+1):(2*n)] <- 1
+    for (ne in nes) {
+      class_res <- sg.bern.xval_classifier(samp=samp, Y=Y, nedge=ne, tstat="fisher", coherent = 9, xval="loo")
+      true_edges <- c(2, 3, 4, 5, 6, 7, 9, 10, 19, 28, 37, 46, 55, 73, 21, 22, 23, 24, 25, 26, 27, 30, 39, 48, 57, 66, 75)
+      miss_edge <- 1 - 1/length(true_edges)*sum(true_edges %in% class_res$edges)
+      results <- rbind(results, data.frame(n=n, nedges=ne, error=class_res$error, miss_edge=miss_edge))    
+    }
+  }
+}
+```
+
+```{r, fig.width=7, fig.height=6, warning=FALSE, message=FALSE}
+results$nedges <- factor(results$nedges)
+me_plot <- ggplot(results, aes(x=n, y=miss_edge, color=nedges, group=nedges)) +
+  geom_point() +
+  stat_summary(fun.y = mean, geom = "line", size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", size=2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  ggtitle("Proportion of Edges Missed by Incoherent Subgraph Estimator") +
+  xlab("Number of Training Examples per Class") +
+  ylab("Missed-Edge Rate") +
+  theme(text=element_text(size=12))
+
+xv_plot <- ggplot(results, aes(x=n, y=error, color=nedges, group=nedges)) +
+  geom_point() +
+  stat_summary(fun.y = mean, geom = "line", size=2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", size=2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  ggtitle("Error of Model Estimated with Leave-One-Out Cross Validation") +
+  xlab("Number of Training Examples per Class") +
+  ylab("Cross-Validated Error") +
+  theme(text=element_text(size=12))
+
+multiplot(me_plot, xv_plot, cols=1)
+```
+
+On the plus side, this situation can be remedied by computing the accuracy measures ($\hat{L}$ and $R_n^x$) across scales (ie, across different numbers of edges and signal vertices) and choosing the edges and signal vertex counts that produce the best cross-validated accuracy.

@@ -1,0 +1,711 @@
+---
+title: "Using a Structured Independent Edge Model to quantify the difference between DTI and fMRI Connectomes in Bi-Lateral Connectivity"
+author: "Eric Bridgeford"
+date: "September 29, 2017"
+header-includes:
+   - \usepackage{amsmath}
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setting
+
+## Task
+
+Given: 
+
++ $n$ samples of graphs, $G_1 = \left\{(g_i)\right\}_{i=1}^n$ from one population, and $m$ samples of graphs, $G_2 = \left\{(g_i)\right\}_{i=1}^m$.
++ A graph, $g_i \in G_j$, where $g_i  = (E, V, w)$ for $N=|V|$ regions of interest and $w(v_i, v_j) = w_{ij}$.
++ a partitioning of the edges into $E_1$ and $E_2$, where $E_1 \cup E_2 = E$ and $E_1 \cap E_2 = \emptyset$.
+
+1. Does the connectivity for the edges $E_1$ exceed those of $E_2$ within a particular modality?
+2. Does the difference in connectivity for the edges $E_1$ and $E_2$ of one modality exceed that of another modality?
+
+
+## Statistical Model
+
+Assume we have a random variable $A$ which can be characterized by the Stochastic Block Model with parameters $G$, $B$:
+
+\begin{align*}
+	A \sim SBM(G, B)
+\end{align*}
+    
+where $G$ is a grouping of the $N$ vertices in our graph into $C$ communities $V_i$ where $\bigcup\limits_{i=1}^{C} V_i = V$, and $V_i \cap V_j = \emptyset$ for all $i \neq j$. $B$ represents the parameters for within and between group edge probabilities. Assume that the number of edges in each subgraph are binomially distributed with the parameter $p$, we can estimate the number of edges for each group with the pmf (noting that in our case, we are given $n$ and $k$ a priori):
+
+\begin{align*}
+  f_B(p | n, k) &= \begin{pmatrix}n \\ k\end{pmatrix}p^k (1 - p)^{n - k}
+\end{align*}
+
+Then the likelihood function is of the form:
+
+\begin{align*}
+  L(p | n, k) &= \prod_{k=0}^n f_B(n, k | p) = \prod_{k=0}^n \begin{pmatrix}n \\ k\end{pmatrix}p^k (1 - p)^{n - k} \\
+  log(L(p | n, k)) &= \sum_{k=0}^n \log\left(\begin{pmatrix}n \\ k\end{pmatrix}\right) + k\log (p) + (n - k)\log (1 - p)
+\end{align*}
+
+Maximizing with respect to $p$:
+
+\begin{align*}
+    \frac{\delta log(L(p | n, k))}{\delta p} &= \sum_{k=0}^n \frac{k}{p} - \frac{n - k}{1 - p} = 0 \\
+    \frac{k}{p} &= \frac{n - k}{1 - p} \\
+    \hat{p} &= \mathbb{E}[p] = \frac{k}{n}
+\end{align*}
+
+to get the variance term, we note that $\hat{p} = \frac{k}{n}$, so then $Var(p) = Var\left(\frac{k}{n}\right) = \frac{1}{n^2} Var(k)$. The binomial distriibution can be thought of as an aggregation of $n$ independent bernoulli trials with probability $p$; that is, $X_i \overset{iid}{\sim} Bern(p)$ where $\mathbb{E}\left[X_i\right] = p$. Given that the variance of independent events sum, we can expand:
+
+\begin{align*}
+  Var(\sum_{i=1}^n X_i) &= \sum_{i=1}^n Var(X_i) = \sum_{i=1}^n E\left[X_i^2\right] - E\left[X_i\right]^2 \\
+  \mathbb{E}\left[X_i^2\right] &= 0^2(1-p) + 1^2(p) = p \\
+  Var(k) &= \sum_{i=1}^n \mathbb{E}\left[X_i^2\right] - \mathbb{E}\left[X_i\right]^2 \\
+  &= np(1-p)
+\end{align*}
+
+Then:
+
+\begin{align*}
+  Var(\hat{p}) &= \frac{1}{n^2}Var(k) = \frac{\hat{p}(1-\hat{p})}{n}
+\end{align*}
+
+where $p$ is the probability of a given edge, $k$ are the number of connected edges, and $n$ is the number of possible edges. We can therefore define an estimator of $B$, $\hat{B}$ where connections between community $V_l$ and $V_m$ can be modelled iid:
+
+\begin{align*}
+  \hat{B}_{lm} &= \mathcal{N}(\mu_{lm}, \sigma_{lm})
+\end{align*}
+
+where $\hat{\mu}_{lm} = \frac{1}{\left|C_l \times C_m\right|}\sum_{(i, j) \in E(C_l \times C_m)} A_{ij}$, and $\hat{\sigma}^2_{lm} = \frac{\hat{\mu}_{lm}(1 - \hat{\mu}_{lm})}{\left|C_l \times C_m\right|}$.
+
+Assuming our edges are iid, we can generalize the above model very simply by instead of considering our vertices to exist in communities, placing our edges into two communities $E_1$ and $E_2$, where $E_1 \cup E_2 = E$ and $E_1 \cap E_2 = \emptyset$. We propose the structured independent-edge model:
+
+\begin{align*}
+	A \sim SIEM(G, B)
+\end{align*}
+
+where $G$ is a grouping of our $N^2$ possible edges into $C$ communities $E_i$ where $\bigcup\limits_{i=1}^{C} E_i = E$, and $E_i \cap E_j = \emptyset$ for all $i \neq j$. $B$ represents the parameters for within and between group edge probabilities.
+
+Then we can define an estimator for $B$ as follows:
+
+\begin{align*}
+	\hat{B}  \sim \mathcal{N}(\mu_B, \Sigma_B)
+\end{align*}
+
+where:
+
+\begin{align*}
+	\mu_B^{(k)} &= p_k = \frac{1}{|E_k|} \sum_{(i, j) \in E_k} M_{ij} \\
+    \sigma_B^{(k)} &= \frac{p_k(1 - p_k)}{|E_k|}
+\end{align*}
+
+given some adjacency representation of a graph $M \in \left\{0, 1\right\}^{N \times N}$.
+
+In a 2-community case (as studied here):
+
+\begin{align*}
+    \hat{\mu}_B &= \begin{bmatrix}
+    	p_{1} \\
+        p_{2} 
+    \end{bmatrix} \\
+    \hat{\Sigma}_B &= \begin{bmatrix}
+    	\frac{p_{1}(1 - p_{1})}{|E_1|} & 0 \\
+    	0 & \frac{p_{2}(1 - p_{2})}{|E_2|}
+    \end{bmatrix} = \begin{bmatrix}
+    	\sigma_{p_1} & 0 \\
+        0 & \sigma_{p_2}
+    \end{bmatrix}
+\end{align*}
+
+where $p_j$ represents the probability of an edge in the $j^{th}$ edge-community, and $\sigma_j$ the variance of edges in that particular edge-community. Then given a connectome as an adjacency matrix $M \in \left\{0, 1\right\}^{N \times N}$ with $N$ vertices, we can compute estimators as follows:
+
+\begin{align*}
+	E_1 &= \left\{(i, j): \textrm{edge }(i, j) \in E_1\right\} \\
+	E_2 &= \left\{(i, j): \textrm{edge }(i, j) \in E_2\right\} \\
+    \hat{p}_1 &= \frac{1}{|E_1|} \sum_{(i, j) \in E_1} M_{ij} \\
+    \hat{p}_2 &= \frac{1}{|E_2|} \sum_{(i, j) \in E_2} M_{ij} \\
+    \sigma_{\hat{p}_1} &= s_1 = \frac{p_{1}(1 - p_{1})}{|E_1|} \\
+    \sigma_{\hat{p}_2} &= s_2 = \frac{p_{2}(1 - p_{2})}{|E_2|}
+\end{align*}
+
+Then we have $\delta = p_1 - p_2$ representing the difference in connectivity from $E_1$ to $E_2$. For these experiments, we will let $E_1$ be the bilateral edges, and $E_2$ the non-bilateral edges.
+
+## Statistical Goal
+
+Where $\delta_i$ is the difference in connectivity for the $i^{th}$ group of graphs, and $p_{j, i}$ the probability of an edge for the $j^{th}$ edge community in the $i^{th}$ group of graphs, let $H_0: \delta_1 <= \delta_2$, and $H_A: \delta_1 > \delta_2$, determine:
+
+\begin{align*}
+  \mathbb{P}(\textrm{reject $H_0$ in favor of $H_A$ | $H_0$ is true})
+\end{align*}
+
+That is, determine the probability of incorrectly rejecting the null hypothesis that the difference in connectivity in the graphs of $G1$ is less than or equal to the difference in connectivity in the graphs of $G_2$. 
+
+For this notebook, we will investigate with $E_1$ as the bilateral edges, and $E_2$ as the non-bilateral edges.
+
+## Test Statistic
+
+[Welch's T-Test](https://en.wikipedia.org/wiki/Welch%27s_t-test) for testing whether populations have equal means given that they have different variances in the univariate case.
+
+\begin{align*}
+    T = \frac{\bar{\delta}_1 - \bar{\delta}_2}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}
+\end{align*}
+
+Since our random variables are all assumed to be independent (covariance terms are all zero), we can assume that $s_1^2 = \sigma_{\hat{\delta}_1}^2 = \sigma^2_{\hat{p}_1, 1} + \sigma^2_{\hat{p}_2, 1}$, and $s_2^2 = \sigma_{\hat{\delta}_2}^2  = \sigma^2_{\hat{p}_1, 2} + \sigma^2_{\hat{p}_2, 2}$.
+
+and the degrees of freedom can be calculated as follows:
+
+\begin{align*}
+    \nu &= \frac{\left(\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}\right)^2}{\frac{s_1^4}{n_1^2 \nu_1} + \frac{s_2^4}{n_2^2\nu_2}}
+\end{align*}
+
+where $\nu_1 = n_1 - 1, \; \nu_2 = n_2 - 1$.
+
+We can then use a one-sided test given $T, \nu$ to get a $p-$ value.
+
+## P-Value
+
+1) We can compute a p-value of falsely rejecting the null hypothesis by simply finding the area:
+
+\begin{align*}
+    p = \int_{-T_{observed}}^{\infty}p(x, df) dx = 1 - \int_{-\infty}^{T_{observed}} p(x, df) dx
+\end{align*}
+
+where $p(x, df)$ is the pdf for the $T$ distribution with degrees of freedom $df$.
+
+## Statistical Power
+
+1) The statistical power can be computed as the inverse of the probability of making a Type II ($\beta$) error, $1 - \beta$. A type II error can be defined as follows:
+
+\begin{align*}
+    \beta = \mathbb{P}(\textrm{reject $H_A$ in favor of $H_0$ | $H_A$ is true}) = \mathbb{P}(T_{observed} < T_{critical})
+\end{align*}
+
+where $T_{critical}$ is the test-statistic at the given level of significance $\alpha$ specified by our test. To compute the power, we will compute the rejection cutoff for the test-statistic, and then simulate data under the alternative hypothesis, and see how many times we would reject the null hypothesis in our simulated data. In pseudo-code:
+
+```{r, eval=FALSE}
+Compute_Power(n, diffs, sig=.95):
+  cutoff = T_{dist}(sig, df=n-2)
+  tstat = []
+  for i in 1:n
+    # simulate 100 deltas from 2 populations of binomial edges
+    snull = repeat(100 times, sum(random_binomial(ne, 0.5 + diffs[1]))/ne - sum(randim_binomial(ne, 0.5 - diffs[1]))/ne)
+    # simulate 100 deltas from 2 populations of binomial edges, where diffs[2] > diffs[1]
+    salt = repeat(100 times, sum(random_binomial(ne, 0.5 + diffs[2]))/ne - sum(randim_binomial(ne, 0.5 - diffs[2]))/ne)
+    # determine whether difference in (0.5 + diffs[2] - (0.5 - diffs[2])) - (0.5 + diffs[1] - (0.5 - diffs[2])) is appreciable
+    tstat[i] = welch_ttest(salt, snull, test="alt > null")$statistic
+  end
+  return(sum(ts > cutoff)/n)
+```
+
+# Simulations
+
+To run the below code, the user must have several packages installed. From an R session, these can be installed with:
+
+```{r, eval=FALSE}
+install.packages(c('ggplot2', 'latex2exp', 'igraph', 'devtools'))
+require(devtools)
+install_github('neurodata/fmriutils')
+```
+
+## Simulated Data
+
+### Consistency of Estimators for $\hat{\delta}$
+
+Here, we will verify that our estimators of $\hat{\delta}$ are correct, that is, that we can accurately estimate $\mu_{\hat{\delta}}$ and $\sigma^2_{\hat{\delta}}$ given binomially distributed edges:
+
+```{r}
+# package dependencies -------------------
+require(ggplot2)
+library(latex2exp)
+require(igraph)
+require(fmriutils)
+
+# Util functions ------------------------
+# variance under the given model with params probability p, and number of edges n
+model.var = function(p, n) {
+  p*(1 - p)/n
+}
+
+# compute the mu and sigma params associated with an input array under the model
+model.params = function(dat) {
+  mu = sum(dat)/length(dat)
+  var = model.var(mu)
+  return(list(mu = mu, sigma = sqrt(var)))
+}
+
+# accepts a [n x n] adjacency matrix and computes the probabilities associated with an SBM
+# where the vertices are grouped such that union_i(groups) = V(A) and
+# intersection(group_i, group_j) = NULL for all i != j
+block_data = function(matrix, groups) {
+  # matrix is adwi_thresh n x n array
+  # groups is a grouping of the vertices in the matrix as a list
+  blocks = array(NaN, dim=c(2,2))
+  for (i in 1:length(groups)) {
+    for (j in 1:length(groups)) {
+      blocks[i, j] = mean(matrix[groups[[i]], groups[[j]]])
+    }
+  }
+  return(blocks)
+}
+
+# computes the analytical welch t-test given mu and the number of observations
+# and the number of samples. Optionally accepts params for the degrees of freedom
+# to override the default computation.
+ana.welch_ttest = function(u1, u2, v1, v2, ns1=NaN, ns2=NaN, df=NaN, verbose=TRUE) {
+  s1 = sqrt(v1)
+  s2 = sqrt(v2)
+  tstat = (u1 - u2)/sqrt(s1^2/ns1 + s2^2/ns2)
+  if (!is.nan(df)) {
+    df = df
+  } else {
+    dfnum = (s1^2/ns1 + s2^2/ns2)^2
+    dfdenom = s1^4/(ns1^2*(ns1 - 1)) + s2^4/(ns2^2*(ns2-1))
+    df = round(dfnum/dfdenom)
+  }
+  p = 1 - pt(tstat, df=df)
+  return(list(t=tstat, p=p, df=df))
+}
+
+# computes the power of the model under a given significance level
+# accepts params for a number of simulations to average power over, and a
+# number of graphs for each computation
+# number of edges defines the number of edges to use in the binomial simulation
+t.power = function(diffs, ne=1225, sig=.95, nsim=100, ngr=100) {
+  ucut = qt(sig, df=ngr)  # t-statistic of null at the given significance level with ne-2 degrees of freedom
+  ts = replicate(nsim, {  # replicate our described test n tsim times
+    alt = replicate(ngr, sum(rbinom(n = ne, size=1, prob = 0.5 + diffs[1]/2))/ne - sum(rbinom(n = ne, size=1, prob=0.5 - diffs[1]/2))/ne)
+    null = replicate(ngr, sum(rbinom(n = ne, size=1, prob = 0.5 + diffs[2]/2))/ne - sum(rbinom(n = ne, size=1, prob = 0.5 - diffs[2]/2))/ne)
+    t.test(alt, null, alternative = "greater", var.equal = FALSE)$statistic
+  })
+  v1 =  model.var(0.5 + diffs[1]/2, ne) + model.var(0.5 - diffs[1]/2, ne)
+  v2  =  model.var(0.5 + diffs[2]/2, ne) + model.var(0.5 - diffs[2]/2, ne)
+  ana_tstat = ana.welch_ttest(diffs[1], diffs[2], v1, v2,  ngr, ngr)$t
+  return(list(power=sum(ts > ucut)/nsim, diff=abs(mean(ts) - ana_tstat)/ana_tstat))
+}
+
+# accepts a matrix and thresholds/binarizes it
+thresh_matrix = function(matrix, thresh=0.5) {
+  thr = quantile(matrix, thresh)
+  return(ifelse(matrix > thr, 1, 0))
+}
+```
+
+```{r}
+ns = round(10^seq(1, log10(1225), length=10))
+ds = seq(0, 1.0, length=21)
+ndat = length(ns)*length(ds)
+empty_ar = array(NaN, dim=c(ndat))
+results = data.frame(n = empty_ar, d = empty_ar, mu = empty_ar, var = empty_ar)
+counter = 1
+nsim = 10
+for (n in ns) {
+  for (d in ds) {
+    v_ar = array(NaN, dim=c(nsim))
+    m_ar = array(NaN, dim=c(nsim))
+    for (i in 1:nsim) {
+      p1 = 0.5 + d/2
+      p2 = 0.5 - d/2
+      demp = replicate(n, {
+        dat1 = rbinom(n = n, p = p1, size=1)
+        dat2 = rbinom(n = n, p = p2, size=1)
+        dhat = sum(dat1 - dat2)/length(dat1)
+        })
+      m_ar[i] = abs(mean(demp) - d)
+      v_ar[i] = abs(var(demp) - (model.var(p1, n) + model.var(p2, n)))
+    }
+    results[counter,] = data.frame(n = n, d = d, mu = mean(m_ar),
+                                   var = mean(v_ar))
+    counter <- counter + 1
+  }
+}
+
+results$n = factor(results$n)
+results$d = factor(results$d)
+
+ggplot(results, aes(x = n, y = mu, group=d, color=d)) +
+  geom_line() +
+  ggtitle(TeX('Consistency of estimator $\\mu_{\\hat{\\delta}}$, average of 10 simulations')) +
+  xlab("Number of possible edges") +
+  ylab(TeX('$\\left|\\delta_{analytical} - \\mu_{\\hat{\\delta}}\\right|$')) +
+  scale_color_discrete(name=TeX("$\\delta_{analytical}$"))
+
+ggplot(results, aes(x = n, y = var, group=d, color=d)) +
+  geom_line() +
+  ggtitle(TeX('Consistency of estimator $\\sigma^2_{\\hat{\\delta}}$, average of 10 simulations')) +
+  xlab("Number of possible edges") +
+  ylab(TeX('$\\left|Var(\\delta_{analytical}) - \\sigma^2_{\\hat{\\delta}}\\right|$')) +
+  scale_color_discrete(name=TeX("$\\delta_{analytical}$"))
+```
+
+As we can see, as our number of possible edges increases, our estimators for $\mu$ and $\sigma^2$ converge, indicating we have consistent estimators. 
+
+### Simulated Trials
+
+In this experiment, we will analyze the power of our test developed. Assuming that the entire graph has average $p=0.5$, we will simulated from a block model where the probabiliy of the within-group edges have $p_{within}=0.5 + \epsilon$, and the outside of group edges have $p_{outside} = 0.5 - \epsilon$ for two different populations of graphs. We will assume a significance level of $0.95$ for our $T$ cutoff, and fix the number of observations between 0 and $\frac{2550}{2}=1225$, since our real data has $2450$ total edges yielding $1225$ observations per-group. Our simulation will be structured as follows:
+
++ Simulate $n$ graphs with edges from a binomial distribution given $ne, p + \epsilon_1$ and $ne, p - \epsilon_1$, the alternative samples.
++ Simulate $n$ graphs with edges from a binomial distribution given $ne, p + \epsilon_2$ and $ne, p - \epsilon_2$, the null samples.
++ Compute the empirical distribution for $\hat{p}$ for the alternative and null samples, respectively by repeating the above procedure $ns$ times.
++ derive the power from the respective empirical distribution of $\hat{\delta}$ as the fraction of test statistics more extreme than the critical test statistic.
++ compute the difference between the average simulated test statistic and the analytical test statistic.
+
+```{r}
+maxdiff = 0.2
+diff = seq(0,  maxdiff, length=21)
+ns = round(10^seq(1, log10(1225), length=10))
+ndat = length(ns)*length(diff)
+empty_ar = array(NaN, dim=c(ndat))
+dat = data.frame(ns = empty_ar, diff=empty_ar, pow=empty_ar, tdiff=empty_ar)
+counter = 1
+for (j in 1:length(ns)) {
+  n = ns[j]
+  for (i in 1:length(diff)) {
+    in.d = maxdiff + diff[i]/2
+    out.d = maxdiff - diff[i]/2
+    # under the model, assume the p_in is the mean within group, and p_out is the mean outside of group
+    # compute the standard deviation according to the model
+    diffs = c(in.d, out.d)
+    result = t.power(diffs, ne=n)
+    dat[counter,] = c(ns=n, diff=diff[i], pow=result$power, tdiff=result$diff)
+    counter = counter + 1
+  }
+}
+```
+
+First, we look at power as a function of the number of edges in our simulation, as we vary the difference between the $\delta$ for each population of graphs:
+
+```{r}
+dat$ns = factor(dat$ns)
+dat$diff = factor(dat$diff)
+thresh = data.frame(diff=diff, sig=.05)
+thresh$diff = factor(thresh$diff)
+ggplot(dat,  aes(x = diff, y = pow, group=ns, color=ns)) +
+  geom_line() +
+  ggtitle(TeX('Power of Unequal-Variance T-Test with 100 simulations, 100 $\\frac{graphs}{simulation}$')) +
+  xlab(TeX('Difference in $\\left|\\delta_1 - \\delta_2\\right|$')) +
+  ylab('Power of Test') +
+  scale_color_discrete(name="number of edges") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+And we also look at how the analytical test-statistic computed from our trials compares to the empirical test-statistics estimated from our simulation procedure:
+
+```{r}
+ggplot(dat, aes(x = diff, y = tdiff, group=ns, color=ns)) +
+  geom_line() +
+  ggtitle(TeX('Analytical T-Test compared to Empirical T-Test')) +
+  xlab(TeX('Difference in $\\left|\\delta_1 - \\delta_2\\right|$')) +
+  ylab(TeX('$\\frac{\\left|\\bar{T}_{empirical} - T_{analytical}\\right|}{T_{analytical}}')) +
+  scale_color_discrete(name="number of edges") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+# Real Data Experiments
+
+## Raw Data
+
+For the data, we compute the weighted mean functional (rank of each edge) and diffusion (number of fibers). For the functional connectome, we threshold such that the largest 50% of edges are set to connected, and the smallest 50% set to disconnected. For the diffusion (which are natively sparse) we just threshold edges that are present to connected, and edges that are not present to disconnected (threshold about 0). 
+
+```{r}
+basepath = '/data/connectome_stats/'
+fmri_gr = read_graph(file.path(basepath, 'fmrimean_1709.edgelist'), format="ncol")
+fmri_mean = get.adjacency(fmri_gr, type="both", sparse=FALSE, attr='weight')
+dwi_gr = read_graph(file.path(basepath, 'dwimean_2861.edgelist'), format="ncol")
+dwi_mean = get.adjacency(dwi_gr, type="both", sparse=FALSE, attr='weight')
+
+fmri_thresh = thresh_matrix(fmri_mean)
+dwi_thresh = thresh_matrix(dwi_mean, thresh=0)
+
+fmriu.plot.plot_graph(fmri_thresh, include_diag = TRUE, title = "Mean Thresholded Functional Connectome", legend.name = "connection")
+fmriu.plot.plot_graph(dwi_thresh, include_diag = TRUE, title = "Mean Thresholded DWI Connectome", legend.name = "connection")
+```
+
+```{r}
+group1 = c()
+group2 = c() 
+# loop over all possible edges to get the indices we want to examine
+for (i in 1:70) {
+  for (j in 1:70) {
+    idx = i + 70*(j - 1)
+    if (abs(i - j) == 35) {  # if this is a bi-lateral edge
+      group1 <- c(group1, idx)
+    } else if (i != j) {
+      group2 <- c(group2, idx)
+    }  # don't count self-loops
+  }
+}
+```
+
+## Difference in Bi-Lateral vs. Non Bi-Lateral Connectivity
+
+### Comparing Distributions of Functional and Diffusion $\hat{\delta}$ (one p-value total)
+
+Here, we take each functional and diffusion connectome individually, and compute the parameters of our block model for each connectome. The question we seek to first answer is, given a large number of observations of $\hat{\delta}$, can we detect when bilateral connectivity exceeds non-bilateral connectivity in the functional connectomes compared to the diffusion connectomes?
+
+#### Diffusion
+
+```{r}
+dwi.dsets = c('BNU1', 'BNU3', 'HNU1', 'KKI2009', 'NKI1', 'NKIENH', 'MRN1313', 'Templeton114', 'Templeton255', 'SWU4')
+dwi.atlas = 'desikan'
+dwi.basepath = '/data/dwi/edgelists/'
+
+graphobj = fmriu.io.collection.open_graphs(basepath = dwi.basepath, atlases = dwi.atlas, datasets = dwi.dsets,
+                                           gname = 'graphs', fmt='edgelist', rtype = 'array')
+dwi.graphs = graphobj$graphs
+dwi.datasets = graphobj$dataset
+dwi.subjects = graphobj$subjects
+```
+
+```{r}
+ne = 1225
+bi.phat = array(NaN, dim=c(dim(dwi.graphs)[1]))
+nbi.phat = array(NaN, dim=c(dim(dwi.graphs)[1]))
+dwi.per.var = array(NaN, dim=c(dim(dwi.graphs)[1]))
+for (i in 1:dim(dwi.graphs)[1]) { 
+  gr = thresh_matrix(dwi.graphs[i,,], thresh=0)
+  bi = c(gr[group1])
+  nbi = c(gr[group2])
+  bi.phat[i] = mean(bi)
+  nbi.phat[i] = mean(nbi)
+  dwi.per.var[i] = model.var(bi.phat[i], ne) + model.var(nbi.phat[i], ne)
+}
+dwi.delta = abs(bi.phat - nbi.phat)
+dwi.mu = mean(dwi.delta)
+dwi.var = model.var(mean(bi.phat), ne) + model.var(mean(nbi.phat), ne)
+```
+
+#### Functional
+
+```{r}
+fmri.dsets = c('BNU1', 'BNU2', 'BNU3', 'HNU1', 'IBATRT', 'IPCAS1', 'IPCAS2', 'IPCAS5', 'IPCAS6', 'IPCAS8', 'MRN1', 'NYU1', 'SWU1', 'SWU2', 'SWU3', 'SWU4', 'UWM', 'XHCUMS')
+fmri.atlas = 'desikan-2mm'
+fmri.basepath = '/data/fmri/ranked/edgelists/'
+
+graphobj = fmriu.io.collection.open_graphs(basepath = fmri.basepath, atlases = fmri.atlas, datasets=fmri.dsets, fmt='edgelist', rtype = 'array')
+fmri.graphs = graphobj$graphs
+fmri.datasets = graphobj$dataset
+fmri.subjects = graphobj$subjects
+```
+
+```{r}
+bi.phat = array(NaN, dim=c(dim(fmri.graphs)[1]))
+nbi.phat = array(NaN, dim=c(dim(fmri.graphs)[1]))
+fmri.per.var = array(NaN, dim=c(dim(fmri.graphs)[1]))
+for (i in 1:dim(fmri.graphs)[1]) {
+  gr = thresh_matrix(fmri.graphs[i,,])
+  bi = c(gr[group1])
+  nbi = c(gr[group2])
+  bi.phat[i] = mean(bi)
+  nbi.phat[i] = mean(nbi)
+  fmri.per.var[i] = model.var(bi.phat[i], ne) + model.var(nbi.phat[i], ne)
+}
+fmri.delta = abs(bi.phat - nbi.phat)
+fmri.mu = mean(fmri.delta)
+fmri.var = model.var(mean(bi.phat), ne) + model.var(mean(nbi.phat), ne)
+```
+
+We might want to visualize the distribution of $\delta = \hat{p}_{bi} - \hat{p}_{non-bi}$ under the analytical model and compare to our empirical model for functional and diffusion:
+ 
+```{r}
+ne = 1225
+# density estimates of the two populations of delta
+dwi.distr.emp.mod = density(as.numeric(dwi.delta))
+fmri.distr.emp.mod = density(as.numeric(fmri.delta))
+
+# variances sum for analytical computation
+dwi.distr.ana = dnorm(dwi.distr.emp.mod$x, mean=dwi.mu, sd=sqrt(dwi.var))
+fmri.distr.ana = dnorm(fmri.distr.emp.mod$x, mean=fmri.mu, sd=sqrt(fmri.var))
+
+n_diff = length(dwi.distr.emp.mod$x)
+dwi.dat = data.frame(x = c(dwi.distr.emp.mod$x, dwi.distr.emp.mod$x), y = c(dwi.distr.emp.mod$y, dwi.distr.ana),
+                      distribution=c(rep("empirical", n_diff), rep("analytical", n_diff)))
+dwi.dat$distribution = factor(dwi.dat$distribution)
+
+ggplot(dat=dwi.dat, aes(x=x, y=y, ymax=y, fill=distribution, color=distribution, group=distribution)) +
+  geom_ribbon(ymin=0, alpha=0.5) +
+  ylab('Density') +
+  xlab(TeX('$\\delta_D$')) +
+  ggtitle(TeX('Distribution of $\\delta_D = \\hat{p}_{bi} - \\hat{p}_{non-bi}$, DWI'))
+```
+
+```{r}
+n_diff = length(dwi.distr.emp.mod$x)
+fmri.dat = data.frame(x = c(fmri.distr.emp.mod$x, fmri.distr.emp.mod$x), y = c(fmri.distr.emp.mod$y, fmri.distr.ana),
+                      distribution=c(rep("empirical", n_diff), rep("analytical", n_diff))) 
+fmri.dat$distribution = factor(fmri.dat$distribution)
+
+ggplot(dat=fmri.dat, aes(x=x, y=y, ymax=y, fill=distribution, color=distribution, group=distribution)) +
+  geom_ribbon(ymin=0, alpha=0.5) +
+  ylab('Density') +
+  xlab(TeX('$\\delta_F$')) +
+  ggtitle(TeX('Distribution of $\\delta_F = \\hat{p}_{bi} - \\hat{p}_{non-bi}$, fMRI'))
+```
+
+Next, we look at the distributions, empirically and analytically, to see if there is a visually perceptible difference in the distribution of the populations $\delta_F$ and $\delta_D$ are from:
+
+```{r}
+cmp.emp = data.frame(x = c(dwi.distr.emp.mod$x, fmri.distr.emp.mod$x), y = c(dwi.distr.emp.mod$y, fmri.distr.emp.mod$y),
+                     distribution=c(rep("DWI", n_diff), rep("fMRI", n_diff)))
+
+ggplot(dat=cmp.emp, aes(x=x, y=y, ymax=y, fill=distribution, color=distribution, group=distribution)) +
+  geom_ribbon(ymin=0, alpha=0.5) +
+  ylab('Density') +
+  xlab(TeX('$\\delta$')) +
+  ggtitle(TeX('Distribution of $\\delta$, Empirical Comparison'))
+```
+
+```{r}
+cmp.ana = data.frame(x = c(dwi.distr.emp.mod$x, fmri.distr.emp.mod$x), y = c(dwi.distr.ana, fmri.distr.ana),
+                     distribution=c(rep("DWI", n_diff), rep("fMRI", n_diff)))
+
+ggplot(dat=cmp.ana, aes(x=x, y=y, ymax=y, fill=distribution, color=distribution, group=distribution)) +
+  geom_ribbon(ymin=0, alpha=0.5) +
+  ylab('Density') +
+  xlab(TeX('$\\delta$')) +
+  ggtitle(TeX('Distribution of $\\delta$, Analytical Comparison'))
+```
+
+both the empirical and analytical results show clear separation of $\delta_D$ and $\delta_F$. Performing a $t-$test of this observation, we see:
+
+```{r}
+t.test(fmri.delta, dwi.delta, alternative="greater", var.equal=FALSE)
+```
+
+which shows that with $p < 2.2 \times 10^{-16}$, the difference in connectivity bi-laterally vs. non bi-laterally in functional connectomes exceeds the difference in connectivity bi-laterally vs non bi-laterally in diffusion connectomes.
+
+### Comparing p-value per subject of Functional vs Diffusion $\hat{\delta}$ (one p-value per pair)
+
+Below, we compute a $p-$value given 2 graphs, 1 functional and 1 diffusion, from the same subject, where we take the cartesian product of the functional connectomes with the diffusion connectomes for each subject. For example, if we had $2$ functional connectomes and $2$ diffusion connectomes, we would end up with $4$ $p-$values, with the first functional connectome $\delta$ compared with the first diffusion connectome $\delta$ ($11$ comparison), and so on for $12$ (first functional connectome with second diffusion connectome), $21$, $22$. We plot a distribution of the $p-$values for each dataset:
+
+```{r}
+# find the common datasets
+common.dsets = fmri.dsets[which(fmri.dsets %in% dwi.dsets)]
+# find the common subjects
+common.sub.sid = fmri.subjects[which(fmri.subjects %in% dwi.subjects)]
+common.sub.did = fmri.datasets[which(fmri.subjects %in% dwi.subjects)]
+
+per.p <- c()
+per.dataset <- c()
+per.subject <- c()
+fmri.failed <- c()
+dwi.failed <- c()
+p.failed <- c()
+per.dwi.delta <- c()
+per.fmri.delta <- c()
+unique_subs = unique(common.sub.sid)
+for (i in 1:length(unique_subs)) {
+  sub = unique_subs[i]
+  dset = unique(fmri.datasets[which(fmri.subjects == sub)])
+  fmri.idxs = which(fmri.subjects == sub)
+  dwi.idxs = which(dwi.subjects == sub)
+  for (fidx in fmri.idxs) {
+    for (didx in dwi.idxs) {
+      pval <- ana.welch_ttest(fmri.delta[fidx], dwi.delta[didx], fmri.per.var[fidx], dwi.per.var[didx], ns=1, ns2=1, df=2)$p
+      per.dwi.delta <- c(per.dwi.delta, dwi.delta[didx])
+      per.fmri.delta <- c(per.fmri.delta, fmri.delta[fidx])
+      per.p <- c(per.p, pval)
+      per.dataset <- c(per.dataset, dset)
+      per.subject <- c(per.subject, sub)
+      if (pval > .05) {
+        fmri.failed <- c(fmri.failed, fidx)
+        dwi.failed <- c(dwi.failed, didx)
+        p.failed <- c(p.failed, pval)
+      }
+    }
+  }
+}
+
+p.dat <- data.frame(p = per.p, dataset=per.dataset, subject=per.subject)
+p.dat$dataset <- factor(p.dat$dataset)
+ggplot(data=p.dat, aes(x=dataset, y=p, color=dataset, group=dataset)) +
+  geom_jitter() +
+  coord_trans(y = "log10") +
+  ggtitle(TeX(sprintf('Bilateral Inter-Modality, %.2f percent have $p < .05$', 100*sum(per.p < .05)/length(per.p)))) +
+  xlab('Dataset') +
+  ylab('p-value') +
+  theme(axis.text.x = element_text(angle=45), legend.position=NaN)
+```
+
+As we can see, even at just the $2-$graph level, the difference in bi-lateral vs. non bi-lateral connectivity in the functional vs. diffusion connectomes is significant in most connectome pairs at $\alpha=0.05$. 
+
+We can instead visualize this as density estimates:
+
+```{r}
+vline = data.frame(x=.05, type="sig")
+ggplot(data=p.dat, aes(p, group=dataset, color=dataset)) +
+  geom_line(stat="density", size=1.5, adjust=1.5) +
+  scale_x_log10(limits=c(.005, 1)) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_color_discrete(name="Dataset") +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05$"), TeX)) +
+  xlab(TeX('$log(p)$')) +
+  ylab("Density") +
+  theme(panel.background = element_rect(fill = '#ffffff')) + 
+  ggtitle(TeX(sprintf('Bilateral Inter-Modality, %.2f percent have $p < .05$', 100*sum(p.dat$p < .05)/length(p.dat$p))))
+```
+
+##### Example of subject with $p > .05$
+
+```{r}
+sort_p <- sort(p.failed, index.return=TRUE, decreasing = TRUE)
+ix = sort_p$ix[1]
+dwfailed = thresh_matrix(dwi.graphs[dwi.failed[ix],,], thresh=0)
+fmfailed = thresh_matrix(fmri.graphs[fmri.failed[ix],,])
+fmriu.plot.plot_graph(dwfailed, include_diag = TRUE,
+                      title = sprintf("DWI subject %s, delta=%.3f", as.character(dwi.subjects[dwi.failed[ix]]), dwi.delta[dwi.failed[ix]]),
+                      legend.name = "connection")
+fmriu.plot.plot_graph(fmfailed, include_diag = TRUE,
+                      title = sprintf("fMRI subject %s, delta=%.3f", as.character(fmri.subjects[fmri.failed[ix]]), fmri.delta[fmri.failed[ix]]),
+                      legend.name = "connection")
+print(sort_p$x[1])
+```
+As we can see, this subject appears to be noise.
+
+```{r}
+sort_p <- sort(p.failed, index.return=TRUE, decreasing = TRUE)
+ix = sort_p$ix[2]
+dwfailed = thresh_matrix(dwi.graphs[dwi.failed[ix],,], thresh=0)
+fmfailed = thresh_matrix(fmri.graphs[fmri.failed[ix],,])
+fmriu.plot.plot_graph(dwfailed, include_diag = TRUE,
+                      title = sprintf("DWI subject %s, delta=%.3f", as.character(dwi.subjects[dwi.failed[ix]]), dwi.delta[dwi.failed[ix]]),
+                      legend.name = "connection")
+fmriu.plot.plot_graph(fmfailed, include_diag = TRUE,
+                      title = sprintf("fMRI subject %s, delta=%.3f", as.character(fmri.subjects[fmri.failed[ix]]), fmri.delta[fmri.failed[ix]]),
+                      legend.name = "connection")
+print(sort_p$x[2])
+```
+
+Below, we visualize the difference $\delta_D - \delta_F$ between each pair of connectomes, and investigate the result in the $p-$value:
+
+```{r}
+batch.dat <- data.frame(diff= per.fmri.delta - per.dwi.delta, p = per.p, dataset=per.dataset)
+batch.dat$dataset <- factor(batch.dat$dataset)
+ggplot(batch.dat, aes(x=diff, y=p, color=dataset, group=dataset, shape=dataset)) +
+  geom_point() +
+  xlab(TeX('$\\delta_D - \\delta_F$')) +
+  ylab(TeX('$p-$value')) +
+  ggtitle(TeX('Examining impact on $p-$value from difference in connectivity'))
+```
+
+### Aggregated
+
+Here, we again perform a test on 2 graphs, except here the graphs used are the average functional and diffusion connectomes (the megameans). We feed this into a simple t-test with the appropriate assumptions (unequal variance, goal is to test for bilateral connectivity exceeding non bilateral connectivity):
+
+```{r}
+fbi = c(fmri_thresh[group1])
+fnbi = c(fmri_thresh[group2])
+f.bi.p = mean(fbi)
+f.nbi.p = mean(fnbi)
+
+
+dbi = c(dwi_thresh[group1])
+dnbi = c(dwi_thresh[group2])
+d.bi.p = mean(dbi)
+d.nbi.p = mean(dnbi)
+
+ana.welch_ttest(abs(f.bi.p - f.nbi.p), abs(d.bi.p - d.nbi.p),model.var(f.bi.p, ne) + model.var(f.nbi.p, ne),
+                model.var(d.bi.p, ne) + model.var(d.nbi.p, ne), ns1=1, ns2=1, df = 2)
+```
+
+As we can see above, with just 2 megamean graphs, we can determine a significant difference in the difference in connectivity bi-laterally vs non-bi-laterally in functional connectomes exceeds that of diffusion connectomes. 

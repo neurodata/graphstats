@@ -2,35 +2,78 @@
 title: "Structured Independent Edge Model"
 author: "Eric Bridgeford"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Vignette Title}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+header-includes:
+   - \usepackage{amsmath}
+output:
+  html_document: default
+  pdf_document: default
 ---
 
-```{r, warning=FALSE, echo=FALSE}
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
 require(graphstats)
 require(mgc)
 require(ggplot2)
 require(latex2exp)
+source('../../R/siem.R')  # so that we can have the model estimators in our scope, which are typically hidden
 ```
 
-# Basics
-
-## Setting
 
 Let $g=(V,E)$ be a graph, where $V$ is the set of vertices that is shared for all $i$, and $E_i$ is the set of binary undirected edges between pairs of vertices.  Let $A$ be a binary adjacency matrix where $a_{uv}=1$ if and only if there is an edge between $u$ and $v$, that is, $(uv) \in E$. 
-Assume $g$ is a realization of a random graph $G \sim F$, which is sampled from a distribution $F$.   
+Assume $g$ is a realization of a random graph $G \sim F$, which is sampled from a distribution $F$.  
+We consider a random graph models that generalizes the stochastic block model, the structured independent edge models (SIEM).  
+
+# Setting
 
 ## Statistical Model
 
 \begin{align*}
-  A \sim SIEM(Q,\tau)
+  A \sim SIEM(P, \tau)
 \end{align*}
 
 where $\tau$ is a grouping of the $|E|$ edges in $G$ into $C$ non-overlapping communities, that is,  
-$\cup_{i=1}^{C} \tau_i  =E$, and $\tau_i \cap \tau_j = \emptyset$ for all $i \neq j$. 
+$\cup_{i=1}^{C} \tau_i  =E$, and $\tau_i \cap \tau_j = \emptyset$ for all $i \neq j$, and $P$ is a matrix of probabilities where $P_{ij}$ represents the probability of an edge existing between $\tau_i$ and $tau_j$.
+
+## Estimators
+
+### Probability
+
+Assuming the number of edges that exist within each edge community $k$ is binomially distributed with $n$ trials (the total number of possible edges) and probability $p$ (the probability of an edge existing at each possible location), the likelihood function is of the form:
+
+\begin{align*}
+  L(p | n, k) &= \prod_{k=0}^n f_B(n, k | p) = \prod_{k=0}^n \begin{pmatrix}n \\ k\end{pmatrix}p^k (1 - p)^{n - k} \\
+  log(L(p | n, k)) &= \sum_{k=0}^n \log\left(\begin{pmatrix}n \\ k\end{pmatrix}\right) + k\log (p) + (n - k)\log (1 - p)
+\end{align*}
+
+Maximizing with respect to $p$:
+
+\begin{align*}
+    \frac{\delta log(L(p | n, k))}{\delta p} &= \sum_{k=0}^n \frac{k}{p} - \frac{n - k}{1 - p} = 0 \\
+    \frac{k}{p} &= \frac{n - k}{1 - p} \\
+    \mu_p &= \mathbb{E}[p] = \frac{k}{n}
+\end{align*}
+
+to get the variance term, we note that $\hat{p} = \frac{k}{n}$, so then $Var(p) = \sigma_p = Var\left(\frac{k}{n}\right) = \frac{1}{n^2} Var(k)$. The binomial distriibution can be thought of as an aggregation of $n$ independent bernoulli trials with probability $p$; that is, $X_i \overset{iid}{\sim} Bern(p)$ where $\mathbb{E}\left[X_i\right] = p$. Given that the variance of independent events sum, we can expand:
+
+\begin{align*}
+  Var(\sum_{i=1}^n X_i) &= \sum_{i=1}^n Var(X_i) = \sum_{i=1}^n E\left[X_i^2\right] - E\left[X_i\right]^2 \\
+  \mathbb{E}\left[X_i^2\right] &= 0^2(1-p) + 1^2(p) = p \\
+  Var(k) &= \sum_{i=1}^n \mathbb{E}\left[X_i^2\right] - \mathbb{E}\left[X_i\right]^2 \\
+  &= np(1-p)
+\end{align*}
+
+Then $\sigma_\hat{p} = \frac{p(1-p)}{n}$. As we can see, $p$ is normally distributed where:
+
+\begin{align*}
+  p \sim \mathcal{N}\left(\mu_p, \sigma_p\right)
+\end{align*}
+
+### Difference in Probability
+
+Given the above model, we can see that for any pair of edge communities $i, j$, their difference $\delta_{ij} = p_i - p_j$, then:
+
+\begin{align*}
+  \delta_{ij} \sim \mathcal{N}\left(\mu_{p_i} - \mu_{p_j}, \sigma_{p_i} + \sigma_{p_j}\right)
+\end{align*}
 
 ## Hypothesis Testing
 
@@ -101,8 +144,8 @@ model <- gs.siem.fit(X, Es)  # fit siem model
 os_pval <- array(0, dim=c(2, 2))
 for (i in 1:length(Es)) {
   for (j in 1:length(Es)) {
-    os_pval[i, j] <- gs.siem.sample_test(model$pr[i], model$pr[j], model$var[i],
-                                         model$var[j], 1, alt='greater')$p
+    os_pval[i, j] <- gs.siem.sample.test(model$pr[i], model$pr[j], model$var[i],
+                                         model$var[j], df=1, alt='greater')$p
   }
 }
 
@@ -145,8 +188,275 @@ mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
 
 ```{r}
 model2 <- gs.siem.fit(X2, Es)  # fit siem model
-gs.siem.sample_test(model$dpr[2, 1], model2$dpr[2, 1], model2$dvar[2, 1],
-                    model2$dvar[2, 1], 2, alt='greater')$p
+gs.siem.sample.test(model$dpr[2, 1], model2$dpr[2, 1], model2$dvar[2, 1],
+                    model2$dvar[2, 1], df=2, alt='greater')$p
 ```
 
 and we can see that at $\alpha=0.05$ we detect a significant difference between the two.
+
+# Simulations
+
+## P Estimation
+
+First, we investigate the consistency of our estimators, or whether the estimators converge to the true parameters as sample size increases:
+
+```{r}
+ns = round(10^seq(1, log10(1225), length=10))
+ps = seq(0, 1, length=11)
+ndat = length(ns)*length(ps)
+empty_ar = array(NaN, dim=c(ndat))
+results = data.frame(n = empty_ar, p = empty_ar, mu = empty_ar, var = empty_ar)
+counter = 1
+nsim = 10
+for (n in ns) {
+  for (p in ps) {
+    v_ar = array(NaN, dim=c(nsim))
+    m_ar = array(NaN, dim=c(nsim))
+    for (i in 1:nsim) {
+      pemp = replicate(n, {
+        dat = rbinom(n = n, p = p, size=1)
+        phat = sum(dat)/length(dat)
+        })
+      m_ar[i] = abs(mean(pemp) - p)
+      v_ar[i] = abs(var(pemp) - model.var(p, n))
+    }
+    results[counter,] = data.frame(n = n, p = p, mu = mean(m_ar),
+                                   var = mean(v_ar))
+    counter <- counter + 1
+  }
+}
+
+results$n = factor(results$n)
+results$p = factor(results$p)
+
+ggplot(results, aes(x = n, y = mu, group=p, color=p)) +
+  geom_line() +
+  ggtitle(TeX('Consistency of estimator $\\mu_{\\hat{p}}$, average of 10 simulations')) +
+  xlab("Number of possible edges") +
+  ylab(TeX('$\\left|p_{analytical} - \\mu_{\\hat{p}}\\right|$')) +
+  scale_color_discrete(name=TeX("$p_{analytical}$"))
+
+ggplot(results, aes(x = n, y = var, group=p, color=p)) +
+  geom_line() +
+  ggtitle(TeX('Consistency of estimator $\\sigma^2_{\\hat{p}}$, average of 10 simulations')) +
+  xlab("Number of possible edges") +
+  ylab(TeX('$\\left|Var(p_{analytical}) - \\sigma^2_{\\hat{p}}\\right|$')) +
+  scale_color_discrete(name=TeX("$p_{analytical}$"))
+```
+
+As we can see, as our number of possible edges increases, our estimators for $\mu$ and $\sigma^2$ converge, indicating we have consistent estimators. 
+
+### Statistical Power
+
+```{r}
+# computes the power of the model under a given significance level
+# accepts params for a number of simulations to average power over, and a
+# number of graphs for each computation
+# number of edges defines the number of edges to use in the binomial simulation
+t.power.p <- function(means, ne=1225, sig=.95, nsim=100, ngr=100) {
+  ucut = qt(sig, df=ngr)  # t-statistic of null at the given significance level with ne-2 degrees of freedom
+  ts = replicate(nsim, {  # replicate our described test n tsim times
+    alt = replicate(ngr, sum(rbinom(n = ne, size=1, prob = means[1]))/ne)
+    null = replicate(ngr, sum(rbinom(n = ne, size=1, prob = means[2]))/ne)
+    t.test(alt, null, alternative = "greater", var.equal = FALSE)$statistic
+  })
+  ana_tstat = gs.siem.sample.test(means[1], means[2], model.var(means[1], n=ne),
+                                  model.var(means[2], n=ne), n1=ngr, n2=ngr)$stat
+  return(list(power=sum(ts > ucut)/nsim, diff=abs(mean(ts) - ana_tstat)/ana_tstat))
+}
+```
+
+In this experiment, we will analyze the power of our test developed. Assuming that the entire graph has average $p=0.5$, we will simulated from a block model where the probabiliy of the within-group edges have $p_{within}=0.5 + \epsilon$, and the outside of group edges have $p_{outside} = 0.5 - \epsilon$. We will assume a significance level of $0.95$ for our $T$ cutoff, and fix the number of observations between 0 and $\frac{2550}{2}=1225$, since our real data has $2450$ total edges yielding $1225$ observations per-group. Our simulation will be structured as follows:
+
++ Simulate $n$ edges from a binomial distribution given $ne, p + \epsilon$, the alternative samples.
++ Simulate $n$ edges from a binomial distribution given $ne, p - \epsilon$, the null samples.
++ Compute the empirical distribution for $\hat{p}$ for the alternative and null samples, respectively by repeating the above procedure $ns$ times.
++ derive the power from the respective empirical distribution of $\hat{p}$ as the fraction of test statistics more extreme than the critical test statistic.
++ compute the difference between the average simulated test statistic and the analytical test statistic.
+
+```{r}
+p = 0.5
+diff = seq(0,  0.1, length=21)
+ns = round(10^seq(1, log10(1225), length=10))
+ndat = length(ns)*length(diff)
+empty_ar = array(NaN, dim=c(ndat))
+dat = data.frame(ns = empty_ar, diff=empty_ar, pow=empty_ar, tdiff=empty_ar)
+counter = 1
+for (j in 1:length(ns)) {
+  n = ns[j]
+  for (i in 1:length(diff)) {
+    in.p = p + diff[i]/2
+    out.p = p - diff[i]/2
+    # under the model, assume the p_in is the mean within group, and p_out is the mean outside of group
+    # compute the standard deviation according to the model
+    means = c(in.p, out.p)
+    result = t.power.p(means, ne=n)
+    dat[counter,] = c(ns=n, diff=diff[i], pow=result$power, tdiff=result$diff)
+    counter = counter + 1
+  }
+}
+```
+
+First, we look at power as a function of the number of edges in our simulation, as we vary the difference between the within community and outside community probabilities:
+
+```{r}
+dat$ns = factor(dat$ns)
+dat$diff = factor(dat$diff)
+thresh = data.frame(diff=diff, sig=.05)
+thresh$diff = factor(thresh$diff)
+ggplot(dat,  aes(x = diff, y = pow, group=ns, color=ns)) +
+  geom_line() +
+  ggtitle(TeX('Power of Unequal-Variance T-Test with 100 simulations, 100 $\\frac{graphs}{simulation}$')) +
+  xlab(TeX('Difference in $p_{within} - p_{outside}$')) +
+  ylab('Power of Test') +
+  scale_color_discrete(name="number of edges") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+And we also look at how the analytical test-statistic computed from our trials compares to the empirical test-statistics estimated from our simulation procedure:
+
+```{r}
+ggplot(dat, aes(x = diff, y = tdiff, group=ns, color=ns)) +
+  geom_line() +
+  ggtitle(TeX('Analytical T-Test compared to Empirical T-Test')) +
+  xlab(TeX('Difference in $\\left|p_{within} - p_{outside}\\right|$')) +
+  ylab(TeX('$\\frac{\\left|\\bar{T}_{empirical} - T_{analytical}\\right|}{T_{analytical}}')) +
+  scale_color_discrete(name="number of edges") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## Delta Estimation
+
+### Consistency of Estimators for $\hat{\delta}$
+
+Here, we will verify that our estimators of $\hat{\delta}$ are correct, that is, that our estimation gets more accurate as our sample size increases:
+
+```{r}
+ns = round(10^seq(1, log10(1225), length=10))
+ds = seq(0, 1.0, length=21)
+ndat = length(ns)*length(ds)
+empty_ar = array(NaN, dim=c(ndat))
+results = data.frame(n = empty_ar, d = empty_ar, mu = empty_ar, var = empty_ar)
+counter = 1
+nsim = 10
+for (n in ns) {
+  for (d in ds) {
+    v_ar = array(NaN, dim=c(nsim))
+    m_ar = array(NaN, dim=c(nsim))
+    for (i in 1:nsim) {
+      p1 = 0.5 + d/2
+      p2 = 0.5 - d/2
+      demp = replicate(n, {
+        dat1 = rbinom(n = n, p = p1, size=1)
+        dat2 = rbinom(n = n, p = p2, size=1)
+        dhat = sum(dat1 - dat2)/length(dat1)
+        })
+      params <- gs.siem.model.params(demp)
+      m_ar[i] = abs(params$p - d)
+      v_ar[i] = abs(params$var - (model.var(p1, n) + model.var(p2, n)))
+    }
+    results[counter,] = data.frame(n = n, d = d, mu = mean(m_ar),
+                                   var = mean(v_ar))
+    counter <- counter + 1
+  }
+}
+
+results$n = factor(results$n)
+results$d = factor(results$d)
+
+ggplot(results, aes(x = n, y = mu, group=d, color=d)) +
+  geom_line() +
+  ggtitle(TeX('Consistency of estimator $\\mu_{\\hat{\\delta}}$, average of 10 simulations')) +
+  xlab("Number of possible edges") +
+  ylab(TeX('$\\left|\\delta_{analytical} - \\mu_{\\hat{\\delta}}\\right|$')) +
+  scale_color_discrete(name=TeX("$\\delta_{analytical}$"))
+
+ggplot(results, aes(x = n, y = var, group=d, color=d)) +
+  geom_line() +
+  ggtitle(TeX('Consistency of estimator $\\sigma^2_{\\hat{\\delta}}$, average of 10 simulations')) +
+  xlab("Number of possible edges") +
+  ylab(TeX('$\\left|Var(\\delta_{analytical}) - \\sigma^2_{\\hat{\\delta}}\\right|$')) +
+  scale_color_discrete(name=TeX("$\\delta_{analytical}$"))
+```
+
+As we can see, as our number of possible edges increases, our estimators for $\mu$ and $\sigma^2$ converge, indicating we have consistent estimators. 
+
+### Statistical Power
+
+```{r}
+# computes the power of the model under a given significance level
+# accepts params for a number of simulations to average power over, and a
+# number of graphs for each computation
+# number of edges defines the number of edges to use in the binomial simulation
+t.power.delta = function(diffs, ne=1225, sig=.95, nsim=100, ngr=100) {
+  ucut = qt(sig, df=ngr)  # t-statistic of null at the given significance level with ne-2 degrees of freedom
+  ts = replicate(nsim, {  # replicate our described test n tsim times
+    alt = replicate(ngr, sum(rbinom(n = ne, size=1, prob = 0.5 + diffs[1]/2))/ne - sum(rbinom(n = ne, size=1, prob=0.5 - diffs[1]/2))/ne)
+    null = replicate(ngr, sum(rbinom(n = ne, size=1, prob = 0.5 + diffs[2]/2))/ne - sum(rbinom(n = ne, size=1, prob = 0.5 - diffs[2]/2))/ne)
+    t.test(alt, null, alternative = "greater", var.equal = FALSE)$statistic
+  })
+  v1 =  model.var(0.5 + diffs[1]/2, ne) + model.var(0.5 - diffs[1]/2, ne)
+  v2  =  model.var(0.5 + diffs[2]/2, ne) + model.var(0.5 - diffs[2]/2, ne)
+  ana_tstat = gs.siem.sample.test(diffs[1], diffs[2], v1, v2, n1=ngr, n2=ngr)$stat
+  return(list(power=sum(ts > ucut)/nsim, diff=abs(mean(ts) - ana_tstat)/ana_tstat))
+}
+```
+
+In this experiment, we will analyze the power of our test developed. Assuming that the entire graph has average $p=0.5$, we will simulated from a block model where the probabiliy of the within-group edges have $p_{within}=0.5 + \epsilon$, and the outside of group edges have $p_{outside} = 0.5 - \epsilon$ for two different populations of graphs. We will assume a significance level of $0.95$ for our $T$ cutoff, and fix the number of observations between 0 and $\frac{2550}{2}=1225$, since our real data has $2450$ total edges yielding $1225$ observations per-group. Our simulation will be structured as follows:
+
++ Simulate $n$ graphs with edges from a binomial distribution given $ne, p + \epsilon_1$ and $ne, p - \epsilon_1$, the alternative samples.
++ Simulate $n$ graphs with edges from a binomial distribution given $ne, p + \epsilon_2$ and $ne, p - \epsilon_2$, the null samples.
++ Compute the empirical distribution for $\hat{p}$ for the alternative and null samples, respectively by repeating the above procedure $ns$ times.
++ derive the power from the respective empirical distribution of $\hat{\delta}$ as the fraction of test statistics more extreme than the critical test statistic.
++ compute the difference between the average simulated test statistic and the analytical test statistic.
+
+```{r}
+maxdiff = 0.2
+diff = seq(0,  maxdiff, length=21)
+ns = round(10^seq(1, log10(1225), length=10))
+ndat = length(ns)*length(diff)
+empty_ar = array(NaN, dim=c(ndat))
+dat = data.frame(ns = empty_ar, diff=empty_ar, pow=empty_ar, tdiff=empty_ar)
+counter = 1
+for (j in 1:length(ns)) {
+  n = ns[j]
+  for (i in 1:length(diff)) {
+    in.d = maxdiff + diff[i]/2
+    out.d = maxdiff - diff[i]/2
+    # under the model, assume the p_in is the mean within group, and p_out is the mean outside of group
+    # compute the standard deviation according to the model
+    diffs = c(in.d, out.d)
+    result = t.power.delta(diffs, ne=n)
+    dat[counter,] = c(ns=n, diff=diff[i], pow=result$power, tdiff=result$diff)
+    counter = counter + 1
+  }
+}
+```
+
+First, we look at power as a function of the number of edges in our simulation, as we vary the difference between the $\delta$ for each population of graphs:
+
+```{r}
+dat$ns = factor(dat$ns)
+dat$diff = factor(dat$diff)
+thresh = data.frame(diff=diff, sig=.05)
+thresh$diff = factor(thresh$diff)
+ggplot(dat,  aes(x = diff, y = pow, group=ns, color=ns)) +
+  geom_line() +
+  ggtitle(TeX('Power of Unequal-Variance T-Test with 100 simulations, 100 $\\frac{graphs}{simulation}$')) +
+  xlab(TeX('Difference in $\\left|\\delta_1 - \\delta_2\\right|$')) +
+  ylab('Power of Test') +
+  scale_color_discrete(name="number of edges") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+And we also look at how the analytical test-statistic computed from our trials compares to the empirical test-statistics estimated from our simulation procedure:
+
+```{r}
+ggplot(dat, aes(x = diff, y = tdiff, group=ns, color=ns)) +
+  geom_line() +
+  ggtitle(TeX('Analytical T-Test compared to Empirical T-Test')) +
+  xlab(TeX('Difference in $\\left|\\delta_1 - \\delta_2\\right|$')) +
+  ylab(TeX('$\\frac{\\left|\\bar{T}_{empirical} - T_{analytical}\\right|}{T_{analytical}}')) +
+  scale_color_discrete(name="number of edges") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```

@@ -4,14 +4,19 @@
 \alias{gs.siem.fit}
 \title{Structured Independent Edge Model, Single Sample}
 \usage{
-gs.siem.fit(X, Es, alt = "greater")
+gs.siem.fit(X, Es, alt = "greater", i = NULL, j = NULL)
 }
 \arguments{
-\item{X}{[v, v] the binary graphs with v vertices as a collection of adjacency matrices.}
+\item{X}{[v, v] the binary graph with v vertices.}
 
 \item{Es}{[[e]] a numbered list where each element corresponds to a community of edges. Each community should consist of the 1-dimensional indices of an edge.}
 
-\item{alt='greater'}{the alternative hypothesis for the p-value.}
+\item{alt='greater'}{the alternative hypothesis for each edge test.
+\itemize{
+\item{'greater'}{p corresponds to H0: x1 <= x2, HA: x1 > x2. R(x1, x2) = x1 > x2}
+\item{'neq'}{p corresponds to H0: x1 = x2, HA: x1 != x2. R(x1, x2) = x1 != x2}
+\item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2. R(x1, x2) = x1 < x2}
+}}
 }
 \value{
 pr [e] a probability array corresponding to the probability of an edge connecting each edge community.
@@ -22,7 +27,7 @@ dpr [e, e] an array consisting of the paired differences in probability where dp
 
 dvar [e, e] an array consisting of the variance of the estimate of the paired differences in probability, where dvar_{ij} = var_i + var_j.
 
-pv [e, e] pv_{ij} is the p-value of false rejection of H0 that pr_i !? pr_j in favor of HA that pr_j ? pr_i.
+pv [e, e] pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).
 }
 \description{
 An independent-edge generalization of the traditional Stochastic Block Model.

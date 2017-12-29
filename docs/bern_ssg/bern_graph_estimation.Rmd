@@ -1,0 +1,239 @@
+---
+title: "Bernoulli Distributed Graph Estimation"
+author: "Eric Bridgeford"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bernoulli Graph Estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  header-includes:
+   - \usepackage{amsfonts}
+   - \usepackage{amsmath}
+   - \usepackage[linesnumbered,lined,boxed,commentsnumbered]{algorithm2e}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+```
+
+In this tutorial, we discuss our estimator of a bernoulli distribution per edge for a given graph.
+
+# Framework
+
+## Setting
+
++ $\mathbb{G}: \Omega \rightarrow \mathcal{G}$ is a graph-valued RV with samples $G_i \sim \mathbb{G}$
++ For each $G_i \in \mathcal{G}$, we have $G_i = (V, E_i)$; that is, each $G_i$ is defined by a set of vertices $V$ and a set of edges $E_i$, where $w_i: V \times V \rightarrow \{0, 1\}$, and $w_i(e_{uv}) \in \{0, 1\}$. That is, each graph has binary edges.
++ $\mathbb{A}: \Omega \rightarrow \mathcal{A}$, a adjacency-matrix-valued RV with samples $A_i \sim \mathbb{A}$, where $\mathcal{A}$ is the space of possible adjacency-matrices and $A_i \in \mathcal{A}$.
++ $A_i \in \mathcal{A}$, and $\mathcal{A} \subseteq \mathbb{R}^{V \times V}$. 
++ Each graph $G_i$ can be represented as an adjacency-matrix $A_i$.
+
+## Statistical Goal
+
+Identify the sufficient parameters to characterize the distribution of connected and disconnected edges.
+
+## Model
+
+Assume that the edge weights can be characterized by a bernoulli RV; that is:
+
+\begin{align}
+  \mathbb{A}_{uv} \sim Bern(p_{uv})
+\end{align}
+
+where $p_{uv}$ is the probability of edge $e_{uv}$ being connected.
+
+Then our likelihood function is simply:
+
+\begin{align}
+  L_{\mathbb{A}}(A_i; \theta) &= \prod_{(u, v) \in E_i} Bern(w_i(e_{uv}); p_{uv}) \\
+  &= \prod_{(u, v) \in E_i} p_{uv}^{w_i(e_{uv})}(1 - p_{uv})^{1 - w_i(e_{uv})}
+\end{align}
+
+# Estimators
+
+## Bernoulli Parameters
+
+Using MLE, it is easy to see that:
+
+\begin{align}
+  \hat{p}_{uv} = \frac{1}{n} \sum_{i=1}^n w_i(e_{uv})
+\end{align}
+
+where $w_i(e_{uv}) \in \{0, 1\}$ is the binary edge weight of edge $e_{uv}$. 
+
+Note that if $w_i(e_{uv}) = 0 \;\forall i$, then $p_{uv} = 0$, which is undesirable since we only have a finite sample (and successive samples where $w_i(e_{uv})) \neq 0$ would lead to poor model performance), and vice versa for $p_{uv} = 1$ when $w_i(e_{uv}) = 0 \;\forall i$. Then consider the smoothed estimator:
+
+\begin{align}
+  p_{uv} = \begin{cases}
+    n_n & max_{i}(w_i(e_{uv})) = 0 \\
+    1-n_n & max_{i}(w_i(e_{uv})) = 1 \\
+    p_{uv} & else
+  \end{cases}
+\end{align}
+
+# Pseudo Code
+
+Below is bare-bones pseudo code for each method. Note that optional parameters are omitted.
+
+```{r eval=FALSE}
+# A function to estimate a beta distribution for each edge in a graph.
+# Inputs
+#   sample: a [n x m x s] element array, where we have s observations of nxm graphs.
+# Outputs
+#   p: a [n x m] matrix denoting the probability parameter per edge.
+sg.bern.graph_estimator(sample, smooth=TRUE):
+  p = sum(sample, 3)/s  # sum over the p dimension
+  if (smooth) {
+    np = 1/(10*s)
+    p[p == 0] = np
+    p[p == 1] = 1 - np 
+  }
+  return p
+
+# a function to estimate a beta distribution for a sample.
+# Inputs
+#   sample: a [s] element vector that is between 0 and 1.
+# Outputs
+#   p: the probability parameter MLE per edge given the sample.
+sg.bern.estimator(sample, smooth=TRUE):
+  p = sum(sample)/s
+  if (smooth) {
+    np = 1/(10*s)
+    p = ifelse(p == 0, np, p)
+    p = ifelse(p == 1, 1 - np, p)
+  }
+  return p
+  
+# a function to generate random beta-distributed samples.
+# Inputs
+#   p: a [n x m] matrix of the probability parameters per edge.
+#   s: the number of samples.
+# Outputs
+#   samp: a [n x m x p] array sampling from the [n x m] graph RV p times.
+sg.beta.sample_graph(p, s):
+  # [n x m x s] array of random uniforms btwn 0 and 1
+  rvals = uniform(n*m*s, from=0, to=1, dim=c(n, m, s))
+  # for each i=1:s, set the value of an edge to 1 if our random value is less than the p,
+  # and 0 otherwise
+  for i=1:s {
+    samp[,,i] = (rvals[,,i] < p)
+  }
+  return samp
+```
+
+# Simulations
+
+## Evaluation
+
+### Frobenius Norm of Difference
+
+When evaluating the similarity of two matrices, we will use the frobenius norm of the difference:
+
+\begin{align*}
+  ||X - Y||_F = \sqrt{\sum_{i=1}^n \sum_{j=1}^n |x_{ij} - y_{ij}|^2} = \sqrt{tr((X - Y)^*(X - Y))}
+\end{align*}
+
+## Estimation of Parameters is Empirically Consistent
+
+Here, we will verify that our estimator converges for arbitrary random $p$ as our number of samples increases, given that our sampling code is correct (see previous section and test code). We are using the Maximum Likelihood Estimators for $p$, which should provide us with estimation of a consistent $\hat{p}$ for $p$. 
+
+### Visualization
+
+We begin by plotting the estimated $p$ and compare to the true $p$ for 50 and 1000 observed samples respectively. Due to the fact that the MLE produces a consistent estimator, we know that our estimated parameters should be closer to the true values with more samples.
+
+```{r fig.width=8}
+require(subgraphing)
+require(ggplot2)
+require(reshape2)
+library(MASS)
+library(scales)
+require(Rmisc)
+
+lseq <- function(from, to, n) {
+  return(round(exp(seq(log(from), log(to), length.out = n))))
+}
+
+jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F",
+                                 "yellow", "#FF7F00", "red", "#7F0000"))
+plot_param <- function(mtx, title='Parameter', lims=c(0, 1)) {
+  meltobj <- melt(mtx)
+  colnames(meltobj) <- c('X', 'Y', 'value')
+  plt <- ggplot(meltobj, aes(x=X, y=Y, fill=value)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = jet.colors(7), limits=lims, oob=squish) +
+    xlab('X dimension') +
+    ylab('Y dimension') +
+    ggtitle(title)
+  return(plt)
+}
+xdim <- 3
+ydim <- 3
+p <- array(runif(xdim*ydim, min=0, max=1), dim=c(xdim, ydim))  # true p
+n_vec <- c(50, 1000)
+n_spaces <- length(n_vec)
+n_bin <- 15
+edge_err <- array(NaN, dim=c(xdim, ydim, n_spaces))  # the error per edge per iteration
+err <- array(NaN, dim=c(n_spaces))  # the average error per iteration
+hist_breaks <- seq(0, 1, length.out=n_bin)  # beta distr btwn 0 and 1
+
+for (k in 1:length(n_vec)) {
+  edge_distr_plots <- list()
+  n <- n_vec[k]
+  samp <- sg.bern.sample_graph(p, n)
+  counter <- 1
+  est <- sg.bern.graph_estimator(samp)
+  params <- plot_param(est$p, title=paste('Estimated p, n=', n, sep=""))
+  print(params)
+}
+params <- plot_param(p, title='True p')
+print(params)
+```
+
+As we can see, after 1000 samples, our estimate is much closer to the true $p$ than at only 50 samples, as we would intuitively expect.
+
+### Simulation
+
+For this simulation, we will do as follows:
+
++ Sample n observations from a 3x3 graph RV where each edge obeys the beta distribution with parameters $p$.
++ Histogram bin the values into 20 bins from 0 to 1.
++ Show the average MSE (average over all of the edges) between the density estimation per edge and the true density function per edge approaches 0 as $n \rightarrow \infty$ as a function of n.
++ Show frobenius norm of difference between estimated $\hat{p}$ and true $p$ as a function of the number of samples n.
+
+We know that by convergence, if we sample a large number of values our sample density should approximate to the true density better and better, and this simulation checks that this property is satisfied. Due to consistency, we expect that as n increases we should get closer and closer approximations of $p$. and as such the difference (frobenius norm of the difference) between the estimated $\hat{p}$ and true $p$ should decline. 
+
+```{r fig.width=8}
+n_vec <- lseq(50, 5000, 20)
+n_spaces <- length(n_vec)
+diff <- list(p=array(NaN, dim=c(n_spaces)))
+
+for (k in 1:length(n_vec)) {
+  n <- n_vec[k]
+  samp <- sg.bern.sample_graph(p, n)
+
+  est <- sg.bern.graph_estimator(samp)
+  diff$p[k] <- norm(est$p - p, 'F')
+}
+
+base_breaks <- function(n = 10){
+    function(x) {
+        axisTicks(log10(range(x, na.rm = TRUE)), log = TRUE, n = n)
+    }
+}
+
+param_results <- data.frame(n=n_vec, p=diff$p)
+param_results <- as.data.frame.array(melt(param_results, id="n", variable.name="parameter"))
+param_err_plot <- ggplot(param_results, aes(x=n, y=value, group=parameter, color=parameter)) +
+  geom_line(size=3) +
+  scale_x_log10(labels=trans_format("log10", math_format(10^.x)), breaks=trans_breaks("log10", function(x) 10^x, n=4)) +
+  xlab('Number of Samples') +
+  ylab('Norm of Difference') +
+  ggtitle('Empirical Consistency of Subgraphing Estimate') +
+  theme(text=element_text(size=12)) +
+  annotation_logticks(base = 10)
+
+multiplot(param_err_plot, cols = 1)
+```
+
+Looking at the bottom plot, we can see that as we increase our number of samples, of parameters are clearly converging to the true parameters. This indicates that our estimators are empirically consistent.

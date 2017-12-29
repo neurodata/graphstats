@@ -1,0 +1,74 @@
+---
+title: "Bernoulli Incoherent Subgraph Estimation"
+author: "Eric Bridgeford"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bernoulli Incoherent Subgraph Estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  header-includes:
+   - \usepackage{amsfonts}
+   - \usepackage{amsmath}
+   - \usepackage[linesnumbered,lined,boxed,commentsnumbered]{algorithm2e}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+```
+
+In this tutorial, we discuss our estimator of a bernoulli distribution per edge for a given graph, and the strategies to identify an incoherent subgraph from the data.
+
+# Framework
+
+## Setting
+
++ $\mathbb{G}: \Omega \rightarrow \mathcal{G}$ is a graph-valued RV with samples $G_i \sim \mathbb{G}$
++ For each $G_i \in \mathcal{G}$, we have $G_i = (V, E_i)$; that is, each $G_i$ is defined by a set of vertices $V$ and a set of edges $E_i$, where $w_i: V \times V \rightarrow \{0, 1\}$, and $w_i(e_{uv}) \in \{0, 1\}$. That is, each graph has binary edges.
++ $\mathbb{A}: \Omega \rightarrow \mathcal{A}$, a adjacency-matrix-valued RV with samples $A_i \sim \mathbb{A}$, where $\mathcal{A}$ is the space of possible adjacency-matrices and $A_i \in \mathcal{A}$.
++ $A_i \in \mathcal{A}$, and $\mathcal{A} \subseteq \mathbb{R}^{V \times V}$. 
++ Each graph $G_i$ can be represented as an adjacency-matrix $A_i$.
+
+## Statistical Goal
+
+Identify the sufficient parameters to characterize the distribution of connected and disconnected edges.
+
+## Model
+
+Assume that the edge weights can be characterized by a bernoulli RV; that is:
+
+\begin{align}
+  \mathbb{A}_{uv} \sim Bern(p_{uv})
+\end{align}
+
+where $p_{uv}$ is the probability of edge $e_{uv}$ being connected.
+
+Then our likelihood function is simply:
+
+\begin{align}
+  L_{\mathbb{A}}(A_i; \theta) &= \prod_{(u, v) \in E_i} Bern(w_i(e_{uv}); p_{uv}) \\
+  &= \prod_{(u, v) \in E_i} p_{uv}^{w_i(e_{uv})}(1 - p_{uv})^{1 - w_i(e_{uv})}
+\end{align}
+
+# Estimators
+
+## Bernoulli Parameters
+
+Using MLE, it is easy to see that:
+
+\begin{align}
+  \hat{p}_{uv} = \frac{1}{n} \sum_{i=1}^n w_i(e_{uv})
+\end{align}
+
+where $w_i(e_{uv}) \in \{0, 1\}$ is the binary edge weight of edge $e_{uv}$. 
+
+Note that if $w_i(e_{uv}) = 0 \;\forall i$, then $p_{uv} = 0$, which is undesirable since we only have a finite sample (and successive samples where $w_i(e_{uv})) \neq 0$ would lead to poor model performance), and vice versa for $p_{uv} = 1$ when $w_i(e_{uv}) = 0 \;\forall i$. Then consider the smoothed estimator:
+
+\begin{align}
+  p_{uv} = \begin{cases}
+    n_n & max_{i}(w_i(e_{uv})) = 0 \\
+    1-n_n & max_{i}(w_i(e_{uv})) = 1 \\
+    p_{uv} & else
+  \end{cases}
+\end{align}
+
