@@ -31,7 +31,7 @@ We consider a random graph models that generalizes the stochastic block model, t
 \end{align*}
 
 where $\tau$ is a grouping of the $|E|$ edges in $G$ into $C$ non-overlapping communities, that is,  
-$\cup_{i=1}^{C} \tau_i  =E$, and $\tau_i \cap \tau_j = \emptyset$ for all $i \neq j$, and $P$ is a matrix of probabilities where $P_{ij}$ represents the probability of an edge existing between $\tau_i$ and $tau_j$.
+$\cup_{i=1}^{C} \tau_i  =E$, and $\tau_i \cap \tau_j = \emptyset$ for all $i \neq j$, and $P$ is a matrix of probabilities where $P_{ij}$ represents the probability of an edge existing between $\tau_i$ and $\tau_j$.
 
 ## Estimators
 
@@ -129,10 +129,10 @@ pedge$community <- factor(pedge$community)
 ggplot(pedge, aes(x=community, y=p, fill=result)) +
   geom_bar(stat="identity", width=.5, position = "dodge") +
   ggtitle("Comparing True vs. Sim Edge Community, Sample 1")
-mgc.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
-                     ylabel = "vertex", title = "Community Each Edge is from, Sample 1", ffactor=TRUE)
-mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
-                     ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 1")
+gs.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
+                    ylabel = "vertex", title = "Community Each Edge is from, Sample 1", ffactor=TRUE)
+gs.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
+                    ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 1", ffactor=TRUE)
 ```
 
 ## One Sample Test
@@ -149,7 +149,7 @@ for (i in 1:length(Es)) {
   }
 }
 
-mgc.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i$"),
+gs.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i$"),
                      ylabel = TeX("$c_j$"), title = TeX("$p$-value that $p_{c_i} > p_{c_j}$, Sample 1"),
                      limits=c(0, 1), vfactor=TRUE)
 ```
@@ -180,10 +180,10 @@ pedge$community <- factor(pedge$community)
 ggplot(pedge, aes(x=community, y=p, fill=result)) +
   geom_bar(stat="identity", width=.5, position = "dodge") +
   ggtitle("Comparing True vs. Sim Edge Community, Sample 2")
-mgc.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
+gs.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
                      ylabel = "vertex", title = "Community Each Edge is from, Sample 2", ffactor=TRUE)
-mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
-                     ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 2")
+gs.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
+                     ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 2", ffactor=TRUE)
 ```
 
 ```{r}
@@ -196,7 +196,7 @@ and we can see that at $\alpha=0.05$ we detect a significant difference between 
 
 # Simulations
 
-## P Estimation
+## $p$ Estimation
 
 First, we investigate the consistency of our estimators, or whether the estimators converge to the true parameters as sample size increases:
 

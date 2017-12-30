@@ -16,12 +16,12 @@
 #' @return pv [e, e] pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).
 #' @author Eric Bridgeford
 #' @export
-gs.siem.fit <- function(X, Es, alt='greater') {
+gs.siem.fit <- function(X, Es, alt='greater', i=NULL, j=NULL) {
   X[X > 0] <- 1  # ensure binarization
 
   # compute parameters for each edge-set
   params <- sapply(Es, function(e1) {
-    model.params(X[e1])
+    gs.siem.model.params(X[e1])
   })
 
   # reorder for simplicity
@@ -36,7 +36,7 @@ gs.siem.fit <- function(X, Es, alt='greater') {
 
   for (i in 1:nes) {
     for (j in 1:nes) {
-      pv[i, j] <- gs.siem.sample_test(pr[i], pr[j], vari[i], vari[j], 1, alt=alt)$p
+      pv[i, j] <- gs.siem.sample.test(pr[i], pr[j], vari[i], vari[j], df=1, alt=alt)$p
       dpr[i, j] <- pr[i] - pr[j]
       dvar[i, j] <- vari[i] + vari[j]
     }
@@ -48,11 +48,13 @@ gs.siem.fit <- function(X, Es, alt='greater') {
 #' Estimator Sample Test
 #'
 #' A function that computes the p value of falsely rejecting H0 that x_i !? x_j in favor of HA that x_j ? x_i for x_i, x_j from the same sample.
-#' @param x1 value of an estimator.
-#' @param x2 value of a second estimator.
+#' @param x1 expectation value of an estimator.
+#' @param x2 expectation value of a second estimator.
 #' @param var1 the variance of the first estimator.
 #' @param var2 the variance of the second estimator.
-#' @param nsamp the number of samples involved. If x1 and x2 are from the same sample, nsamp is 1.
+#' @param df=NULL the number of degrees of freedom involved. Ignored if n1 and n2 are provided.
+#' @param n1=NULL the number of observations for the first estimator. If n1 and n2 are not provided, the number of degrees of freedom is set to df.
+#' @param n2=NULL the number of observations for the second estimator. If n1 and n2 are not provided, the number of degrees of freedom is set to df.
 #' \itemize{
 #' \item{1}{x1 and x2 are from different samples}
 #' \item{2}{x1 and x2 are from different samples}
@@ -65,8 +67,16 @@ gs.siem.fit <- function(X, Es, alt='greater') {
 #' }
 #' @return p is the p-value of false rejection of H0 that !R(x1, x2) in favor of HA that R(x1, x2).
 #' @export
-gs.siem.sample_test <- function(x1, x2, var1, var2, nsamp, alt='greater') {
+gs.siem.sample.test <- function(x1, x2, var1, var2, df=NULL, n1=NULL, n2=NULL, alt='greater') {
   num <- (x1 - x2)
+  if (is.null(df) & (is.null(n1) & is.null(n2))) {
+    stop('Either df must be provided, or n1 and n2 should be provided.')
+  }
+  if (!is.null(df) & (!is.null(n1) | !is.null(n2))) {
+    stop('If the df is set, neither n1 nor n2 should be provided.')
+  } else if ((!is.null(n1) & !is.null(n2)) & !is.null(df)) {
+    stop('If n1 and n2 are provided, df should not.')
+  }
   if (alt == 'less') {
     num <- -num
   } else if (alt == 'neq') {
@@ -74,11 +84,18 @@ gs.siem.sample_test <- function(x1, x2, var1, var2, nsamp, alt='greater') {
   } else if (alt != 'greater') {
     stop("You have passed an invalid alternative hypothesis for the given test.")
   }
-  tstat <- num/sqrt(var1 + var2)
-  if (alt == 'neq') {
-    p = 1 - 2*pt(tstat, df=nsamp)
+  if (is.null(df)) {
+    dfnum = (var1/n1 + var2/n2)^2
+    dfdenom = var1^2/(n1^2*(n1 - 1)) + var2^4/(n2^2*(n2-1))
+    df = round(dfnum/dfdenom)
+    tstat = (x1 - x2)/sqrt(var1/n1 + var2/n2)
   } else {
-    p = 1 - pt(tstat, df=nsamp)
+    tstat <- num/sqrt(var1 + var2)
+  }
+  if (alt == 'neq') {
+    p = 1 - 2*pt(tstat, df=df)
+  } else {
+    p = 1 - pt(tstat, df=df)
   }
   return(list(stat=tstat, p=p, df=df))
 }
@@ -100,9 +117,59 @@ model.var <- function(p, n) {
 #' @param data an array containing the edge data for a particular edge in a single graph.
 #' @return var the variance associated with a particular edge community.
 #' @author Eric Bridgeford
-model.params <- function(data) {
+gs.siem.model.params <- function(data) {
   n <- length(data)
   m.mu <- sum(data)/n
   m.var <- model.var(m.mu, n)
   return(list(p=m.mu, var=m.var))
+}
+
+#' SIEM for Batch Detection
+#'
+#' A function that computes a test statistic associated with a particular arrangement of graphs
+#' using pairs of edge community estimators estimated by the SIEM.
+#' @param models [[n]] a list of the models fit to each of the n samples. Each element must contain the following:
+#' \itemize{
+#' \item{model}{a model fit by \code{\link{gs.siem.fit}}}
+#' \item{Z}{the batch id the particular model is from.}
+#' }
+#' @param i=1 the first edge set to use in the comparison.
+#' @param j=2 the second edge set to use in the comparison.
+#' @param tstat=gs.siem.batch.tstat.delta the test statistic to use. Should operate on a pair of models.
+#' @return tstat the test statistic.
+#' @seealso \code{\link{gs.siem.fit}}
+#' @author Eric Bridgeford
+#' @export
+gs.siem.batch.test <- function(models, i=1, j=2, tstat=gs.siem.batch.tstat) {
+  Z <- sapply(models, function(model) model$Z)
+  p <- sapply(models, function(model) model$model$pr[i])
+  q <- sapply(models, function(model) model$model$pr[j])
+  tstat <- gs.siem.batch.tstat(p, q, Z)
+  return(tstat)
+}
+
+#' Test Statistic for Batch Detection
+#'
+#' A function that computes a test statistic associated with a set of estimators.
+#' @param set1est [n] the first set of estimators for each element in the population.
+#' @param set2est [n] the second set of estimators for each element in the population.
+#' @param Z [n] the parameter labels for the batch each element is from.
+#' @return tstat the test statistic.
+#' @author Eric Bridgeford
+#' @export
+gs.siem.batch.tstat <- function(set1est, set2est, Z) {
+  Zset <- unique(Z)
+  n <- length(Zset)
+  pset <- sapply(Zset, function(z) mean(p[Z == z]))
+  qset <- sapply(Zset, function(z) mean(q[Z == z]))
+
+  D <- array(NaN, dim=c(n, n))
+  for (i in 1:n) {
+    for (j in i:n) {
+      D[i, j] <- abs(pset[i] - pset[j] - (qset[i] - qset[j]))
+    }
+  }
+
+  tstat <- max(D, na.rm=TRUE)
+  return(tstat)
 }
