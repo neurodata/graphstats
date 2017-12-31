@@ -1,0 +1,433 @@
+---
+title: "SIEM for Determination of Batch Effects in fMRI and dMRI Populations wrt Bilateral Connectivity"
+author: "Eric Bridgeford"
+date: "December 31, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+require(fmriutils)
+require(graphstats)
+require(mgc)
+require(ggplot2)
+require(latex2exp)
+require(igraph)
+require(stringr)
+source('../../R/siem.R')
+
+# accepts a matrix and thresholds/binarizes it
+thresh_matrix = function(matrix, thresh=0.5) {
+  thr = quantile(matrix, thresh)
+  return(ifelse(matrix > thr, 1, 0))
+}
+
+# accepts a [n x n] adjacency matrix and computes the probabilities associated with an SBM
+# where the vertices are grouped such that union_i(groups) = V(A) and
+# intersection(group_i, group_j) = NULL for all i != j
+block_data = function(matrix, groups) {
+  # matrix is adwi_thresh n x n array
+  # groups is a grouping of the vertices in the matrix as a list
+  blocks = array(NaN, dim=c(2,2))
+  for (i in 1:length(groups)) {
+    for (j in 1:length(groups)) {
+      blocks[i, j] = mean(matrix[groups[[i]], groups[[j]]])
+    }
+  }
+  return(blocks)
+}
+
+parse_class <- function(basepath, dsets, subjects) {
+  sex = list()
+  # disease = list()
+  age = list()
+  include = c()
+  for (dset in dsets) {
+    path_to_file = file.path(basepath, paste(dset, "_phenotypic_data.csv", sep=""))
+    tryCatch({
+      tab = read.csv(path_to_file)
+      tab$SEX[tab$SEX == '#' | is.na(tab$SEX) | is.nan(tab$SEX)] = NaN
+      if (dset == 'KKI2009') {
+        sexm <- 'M'
+      } else if (dset == 'Templeton114') {
+        sexm <- 1
+      } else {
+        sexm <- 2
+      }
+      tab$AGE_AT_SCAN_1 <- factor(tab$AGE_AT_SCAN_1)
+      tab$SEX = tab$SEX == sexm
+      tab = tab[complete.cases(tab$SEX),]
+      tab$AGE_AT_SCAN_1 = as.numeric(levels(tab$AGE_AT_SCAN_1))[tab$AGE_AT_SCAN_1]
+      for (idx in 1:dim(tab)[1]) {
+        subid = toString(tab[idx,]$SUBID)
+        sex[[subid]] = tab[idx,]$SEX
+        age[[subid]] = tab[idx,]$AGE_AT_SCAN_1
+        # disease[[subid]] = tab[idx,]$DSM_IV_TR
+      }
+    }, error=function(e) return(NaN))
+  }
+  
+  sclass = array(NaN, dim=c(length(subjects)))
+  ageclass = sclass
+  # diseaseclass = sclass
+  for (i in 1:length(subjects)) {
+    subject = subjects[i]
+    subid = sub('^0+(?=[1-9])', '', str_extract(subject, '(?<=sub-).*'), perl=TRUE)
+    idx = which(names(sex) == subid)
+    if (length(idx) >= 1) {
+      sclass[i] <- tryCatch(sex[[subid]], error=NaN)
+      ageclass[i] <- tryCatch(age[[subid]], error=NaN)
+      # diseaseclass[i] <- disease[[subid]]
+    }
+  }
+  return(list(sex=sclass, age=ageclass))#, disease=diseaseclass))
+}
+```
+
+# Model
+
+For details on the model, please see [SIEM model](http://docs.neurodata.io/graphstats/siem/siem.html). For an expanded look at the Homotopic vs. Heterotopic Connectivity Problem, see [Bilateral Connectivity Notebook](http://docs.neurodata.io/graphstats/siem/bilateral_within.html).
+
+# Real Data Experiments
+
+In this notebook, we determine whether there exists a batch effect in the difference in connectivity $p_{homo}$ homotopically (same region, opposite hemisphere) vs $p_{hetero}$ heterotopically (different region) connectivity within a particular modality. We consider $\delta_{x} = p_{homo} - p_{hetero}$ to be the difference in connectivity for a graph from a graph or collection of graphs from a particular modality $x$.
+
+## Tests
+
+### for each Graph
+
+Our test for this notebook is as follows:
+
+\begin{align*}
+  H_0: p_{homo} \leq p_{hetero} \\
+  H_A: p_{homo} > p_{hetero}
+\end{align*}
+
+We will use a $1$-sample test to determine whether within a single graph we can determine a significant difference in connectivity.  
+
+We will perform this experiment for both dMRI and fMRI-derived connectomes.
+
+### for Determining a Batch
+
+To determine a batch's test statistic, we will simply attempt to assess the magnitude of the differences in model fit between each pair of batches. To acquire a p-value, we will use a permutation-based approach. That is:
+
+```
+test_statistic(models, grouping):
+  compute the average p_{homo} and p_{hetero} for each unique grouping label.
+  For each i, j pair of unique grouping labels:
+    stat[i, j] = |p_{homo, 1} - p_{homo, 2} - (p_{hetero, 1} - p_{hetero, 2})|
+  return max(stats)  # test statistic is the pairing with the greatest magnitude
+  
+permutation_test(models, batch_grouping):
+  compute the test statistic for the graphs given the default batch grouping.
+  For i in 1:nrepetitions:
+    permute the batch grouping to obtain a permuted grouping.
+    compute the test statistic for the models given the permuted grouping.
+  Compute the fraction of permuted test statistics > the given test statistic. 
+```
+
+Or the fraction of times that the maximum magnitude of a model fit difference exceeds the observed maximumm magnitude of a model fit difference.
+
+```{r}
+case.experiment.within <- function(models, datasets.labs, split.labs, modal, nrep=1000) {
+  # partition the models that do not have the split data
+  include_sets <- which(!is.nan(split.labs))
+  incl.models <- models[include_sets]
+  incl.datasets.labs <- datasets.labs[include_sets]
+  incl.split.labs <- split.labs[include_sets]
+  
+  dsets <- unique(incl.datasets.labs)
+  results <- data.frame(dataset=c(), pval=c())
+  
+  for (i in 1:length(dsets)) {
+    ss <- which(incl.datasets.labs == dsets[i])
+    model_ss <- incl.models[ss]  # subset one dataset of models
+    split_ss <- incl.split.labs[ss]
+    if (length(unique(split_ss)) > 1) {
+      tstat.alt <- gs.siem.batch.test(incl.models, split_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
+      tstat.nulls <- array(NaN, dim=c(nrep))
+      for (j in 1:nrep) {
+        permuted_ss <- sample(split_ss, size=length(split_ss))
+        tstat.nulls[j] <-  gs.siem.batch.test(incl.models, permuted_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
+      }
+      pval <- sum(tstat.nulls < tstat.alt)/nrep
+    } else {
+      pval <- NaN
+    }
+    results <- rbind(results, data.frame(dataset=dsets[i], pval=pval, modal=modal))
+  }
+  return(results)
+}
+
+
+case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
+  # partition the models that do not have the split data
+  include_sets <- which(!is.nan(datasets.labs))
+  models <- models[include_sets]
+  datasets.labs <- datasets.labs[include_sets]
+  
+  dsets <- unique(datasets.labs)
+  results <- data.frame(dataset=c(), pval=c())
+
+  tstat.alt <- gs.siem.batch.test(models, datasets.labs, i=1, j=2)  # first edge group is homotopic, second is heterotopic
+  tstat.nulls <- array(NaN, dim=c(nrep))
+  for (j in 1:nrep) {
+    permuted_ss <- sample(datasets.labs, size=length(split_ss))
+    tstat.nulls[j] <-  gs.siem.batch.test(models, permuted_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
+  }
+  results <- rbind(results, data.frame(dataset='set', pval=(sum(tstat.nulls > tstat.alt)/nrep), modal=modal))
+  return(results)
+}
+```
+
+## Raw Data
+
+The data below can be downloaded and moved to appropriate folders as follows (note that the below section requires sudo access):
+
+```
+sudo mkdir /data/
+sudo chmod -R 777 /data
+
+cd /data
+wget http://openconnecto.me/mrdata/share/derivatives/dwi_edgelists.tar.gz
+wget http://openconnecto.me/mrdata/share/derivatives/fmri_edgelists.tar.gz
+wget http://openconnecto.me/mrdata/share/connectome_stats/connectome_stats.zip
+
+mkdir -p /data/connectome_stats /data/all_mr /data/all_mr/dwi/edgelists /data/all_mr/fmri/ranked/edgelists
+mv dwi_edgelists.tar.gz /data/dwi/edgelists
+cd /data/dwi/edgelists
+tar -xvzf dwi_edgelists.tar.gz
+mv /data/fmri_edgelists.tar.gz /data/fmri/ranked/edgelists
+cd /data/fmri/ranked/edgelists
+tar -xvzf fmri_edgelists.tar.gz
+mv /data/connectome_stats.zip /data/connectome_stats.zip
+cd /data/connectome_stats
+unzip connectome_stats.zip
+```
+
+## Diffusion
+
+```{r}
+nroi <- 70
+dwi.dsets = c('BNU1', 'BNU3', 'HNU1', 'KKI2009', 'NKI1', 'NKIENH', 'MRN1313', 'Templeton114', 'Templeton255', 'SWU4')
+dwi.atlas = 'desikan'
+dwi.basepath = '/data/all_mr/dwi/edgelists'
+
+graphobj = fmriu.io.collection.open_graphs(basepath = dwi.basepath, atlases = dwi.atlas, datasets = dwi.dsets,
+                                           gname = 'graphs', fmt='edgelist', rtype = 'array')
+dwi.graphs = graphobj$graphs
+dwi.datasets = graphobj$dataset
+dwi.subjects = graphobj$subjects
+dwi.sessions = graphobj$sessions
+
+sexpath = '/data/all_mr/phenotypic/'
+class = parse_class(sexpath, dwi.dsets, dwi.subjects)
+dwi.sexs = class$sex
+```
+
+```{r}
+ne = 1225
+nroi <- 70
+group1 <- c()  # edges in same hemisphere
+group2 <- c()  # edges across hemispheres
+for (i in 1:nroi) {
+  for (j in 1:nroi) {
+    idx <- (i - 1)*nroi + j
+    if (abs(j - i) == 35) {
+      group1 <- c(group1, idx)
+    } else {
+      group2 <- c(group2, idx)
+    }
+  }
+}
+Es <- list(group1, group2)
+dwi.models <- sapply(1:dim(dwi.graphs)[1], function(i) {
+                  gs.siem.fit(thresh_matrix(dwi.graphs[i,,], 0), Es, alt='greater')
+                }, simplify = FALSE)
+```
+
+
+# Functional
+
+```{r}
+nroi <- 70
+fmri.dsets = c('BNU1', 'BNU2', 'BNU3', 'HNU1', 'IBATRT', 'IPCAS1', 'IPCAS2', 'IPCAS5', 'IPCAS6', 'IPCAS8', 'MRN1', 'NYU1', 'SWU1', 'SWU2', 'SWU3', 'SWU4', 'UWM', 'XHCUMS')
+fmri.atlas = 'desikan-2mm'
+fmri.basepath = '/data/all_mr/fmri/ranked/edgelists/'
+
+graphobj = fmriu.io.collection.open_graphs(basepath = fmri.basepath, atlases = fmri.atlas, datasets=fmri.dsets, fmt='edgelist', rtype = 'array')
+fmri.graphs = graphobj$graphs
+fmri.datasets = graphobj$dataset
+fmri.subjects = graphobj$subjects
+fmri.sessions <- graphobj$sessions
+
+sexpath = '/data/all_mr/phenotypic/'
+class = parse_class(sexpath, fmri.dsets, fmri.subjects)
+fmri.sexs = class$sex
+```
+
+```{r}
+ne = 1225
+nroi <- 70
+group1 <- c()  # edges in same hemisphere
+group2 <- c()  # edges across hemispheres
+for (i in 1:nroi) {
+  for (j in 1:nroi) {
+    idx <- (i - 1)*nroi + j
+    if (abs(j - i) == 35) {
+      group1 <- c(group1, idx)
+    } else {
+      group2 <- c(group2, idx)
+    }
+  }
+}
+Es <- list(group1, group2)
+fmri.models <- sapply(1:dim(fmri.graphs)[1], function(i) {
+                  gs.siem.fit(thresh_matrix(fmri.graphs[i,,], 0.5), Es, alt='greater')
+                }, simplify = FALSE)
+```
+
+# Case 1: Session Partitioning
+
++ Is there a batch effect between sessions of a particular study?
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 sessions.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+results <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sessions, 'dMRI', nrep=1000),
+      case.experiment.within(fmri.models, fmri.datasets, fmri.sessions, 'fMRI', nrep=1000))
+```
+
+```{r}
+ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+  geom_point(size=2) +
+  xlab("Modality") +
+  ylab(TeX("$p$-Value")) +
+  ggtitle("Case 1: Session Partitioning")
+```
+
+# Case 2: Subject Partitioning
+
++ Is there a batch effect between subjects in a particular study?
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+results <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000),
+      case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000))
+```
+
+```{r}
+ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+  geom_point(size=2) +
+  xlab("Modality") +
+  ylab(TeX("$p$-Value")) +
+  ggtitle("Case 2: Subject Partitioning")
+```
+
+# Case 3: Same Sex
+
++ Is there a batch effect between sexs in a particular study?
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+results <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sexs, 'dMRI', nrep=1000),
+      case.experiment.within(fmri.models, fmri.datasets, fmri.sexs, 'fMRI', nrep=1000))
+```
+
+```{r}
+ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+  geom_point(size=2) +
+  xlab("Modality") +
+  ylab(TeX("$p$-Value")) +
+  ggtitle("Case 3: Sex Partitioning")
+```
+
+# Case 4: Same Site
+
++ Is there a batch effect between studies with site held fixed?  
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+dwi.studies <- dwi.datasets
+fmri.studies <- fmri.datasets
+dwi.studies[dwi.studies == 'BNU1' | dwi.studies == 'BNU3'] <- 'BNU'
+fmri.studies[fmri.studies == 'BNU1' | fmri.studies == 'BNU3'] <- 'BNU'
+dwi.studies[dwi.studies == 'Templeton114' | dwi.studies == 'Templeton255'] <- 'Templeton'
+
+results <- rbind(case.experiment.within(dwi.models, dwi.studies, dwi.datasets, 'dMRI', nrep=1000),
+      case.experiment.within(fmri.models, fmri.studies, fmri.datasets, 'fMRI', nrep=1000))
+```
+
+```{r}
+ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+  geom_point(size=2) +
+  xlab("Modality") +
+  ylab(TeX("$p$-Value")) +
+  ggtitle("Case 4: Same Site")
+```
+
+# Case 5: Same Demographics
+
++ Is there a batch effect between sites with demographic held fixed?  
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+dwi.dset.sset <- which(dwi.datasets %in% c('BNU1', 'SWU4', 'HNU1', 'BNU3'))
+dwi.models.subs  <- dwi.models[dwi.dset.sset]; dwi.datasets.subs <- dwi.datasets[dwi.dset.sset]
+
+fmri.dset.sset <- which(fmri.datasets %in% c('BNU1', 'SWU4', 'HNU1', 'BNU3'))
+fmri.models.subs  <- fmri.models[fmri.dset.sset]; fmri.datasets.subs <- fmri.datasets[fmri.dset.sset]
+
+results <- rbind(case.experiment.between(dwi.models.subs, dwi.datasets.subs, 'dMRI', nrep=1000),
+      case.experiment.between(fmri.models.subs, fmri.datasets.subs, 'fMRI', nrep=1000))
+```
+
+```{r}
+ggplot(results, aes(x=modal, y=pval)) +
+  geom_point(size=2) +
+  xlab("Modality") +
+  ylab(TeX("$p$-Value")) +
+  ggtitle("Case 5: Same Demographics")
+```
+
+
+
+# Case 6: Disparate Demographics
+
++  Is there a batch effect between sites without demographic held fixed?  
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+results <- rbind(case.experiment.between(dwi.models, dwi.datasets, 'dMRI', nrep=1000),
+      case.experiment.between(fmri.models, fmri.datasets, 'fMRI', nrep=1000))
+```
+
+```{r}
+ggplot(results, aes(x=modal, y=pval)) +
+  geom_point(size=2) +
+  xlab("Modality") +
+  ylab(TeX("$p$-Value")) +
+  ggtitle("Case 6: Disparate Demographics")
+```
