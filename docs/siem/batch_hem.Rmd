@@ -85,7 +85,7 @@ parse_class <- function(basepath, dsets, subjects) {
 
 # Model
 
-For details on the model, please see [SIEM model](http://docs.neurodata.io/graphstats/siem/siem.html). For an expanded look at the Homotopic vs. Heterotopic Connectivity Problem, see [Hemispheric Connectivity Notebook](http://docs.neurodata.io/graphstats/siem/hemispheric_within.html).
+For details on the model, please see [SIEM model](http://docs.neurodata.io/graphstats/siem/siem.html). For an expanded look at the Ipsilateral vs Contralateral Problem, see [Hemispheric Connectivity Notebook](http://docs.neurodata.io/graphstats/siem/hemispheric_within.html).
 
 # Real Data Experiments
 
@@ -112,9 +112,9 @@ To determine a batch's test statistic, we will simply attempt to assess the magn
 
 ```
 test_statistic(models, grouping):
-  compute the average p_{homo} and p_{hetero} for each unique grouping label.
+  compute the average p_{ipsi} and p_{contra} for the graphs within each unique grouping label.
   For each i, j pair of unique grouping labels:
-    stat[i, j] = |p_{homo, 1} - p_{homo, 2} - (p_{hetero, 1} - p_{hetero, 2})|
+    stat[i, j] = |p_{ipsi, 1} - p_{ipsi, 2} - (p_{contra, 1} - p_{contra, 2})|
   return max(stats)  # test statistic is the pairing with the greatest magnitude
   
 permutation_test(models, batch_grouping):
@@ -292,7 +292,7 @@ fmri.models <- sapply(1:dim(fmri.graphs)[1], function(i) {
 
 ## Procedure
  
-1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 sessions.
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in ipsilateral vs. contralateral connectivity between any pair of 2 sessions.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
@@ -314,7 +314,7 @@ ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
 
 ## Procedure
  
-1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
@@ -336,7 +336,7 @@ ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
 
 ## Procedure
  
-1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
@@ -358,7 +358,7 @@ ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
 
 ## Procedure
  
-1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
@@ -386,7 +386,7 @@ ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
 
 ## Procedure
  
-1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
@@ -414,7 +414,7 @@ ggplot(results, aes(x=modal, y=pval)) +
 
 ## Procedure
  
-1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in homotopic vs. heterotopic connectivity between any pair of 2 subjects.
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}

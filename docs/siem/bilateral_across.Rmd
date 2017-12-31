@@ -412,7 +412,7 @@ Here, we again perform a test on 2 graphs, except here the graphs used are the a
 fmri.agg.mod <- gs.siem.fit(fmri_thresh, Es)
 dwi.agg.mod <- gs.siem.fit(dwi_thresh, Es)
 
-gs.siem.sample.test(dwi.agg.mod$dpr[1,2], fmri.agg.mod$dpr[1,2], dwi.agg.mod$dvar[1,2], fmri.agg.mod$dvar[1,2], df = 2)$p
+gs.siem.sample.test(fmri.agg.mod$dpr[1,2], dwi.agg.mod$dpr[1,2], fmri.agg.mod$dvar[1,2], dwi.agg.mod$dvar[1,2], df = 2)$p
 ```
 
 As we can see, with just 2 megamean graphs, we can identify a significant difference in the difference in connectivity homotopically vs bi-laterally in functional vs. diffusion connectomes.
