@@ -150,29 +150,24 @@ group2 <- c()  # edges across hemispheres
 for (i in 1:nroi) {
   for (j in 1:nroi) {
     idx <- (i - 1)*nroi + j
-    if ((i <= 35 & j <= 35) | (i > 35 & j > 35)) {
+    if (abs(j - i) == 35) {  # across hemispheric edges
       group1 <- c(group1, idx)
-    } else {
+    } else if (i != j) {  # ignore diagonal
       group2 <- c(group2, idx)
     }
   }
 }
 Es <- list(group1, group2)
 dwi.models <- sapply(1:dim(dwi.graphs)[1], function(i) {
-                  list(model=gs.siem.fit(thresh_matrix(dwi.graphs[i,,], 0), Es, alt='greater'), Z=dwi.datasets[i])
+                  gs.siem.fit(thresh_matrix(dwi.graphs[i,,], 0), Es, alt='greater')
                 }, simplify = FALSE)
 
-dwi.ips.phat <- sapply(dwi.models, function(model) model$model$pr[1])
-dwi.hetero.phat <- sapply(dwi.models, function(model)model$model$pr[2])
-```
-
-```{r}
-dwi.ips.phat <- sapply(dwi.models, function(model) model$model$pr[1])
-dwi.hetero.phat <- sapply(dwi.models, function(model)model$model$pr[2])
-dwi.delta.phat <- sapply(dwi.models, function(model) model$model$dpr[1,2])
-dwi.delta.var <- sapply(dwi.models, function(model)model$model$dvar[1,2])
+dwi.homo.phat <- sapply(dwi.models, function(model) model$pr[1])
+dwi.hetero.phat <- sapply(dwi.models, function(model)model$pr[2])
+dwi.delta.phat <- sapply(dwi.models, function(model) model$dpr[1,2])
+dwi.delta.var <- sapply(dwi.models, function(model)model$dvar[1,2])
 dwi.phat.mu = mean(dwi.delta.phat)
-dwi.phat.var = model.var(mean(dwi.ips.phat), ne) + model.var(mean(dwi.hetero.phat), ne)
+dwi.phat.var = model.var(mean(dwi.homo.phat), ne) + model.var(mean(dwi.hetero.phat), ne)
 ```
 
 # Functional
@@ -197,24 +192,24 @@ group2 <- c()  # edges across hemispheres
 for (i in 1:nroi) {
   for (j in 1:nroi) {
     idx <- (i - 1)*nroi + j
-    if ((i <= 35 & j <= 35) | (i > 35 & j > 35)) {
+    if (abs(j - i) == 35) {  # across hemispheric edges
       group1 <- c(group1, idx)
-    } else {
+    } else if (i != j) {  # ignore diagonal
       group2 <- c(group2, idx)
     }
   }
 }
 Es <- list(group1, group2)
 fmri.models <- sapply(1:dim(fmri.graphs)[1], function(i) {
-                  list(model=gs.siem.fit(thresh_matrix(fmri.graphs[i,,], 0.5), Es, alt='greater'), Z=dwi.datasets[i])
+                  gs.siem.fit(thresh_matrix(fmri.graphs[i,,], 0.5), Es, alt='greater')
                 }, simplify = FALSE)
 
-fmri.ips.phat <- sapply(fmri.models, function(model) model$model$pr[1])
-fmri.hetero.phat <- sapply(fmri.models, function(model)model$model$pr[2])
-fmri.delta.phat <- sapply(fmri.models, function(model) model$model$dpr[1,2])
-fmri.delta.var <- sapply(fmri.models, function(model)model$model$dvar[1,2])
+fmri.homo.phat <- sapply(fmri.models, function(model) model$pr[1])
+fmri.hetero.phat <- sapply(fmri.models, function(model)model$pr[2])
+fmri.delta.phat <- sapply(fmri.models, function(model) model$dpr[1,2])
+fmri.delta.var <- sapply(fmri.models, function(model)model$dvar[1,2])
 fmri.phat.mu = mean(fmri.delta.phat)
-fmri.phat.var = model.var(mean(fmri.ips.phat), ne) + model.var(mean(fmri.hetero.phat), ne)
+fmri.phat.var = model.var(mean(fmri.homo.phat), ne) + model.var(mean(fmri.hetero.phat), ne)
 ```
 
 # $n$ sample test
@@ -289,10 +284,10 @@ ggplot(dat=cmp.ana, aes(x=x, y=y, ymax=y, fill=distribution, color=distribution,
 both the empirical and analytical results show clear separation of $\delta_D$ and $\delta_F$. Performing a $t-$test of this observation, we see:
 
 ```{r}
-t.test(dwi.delta.phat, fmri.delta.phat, alternative="greater", var.equal=FALSE)
+t.test(fmri.delta.phat, dwi.delta.phat, alternative="greater", var.equal=FALSE)
 ```
 
-which shows that with $p < 2.2 \times 10^{-16}$, the difference in connectivity homotopically vs. heterotopically in diffusion connectomes exceeds the difference in connectivity homotopically vs heterotopically in functional connectomes.
+which shows that with $p < 2.2 \times 10^{-16}$, the difference in connectivity homotopically vs. heterotopically in functional connectomes exceeds the difference in connectivity homotopically vs heterotopically in diffusion connectomes.
 
 # $2$-sample test
 
@@ -321,8 +316,8 @@ for (i in 1:length(unique_subs)) {
   dwi.idxs = which(dwi.subjects == sub)
   for (fidx in fmri.idxs) {
     for (didx in dwi.idxs) {
-      pval <- gs.siem.sample.test(dwi.delta.phat[didx], fmri.delta.phat[fidx], dwi.delta.var[didx],
-                                  fmri.delta.var[fidx], df=2)$p
+      pval <- gs.siem.sample.test(fmri.delta.phat[fidx], dwi.delta.phat[didx], fmri.delta.var[fidx],
+                                  dwi.delta.var[didx], alt='greater', df=2)$p
       per.dwi.delta <- c(per.dwi.delta, dwi.delta.phat[didx])
       per.fmri.delta <- c(per.fmri.delta, fmri.delta.phat[fidx])
       per.p <- c(per.p, pval)
@@ -348,7 +343,7 @@ ggplot(data=p.dat, aes(x=dataset, y=p, color=dataset, group=dataset)) +
   theme(axis.text.x = element_text(angle=45), legend.position=NaN, panel.background = element_rect(fill = '#ffffff'))
 ```
 
-As we can see, even at just the $2-$graph level, the difference in homotopic vs. heterotopic connectivity in the diffusion connectomes exceeds that of the functional connectomes and is significant in most connectomes at $\alpha=0.05$. 
+As we can see, even at just the $2-$graph level, the difference in homotopic vs. heterotopic connectivity in the functional connectomes exceeds that of the diffusion connectomes and is significant in most connectomes at $\alpha=0.05$. 
 
 We can instead visualize this as density estimates:
 
@@ -363,7 +358,7 @@ ggplot(data=p.dat, aes(p, group=dataset, color=dataset)) +
   xlab(TeX('$log(p)$')) +
   ylab("Density") +
   theme(panel.background = element_rect(fill = '#ffffff')) + 
-  ggtitle(TeX(sprintf('Hemispheric Inter-Modality, %.2f percent have $p < .05$', 100*sum(p.dat$p < .05)/length(p.dat$p))))
+  ggtitle(TeX(sprintf('Bilateral Inter-Modality, %.2f percent have $p < .05$', 100*sum(p.dat$p < .05)/length(p.dat$p))))
 ```
 
 ##### Example of subject with $p > .05$
@@ -409,7 +404,7 @@ ggplot(batch.dat, aes(x=diff, y=p, color=dataset, group=dataset, shape=dataset))
   theme(panel.background = element_rect(fill = '#ffffff'))
 ```
 
-# Aggregated
+# Megamean
 
 Here, we again perform a test on 2 graphs, except here the graphs used are the average functional and diffusion connectomes (the megameans). We feed this into a simple t-test with the appropriate assumptions (unequal variance, goal is to test for homotopic connectivity exceeding heterotopic connectivity):
 

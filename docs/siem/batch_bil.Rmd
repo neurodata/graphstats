@@ -234,7 +234,7 @@ for (i in 1:nroi) {
     idx <- (i - 1)*nroi + j
     if (abs(j - i) == 35) {
       group1 <- c(group1, idx)
-    } else {
+    } else if (i != j) {
       group2 <- c(group2, idx)
     }
   }
