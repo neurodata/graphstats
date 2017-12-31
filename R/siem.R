@@ -16,7 +16,7 @@
 #' @return pv [e, e] pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).
 #' @author Eric Bridgeford
 #' @export
-gs.siem.fit <- function(X, Es, alt='greater', i=NULL, j=NULL) {
+gs.siem.fit <- function(X, Es, alt='greater') {
   X[X > 0] <- 1  # ensure binarization
 
   # compute parameters for each edge-set
@@ -29,8 +29,9 @@ gs.siem.fit <- function(X, Es, alt='greater', i=NULL, j=NULL) {
   pr <- unlist(params[1,])
   vari <- unlist(params[2,])
 
-  nes <- length(pr)
+  nes <- length(Es)
   pv <- array(0, dim=c(nes, nes))
+  diag(pv) <- 0.5
   dpr <- array(0, dim=c(nes, nes))
   dvar <- array(0, dim=c(nes, nes))
 

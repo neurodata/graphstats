@@ -4,7 +4,7 @@
 \alias{gs.siem.fit}
 \title{Structured Independent Edge Model, Single Sample}
 \usage{
-gs.siem.fit(X, Es, alt = "greater", i = NULL, j = NULL)
+gs.siem.fit(X, Es, alt = "greater")
 }
 \arguments{
 \item{X}{[v, v] the binary graph with v vertices.}

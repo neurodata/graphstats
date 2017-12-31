@@ -6,7 +6,7 @@
 \usage{
 gs.plot.plot_matrix(mtx, title = "", xlabel = "", ylabel = "",
   legend.name = "metric", legend.show = TRUE, font.size = 12,
-  limits = NaN, vfactor = FALSE, ffactor = FALSE)
+  limits = NULL, vfactor = FALSE, ffactor = FALSE, vlist = NULL)
 }
 \arguments{
 \item{mtx}{[n, n] or [n, d]: the input. Can either be a square matrix or a data matrix.}
