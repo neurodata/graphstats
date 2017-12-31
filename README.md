@@ -9,8 +9,7 @@ A package for graph statistical algorithms.
 - [Demo](#demo)
  - [Instructions for Use](#instructions-for-use)
 - [License](./LICENSE)
-- [Issues](https://github.com/neurodata/mgc/issues)
-- [Pseudocode](#pseudocode)
+- [Issues](https://github.com/neurodata/graphstats/issues)
 
 # Overview
 
@@ -28,7 +27,7 @@ A graph, or network, provides a mathematically intuitive representation of data 
 
 ## Hardware Requirements
 
-The `MGC` package requires only a standard computer with enough RAM to support the operations defined by a user. For minimal performance, this will be a computer with about 2 GB of RAM. For optimal performance, we recommend a computer with the following specs:
+The `graphstats` package requires only a standard computer with enough RAM to support the operations defined by a user. For minimal performance, this will be a computer with about 2 GB of RAM. For optimal performance, we recommend a computer with the following specs:
 
 RAM: 16+ GB  
 CPU: 4+ cores, 3.3+ GHz/core
@@ -45,7 +44,7 @@ Linux: Ubuntu 16.04
 Mac OSX:  
 Windows:  
 
-Before setting up the `MGC` package, users should have `R` version 3.4.0 or higher, and several packages set up from CRAN.
+Before setting up the `graphstats` package, users should have `R` version 3.4.0 or higher, and several packages set up from CRAN.
 
 #### Installing R version 3.4.2 on Ubuntu 16.04
 
@@ -61,7 +60,7 @@ sudo apt-get install r-base r-base-dev
 
 which should install in about 20 seconds.
 
-If you are having an issue that you believe to be tied to software versioning issues, please drop us an [Issue](https://github.com/neurodata/mgc/issues). 
+If you are having an issue that you believe to be tied to software versioning issues, please drop us an [Issue](https://github.com/neurodata/graphstats/issues). 
 
 # Installation Guide
 
@@ -69,7 +68,7 @@ From an `R` session, type:
 
 ```
 require(devtools)
-install_github('neurodata/graphstats', build_vignettes=TRUE)  # install mgc with the vignettes
+install_github('neurodata/graphstats', build_vignettes=TRUE)  # install graphstats with the vignettes
 require(graphstats)  # source the package now that it is set up
 vignette("siem", package="graphstats")  # view one of the basic vignettes
 ```
