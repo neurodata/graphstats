@@ -171,7 +171,7 @@ case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
   tstat.alt <- gs.siem.batch.test(models, datasets.labs, i=1, j=2)  # first edge group is homotopic, second is heterotopic
   tstat.nulls <- array(NaN, dim=c(nrep))
   for (j in 1:nrep) {
-    permuted_ss <- sample(datasets.labs, size=length(split_ss))
+    permuted_ss <- sample(datasets.labs, size=length(datasets.labs))
     tstat.nulls[j] <-  gs.siem.batch.test(models, permuted_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
   }
   results <- rbind(results, data.frame(dataset='set', pval=(sum(tstat.nulls > tstat.alt)/nrep), modal=modal))
