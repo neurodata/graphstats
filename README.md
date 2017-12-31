@@ -80,10 +80,15 @@ The package should take approximately 20 seconds to install with vignettes on a 
 
 For interactive demos of the functions, please check out the vignettes built into the package. They can be accessed as follows:
 
+
+## SIEM
+
 ```
 require(graphstats)
 vignette('siem')
 ```
+
+with a more in-depth demo found at [SIEM model](http://docs.neurodata.io/graphstats/siem/siem.html).
 
 # Usage
 
