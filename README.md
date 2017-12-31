@@ -7,7 +7,7 @@ A package for graph statistical algorithms.
 - [System Requirements](#system-requirements)
 - [Installation Guide](#installation-guide)
 - [Demo](#demo)
- - [Instructions for Use](#instructions-for-use)
+- [Usage](#usage)
 - [License](./LICENSE)
 - [Issues](https://github.com/neurodata/graphstats/issues)
 
@@ -101,3 +101,5 @@ Below, we provide several real applications of functions in the `graphstats` pac
     - [between-modality ipsi vs contra-lateral connectivity](http://docs.neurodata.io/graphstats/siem/hemisphere_across.html)
     - [within-modality homo vs heterotopic connectivity](http://docs.neurodata.io/graphstats/siem/bilateral_within.html)
     - [between-modality homo vs heterotopic connectivity](http://docs.neurodata.io/graphstats/siem/bilateral_across.html)
+    - [bilateral batch effects](http://docs.neurodata.io/graphstats/siem/batch_bil.html)
+    - [hemispheric batch effects](http://docs.neurodata.io/graphstats/siem/batch_hem.html)
