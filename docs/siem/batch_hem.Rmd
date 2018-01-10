@@ -304,7 +304,8 @@ plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, group
   ylab(TeX("$p$-Value")) +
   xlab("Modality") +
   scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
-  labs(shape="Modality", color="Dataset")
+  labs(shape="Modality", color="Dataset") +
+  guides(color=guide_legend(ncol=2))
 ```
 
 # Case 2: Subject Partitioning
