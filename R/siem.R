@@ -17,8 +17,6 @@
 #' @author Eric Bridgeford
 #' @export
 gs.siem.fit <- function(X, Es, alt='greater') {
-  X[X > 0] <- 1  # ensure binarization
-
   # compute parameters for each edge-set
   params <- sapply(Es, function(e1) {
     gs.siem.model.params(X[e1])
@@ -31,7 +29,6 @@ gs.siem.fit <- function(X, Es, alt='greater') {
 
   nes <- length(Es)
   pv <- array(0, dim=c(nes, nes))
-  diag(pv) <- 0.5
   dpr <- array(0, dim=c(nes, nes))
   dvar <- array(0, dim=c(nes, nes))
 
@@ -89,7 +86,7 @@ gs.siem.sample.test <- function(x1, x2, var1, var2, df=NULL, n1=NULL, n2=NULL, a
     dfnum = (var1/n1 + var2/n2)^2
     dfdenom = var1^2/(n1^2*(n1 - 1)) + var2^4/(n2^2*(n2-1))
     df = round(dfnum/dfdenom)
-    tstat = (x1 - x2)/sqrt(var1/n1 + var2/n2)
+    tstat = num/sqrt(var1/n1 + var2/n2)
   } else {
     tstat <- num/sqrt(var1 + var2)
   }
@@ -129,36 +126,43 @@ gs.siem.model.params <- function(data) {
 #'
 #' A function that computes a test statistic associated with a particular arrangement of graphs
 #' using pairs of edge community estimators estimated by the SIEM.
-#' @param models [[n]] a list of the models fit to each of the n samples. Each element must contain the following:
-#' \itemize{
-#' \item{model}{a model fit by \code{\link{gs.siem.fit}}}
-#' \item{Z}{the batch id the particular model is from.}
-#' }
+#' @param models [[n]] a list of the models fit to each of the n samples.
+#' @param Z [n] an array of the labels associated with each model.
 #' @param i=1 the first edge set to use in the comparison.
 #' @param j=2 the second edge set to use in the comparison.
 #' @param tstat=gs.siem.batch.tstat.delta the test statistic to use. Should operate on a pair of models.
-#' @return tstat the test statistic.
+#' @param nperm=1000 the number of permutations for testing.
+#' @return tstat.alt the test statistic given the current Z orderings.
+#' @return tstat.null the test statistics of each permutation of the Z orderings.
+#' @return p the expectation of tstat.null >= tstat.alt.
 #' @seealso \code{\link{gs.siem.fit}}
 #' @author Eric Bridgeford
 #' @export
-gs.siem.batch.test <- function(models, i=1, j=2, tstat=gs.siem.batch.tstat) {
-  Z <- sapply(models, function(model) model$Z)
-  p <- sapply(models, function(model) model$model$pr[i])
-  q <- sapply(models, function(model) model$model$pr[j])
-  tstat <- gs.siem.batch.tstat(p, q, Z)
-  return(tstat)
+gs.siem.batch.perm <- function(models, Z, i=1, j=2, tstat=gs.siem.batch.tstat, nperm=1000) {
+  tstat.alt <- do.call(tstat, list(models, Z, i=1, j=2))
+  tstat.nulls <- array(NaN, dim=c(nperm))
+  for (j in 1:nperm) {
+    permuted_ss <- sample(Z, size=length(Z))
+    tstat.nulls[j] <-  do.call(tstat, list(models, permuted_ss, i=1, j=2))  # get test statistic of permuted data
+  }
+  return(list(tstat.alt=tstat.alt, tstat.nulls=tstat.nulls, p=sum(tstat.nulls >= tstat.alt)/nperm))
 }
 
 #' Test Statistic for Batch Detection
 #'
 #' A function that computes a test statistic associated with a set of estimators.
-#' @param set1est [n] the first set of estimators for each element in the population.
-#' @param set2est [n] the second set of estimators for each element in the population.
-#' @param Z [n] the parameter labels for the batch each element is from.
+#' @param models [[n]] a list of the models fit to each of the n samples.
+#' @param Z [n] an array of the labels associated with each model.
+#' @param i=1 the first edge set to use in the comparison.
+#' @param j=2 the second edge set to use in the comparison.
 #' @return tstat the test statistic.
+#' @return D the distance matrix.
 #' @author Eric Bridgeford
 #' @export
-gs.siem.batch.tstat <- function(set1est, set2est, Z) {
+gs.siem.batch.tstat <- function(models, Z, i=1, j=2) {
+  p <- sapply(models, function(model) model$pr[i])
+  q <- sapply(models, function(model) model$pr[j])
+
   Zset <- unique(Z)
   n <- length(Zset)
   pset <- sapply(Zset, function(z) mean(p[Z == z]))
@@ -172,5 +176,5 @@ gs.siem.batch.tstat <- function(set1est, set2est, Z) {
   }
 
   tstat <- max(D, na.rm=TRUE)
-  return(tstat)
+  return(tstat=tstat)
 }

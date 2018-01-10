@@ -13,28 +13,9 @@ require(ggplot2)
 require(latex2exp)
 require(igraph)
 require(stringr)
+require(gridExtra)
+require(scales)
 source('../../R/siem.R')
-
-# accepts a matrix and thresholds/binarizes it
-thresh_matrix = function(matrix, thresh=0.5) {
-  thr = quantile(matrix, thresh)
-  return(ifelse(matrix > thr, 1, 0))
-}
-
-# accepts a [n x n] adjacency matrix and computes the probabilities associated with an SBM
-# where the vertices are grouped such that union_i(groups) = V(A) and
-# intersection(group_i, group_j) = NULL for all i != j
-block_data = function(matrix, groups) {
-  # matrix is adwi_thresh n x n array
-  # groups is a grouping of the vertices in the matrix as a list
-  blocks = array(NaN, dim=c(2,2))
-  for (i in 1:length(groups)) {
-    for (j in 1:length(groups)) {
-      blocks[i, j] = mean(matrix[groups[[i]], groups[[j]]])
-    }
-  }
-  return(blocks)
-}
 
 parse_class <- function(basepath, dsets, subjects) {
   sex = list()
@@ -143,17 +124,9 @@ case.experiment.within <- function(models, datasets.labs, split.labs, modal, nre
     model_ss <- incl.models[ss]  # subset one dataset of models
     split_ss <- incl.split.labs[ss]
     if (length(unique(split_ss)) > 1) {
-      tstat.alt <- gs.siem.batch.test(incl.models, split_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
-      tstat.nulls <- array(NaN, dim=c(nrep))
-      for (j in 1:nrep) {
-        permuted_ss <- sample(split_ss, size=length(split_ss))
-        tstat.nulls[j] <-  gs.siem.batch.test(incl.models, permuted_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
-      }
-      pval <- sum(tstat.nulls < tstat.alt)/nrep
-    } else {
-      pval <- NaN
+      perm.result <- gs.siem.batch.perm(model_ss, split_ss, i=1, j=2, nperm=nrep)
+      results <- rbind(results, data.frame(dataset=dsets[i], pval=perm.result$p, modal=modal))
     }
-    results <- rbind(results, data.frame(dataset=dsets[i], pval=pval, modal=modal))
   }
   return(results)
 }
@@ -167,15 +140,40 @@ case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
   
   dsets <- unique(datasets.labs)
   results <- data.frame(dataset=c(), pval=c())
-
-  tstat.alt <- gs.siem.batch.test(models, datasets.labs, i=1, j=2)  # first edge group is homotopic, second is heterotopic
-  tstat.nulls <- array(NaN, dim=c(nrep))
-  for (j in 1:nrep) {
-    permuted_ss <- sample(datasets.labs, size=length(datasets.labs))
-    tstat.nulls[j] <-  gs.siem.batch.test(models, permuted_ss, i=1, j=2)  # first edge group is homotopic, second is heterotopic
-  }
-  results <- rbind(results, data.frame(dataset='set', pval=(sum(tstat.nulls > tstat.alt)/nrep), modal=modal))
+  
+  perm.result <- gs.siem.batch.perm(models, datasets.labs, i=1, j=2, nperm=nrep)
+  results <- rbind(results, data.frame(dataset='set', pval=perm.result$p, modal=modal))
   return(results)
+}
+
+case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000) {
+  # partition the models that do not have the split data
+  include_sets <- which(!is.nan(datasets.labs))
+  models <- models[include_sets]
+  datasets.labs <- datasets.labs[include_sets]
+  
+  dsets <- unique(datasets.labs)
+  results <- data.frame(dset1=c(), dset2=c(), pval=c(), modality=c())
+  D <- array(0, dim=c(length(dsets), length(dsets)))
+  for (i in 1:(length(dsets) - 1)) {
+    for (j in (i:length(dsets))) {
+      ss <- datasets.labs %in% c(dsets[i], dsets[j])
+      perm.result <- gs.siem.batch.perm(models[ss], datasets.labs[ss], i=1, j=2, nperm=nrep)
+      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=perm.result$p, modal=modal))
+      D[i, j] <- perm.result$p
+    }
+  }
+  
+  D <- D + t(D) - diag(diag(D))
+  diag(D) <- 1  # no batch between same dataset
+  return(list(data=results, D=D, dsets=dsets))
+}
+
+g_legend <- function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
 }
 ```
 
@@ -240,9 +238,8 @@ for (i in 1:nroi) {
   }
 }
 Es <- list(group1, group2)
-dwi.models <- sapply(1:dim(dwi.graphs)[1], function(i) {
-                  gs.siem.fit(thresh_matrix(dwi.graphs[i,,], 0), Es, alt='greater')
-                }, simplify = FALSE)
+dwi.rank.graphs <- gs.xfm.aaply(dwi.graphs, gs.xfm.rank_graph)
+dwi.models <- suppressWarnings(gs.xfm.alply(dwi.rank.graphs, gs.siem.fit, Es))
 ```
 
 
@@ -281,9 +278,8 @@ for (i in 1:nroi) {
   }
 }
 Es <- list(group1, group2)
-fmri.models <- sapply(1:dim(fmri.graphs)[1], function(i) {
-                  gs.siem.fit(thresh_matrix(fmri.graphs[i,,], 0.5), Es, alt='greater')
-                }, simplify = FALSE)
+fmri.rank.graphs <- gs.xfm.aaply(fmri.graphs, gs.xfm.rank_graph)
+fmri.models <- suppressWarnings(gs.xfm.alply(fmri.rank.graphs, gs.siem.fit, Es))
 ```
 
 # Case 1: Session Partitioning
@@ -296,16 +292,19 @@ fmri.models <- sapply(1:dim(fmri.graphs)[1], function(i) {
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
-results <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sessions, 'dMRI', nrep=1000),
+results1 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sessions, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.datasets, fmri.sessions, 'fMRI', nrep=1000))
+saveRDS(results1, 'results_hem_case1.rds')
 ```
 
 ```{r}
-ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
   geom_point(size=2) +
-  xlab("Modality") +
+  ggtitle("Case 1: Sessions") +
   ylab(TeX("$p$-Value")) +
-  ggtitle("Case 1: Session Partitioning")
+  xlab("Modality") +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+  labs(shape="Modality", color="Dataset")
 ```
 
 # Case 2: Subject Partitioning
@@ -318,16 +317,18 @@ ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
-results <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000),
+results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000))
+saveRDS(results2, 'results_hem_case2.rds')
 ```
 
 ```{r}
-ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+plot2 <- ggplot(results2, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
   geom_point(size=2) +
-  xlab("Modality") +
-  ylab(TeX("$p$-Value")) +
-  ggtitle("Case 2: Subject Partitioning")
+  ggtitle("Case 2: Subjects") +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
 ```
 
 # Case 3: Same Sex
@@ -340,16 +341,18 @@ ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
-results <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sexs, 'dMRI', nrep=1000),
+results3 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sexs, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.datasets, fmri.sexs, 'fMRI', nrep=1000))
+saveRDS(results3, 'results_hem_case3.rds')
 ```
 
 ```{r}
-ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+plot3 <- ggplot(results3, aes(x=modal, y=pval, shape=modal, group=dataset, color=dataset)) +
   geom_point(size=2) +
-  xlab("Modality") +
-  ylab(TeX("$p$-Value")) +
-  ggtitle("Case 3: Sex Partitioning")
+  ggtitle("Case 3: Same Sex") +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
 ```
 
 # Case 4: Same Site
@@ -368,21 +371,24 @@ dwi.studies[dwi.studies == 'BNU1' | dwi.studies == 'BNU3'] <- 'BNU'
 fmri.studies[fmri.studies == 'BNU1' | fmri.studies == 'BNU3'] <- 'BNU'
 dwi.studies[dwi.studies == 'Templeton114' | dwi.studies == 'Templeton255'] <- 'Templeton'
 
-results <- rbind(case.experiment.within(dwi.models, dwi.studies, dwi.datasets, 'dMRI', nrep=1000),
+results4 <- rbind(case.experiment.within(dwi.models, dwi.studies, dwi.datasets, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.studies, fmri.datasets, 'fMRI', nrep=1000))
+saveRDS(results4, 'results_hem_case4.rds')
 ```
 
 ```{r}
-ggplot(results, aes(x=modal, y=pval, group=dataset, color=dataset)) +
+plot4 <- ggplot(results4, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
   geom_point(size=2) +
-  xlab("Modality") +
-  ylab(TeX("$p$-Value")) +
-  ggtitle("Case 4: Same Site")
+  ggtitle("Case 4: Same Site") +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+  labs(shape="Modality", color="Dataset")
 ```
 
 # Case 5: Same Demographics
 
-+ Is there a batch effect between sites with demographic held fixed?  
++ Is there a batch effect between studies with demographic held fixed?  
 
 ## Procedure
  
@@ -396,21 +402,23 @@ dwi.models.subs  <- dwi.models[dwi.dset.sset]; dwi.datasets.subs <- dwi.datasets
 fmri.dset.sset <- which(fmri.datasets %in% c('BNU1', 'SWU4', 'HNU1', 'BNU3'))
 fmri.models.subs  <- fmri.models[fmri.dset.sset]; fmri.datasets.subs <- fmri.datasets[fmri.dset.sset]
 
-results <- rbind(case.experiment.between(dwi.models.subs, dwi.datasets.subs, 'dMRI', nrep=1000),
+results5 <- rbind(case.experiment.between(dwi.models.subs, dwi.datasets.subs, 'dMRI', nrep=1000),
       case.experiment.between(fmri.models.subs, fmri.datasets.subs, 'fMRI', nrep=1000))
+saveRDS(results5, 'results_hem_case5.rds')
 ```
 
 ```{r}
-ggplot(results, aes(x=modal, y=pval)) +
+plot5 <- ggplot(results5, aes(x=modal, y=pval, shape=modal)) +
   geom_point(size=2) +
-  xlab("Modality") +
-  ylab(TeX("$p$-Value")) +
-  ggtitle("Case 5: Same Demographics")
+  ggtitle("Case 5: Same Demographic") +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
 ```
 
 # Case 6: Disparate Demographics
 
-+  Is there a batch effect between sites without demographic held fixed?  
++  Is there a batch effect between studies without demographic held fixed?  
 
 ## Procedure
  
@@ -418,14 +426,64 @@ ggplot(results, aes(x=modal, y=pval)) +
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r}
-results <- rbind(case.experiment.between(dwi.models, dwi.datasets, 'dMRI', nrep=1000),
+results6 <- rbind(case.experiment.between(dwi.models, dwi.datasets, 'dMRI', nrep=1000),
       case.experiment.between(fmri.models, fmri.datasets, 'fMRI', nrep=1000))
+saveRDS(results6, 'results_hem_case6.rds')
 ```
 
 ```{r}
-ggplot(results, aes(x=modal, y=pval)) +
+plot6 <- ggplot(results6, aes(x=modal, y=pval, shape=modal)) +
   geom_point(size=2) +
-  xlab("Modality") +
-  ylab(TeX("$p$-Value")) +
-  ggtitle("Case 6: Disparate Demographics")
+  ggtitle("Case 6: Disparate Demographic") +
+  xlab("") +
+  ylab("") +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+```
+
+# Pairwise Study Comparison
+
++ Is there a batch effect between all pairs of studies?  
+
+## Procedure
+ 
+1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
+2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
+
+```{r}
+dwi_pair_results <- case.experiment.pairwise(dwi.models, dwi.datasets, 'dMRI', nrep=1000)
+fmri_pair_results <- case.experiment.pairwise(fmri.models, fmri.datasets, 'fMRI', nrep=1000)
+results_pair <- list(dwi_pair_results, fmri_pair_results)
+saveRDS(results_pair, 'results_hem_pair.rds')
+```
+
+# Results
+
+## Cases
+
+```{r, fig.width=14, fig.height=8}
+top_leg <- g_legend(plot1)
+bot_leg <- g_legend(plot4)
+grid.arrange(arrangeGrob(plot1 + theme(legend.position=NaN),
+                         plot2 + theme(legend.position=NaN),
+                         plot3 + theme(legend.position=NaN),
+                         plot4 + theme(legend.position=NaN),
+                         plot5 + theme(legend.position=NaN),
+                         plot6 + theme(legend.position=NaN), nrow=2),
+             arrangeGrob(top_leg, bot_leg, nrow=2), nrow=1, widths=c(0.82, 0.16))
+```
+## Pairwise Comparisons
+
+### DWI
+
+```{r, fig.height=5, fig.width=6}
+gs.plot.plot_matrix(log10(dwi_pair_results$D + .0001), vfactor = TRUE, xlabel="Dataset", ylabel="Dataset",
+                    vlist = dwi_pair_results$dsets, legend.name=TeX("$log_{10}(p)$"),
+                    title = "DWI Paired Batch Investigation")
+```
+### fMRI
+
+```{r, fig.height=5, fig.width=6}
+gs.plot.plot_matrix(log10(fmri_pair_results$D + .0001), vfactor = TRUE, xlabel="Dataset", ylabel="Dataset",
+                    vlist = fmri_pair_results$dsets, legend.name=TeX("$log_{10}(p)$"),
+                    title = "fMRI Paired Batch Investigation")
 ```

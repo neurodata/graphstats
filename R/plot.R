@@ -4,6 +4,7 @@
 #'
 #' @import ggplot2
 #' @import reshape2
+#' @import plyr
 #' @param mtx [n, n] or [n, d]: the input. Can either be a square matrix or a data matrix.
 #' @param title="" the title for the square plot.
 #' @param xlabel=""	the x label for the square plot.
@@ -27,6 +28,10 @@ gs.plot.plot_matrix <- function(mtx, title="",xlabel="", ylabel="", legend.name=
   if (vfactor) {
     dm$x <- factor(dm$x)
     dm$y <- factor(dm$y)
+    if  (!is.null(vlist)) {
+      dm$x <- plyr::mapvalues(dm$x, from=1:length(vlist), to=vlist)
+      dm$y <- plyr::mapvalues(dm$y, from=1:length(vlist), to=vlist)
+    }
   }
   if (ffactor) {
     dm$value <- factor(dm$value)
@@ -50,6 +55,10 @@ gs.plot.plot_matrix <- function(mtx, title="",xlabel="", ylabel="", legend.name=
   } else {
     sqplot <- sqplot +
       ggplot2::theme(text=element_text(size=font.size, legend.position="none"))
+  }
+  if (!is.null(vlist)) {
+    sqplot <- sqplot +
+      ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
   }
   return(sqplot)
 }

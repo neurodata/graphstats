@@ -4,14 +4,16 @@
 \alias{gs.siem.batch.tstat}
 \title{Test Statistic for Batch Detection}
 \usage{
-gs.siem.batch.tstat(set1est, set2est, Z)
+gs.siem.batch.tstat(models, Z, i = 1, j = 2)
 }
 \arguments{
-\item{set1est}{[n] the first set of estimators for each element in the population.}
+\item{models}{[[n]] a list of the models fit to each of the n samples.}
 
-\item{set2est}{[n] the second set of estimators for each element in the population.}
+\item{Z}{[n] an array of the labels associated with each model.}
 
-\item{Z}{[n] the parameter labels for the batch each element is from.}
+\item{i=1}{the first edge set to use in the comparison.}
+
+\item{j=2}{the second edge set to use in the comparison.}
 }
 \value{
 tstat the test statistic.
