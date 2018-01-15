@@ -110,6 +110,11 @@ permutation_test(models, batch_grouping):
 Or the fraction of times that the maximum magnitude of a model fit difference exceeds the observed maximum magnitude of a model fit difference.
 
 ```{r}
+get_results <- function(tstat.out) {
+  P <- tstat.out$P
+  return(P[upper.tri(P, diag=FALSE)])
+}
+
 case.experiment.within <- function(models, datasets.labs, split.labs, modal, nrep=1000) {
   # partition the models that do not have the split data
   include_sets <- which(!is.nan(split.labs))
@@ -126,7 +131,7 @@ case.experiment.within <- function(models, datasets.labs, split.labs, modal, nre
     split_ss <- incl.split.labs[ss]
     if (length(unique(split_ss)) > 1) {
       perm.result <- gs.siem.batch.perm(model_ss, split_ss, i=1, j=2, nperm=nrep)
-      results <- rbind(results, data.frame(dataset=dsets[i], pval=perm.result$p, modal=modal))
+      results <- rbind(results, data.frame(dataset=dsets[i], pval=get_results(perm.result), modal=modal))
     }
   }
   return(results)
@@ -143,7 +148,7 @@ case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
   results <- data.frame(dataset=c(), pval=c())
   
   perm.result <- gs.siem.batch.perm(models, datasets.labs, i=1, j=2, nperm=nrep)
-  results <- rbind(results, data.frame(dataset='set', pval=perm.result$p, modal=modal))
+  results <- rbind(results, data.frame(dataset='set', pval=get_results(perm.result), modal=modal))
   return(results)
 }
 
@@ -160,8 +165,8 @@ case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000) {
     for (j in (i:length(dsets))) {
       ss <- datasets.labs %in% c(dsets[i], dsets[j])
       perm.result <- gs.siem.batch.perm(models[ss], datasets.labs[ss], i=1, j=2, nperm=nrep)
-      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=perm.result$p, modal=modal))
-      D[i, j] <- perm.result$p
+      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=get_results(perm.result), modal=modal))
+      D[i, j] <- get_results(perm.result)
     }
   }
   
@@ -292,7 +297,7 @@ fmri.models <- suppressWarnings(gs.xfm.alply(fmri.rank.graphs, gs.siem.fit, Es))
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in ipsilateral vs. contralateral connectivity between any pair of 2 sessions.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 results1 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sessions, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.datasets, fmri.sessions, 'fMRI', nrep=1000))
 saveRDS(results1, 'results_hem_case1.rds')
@@ -300,7 +305,7 @@ saveRDS(results1, 'results_hem_case1.rds')
 
 ```{r}
 plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
-  geom_point(size=2) +
+  geom_jitter(size=2) +
   ggtitle("Case 1: Sessions") +
   ylab(TeX("$p$-Value")) +
   xlab("Modality") +
@@ -318,7 +323,7 @@ plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, group
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000))
 saveRDS(results2, 'results_hem_case2.rds')
@@ -326,7 +331,7 @@ saveRDS(results2, 'results_hem_case2.rds')
 
 ```{r}
 plot2 <- ggplot(results2, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
-  geom_point(size=2) +
+  geom_jitter(size=2) +
   ggtitle("Case 2: Subjects") +
   xlab("") +
   ylab("") +
@@ -342,7 +347,7 @@ plot2 <- ggplot(results2, aes(x=modal, y=pval, shape=modal, color=dataset, group
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 results3 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.sexs, 'dMRI', nrep=1000),
       case.experiment.within(fmri.models, fmri.datasets, fmri.sexs, 'fMRI', nrep=1000))
 saveRDS(results3, 'results_hem_case3.rds')
@@ -350,7 +355,7 @@ saveRDS(results3, 'results_hem_case3.rds')
 
 ```{r}
 plot3 <- ggplot(results3, aes(x=modal, y=pval, shape=modal, group=dataset, color=dataset)) +
-  geom_point(size=2) +
+  geom_jitter(size=2) +
   ggtitle("Case 3: Same Sex") +
   xlab("") +
   ylab("") +
@@ -366,7 +371,7 @@ plot3 <- ggplot(results3, aes(x=modal, y=pval, shape=modal, group=dataset, color
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 dwi.studies <- dwi.datasets
 fmri.studies <- fmri.datasets
 dwi.studies[dwi.studies == 'BNU1' | dwi.studies == 'BNU3'] <- 'BNU'
@@ -380,7 +385,7 @@ saveRDS(results4, 'results_hem_case4.rds')
 
 ```{r}
 plot4 <- ggplot(results4, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
-  geom_point(size=2) +
+  geom_jitter(size=2) +
   ggtitle("Case 4: Same Site") +
   xlab("") +
   ylab("") +
@@ -397,7 +402,7 @@ plot4 <- ggplot(results4, aes(x=modal, y=pval, shape=modal, color=dataset, group
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 dwi.dset.sset <- which(dwi.datasets %in% c('BNU1', 'SWU4', 'HNU1', 'BNU3'))
 dwi.models.subs  <- dwi.models[dwi.dset.sset]; dwi.datasets.subs <- dwi.datasets[dwi.dset.sset]
 
@@ -411,7 +416,7 @@ saveRDS(results5, 'results_hem_case5.rds')
 
 ```{r}
 plot5 <- ggplot(results5, aes(x=modal, y=pval, shape=modal)) +
-  geom_point(size=2) +
+  geom_jitter(size=2) +
   ggtitle("Case 5: Same Demographic") +
   xlab("") +
   ylab("") +
@@ -427,7 +432,7 @@ plot5 <- ggplot(results5, aes(x=modal, y=pval, shape=modal)) +
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 results6 <- rbind(case.experiment.between(dwi.models, dwi.datasets, 'dMRI', nrep=1000),
       case.experiment.between(fmri.models, fmri.datasets, 'fMRI', nrep=1000))
 saveRDS(results6, 'results_hem_case6.rds')
@@ -435,7 +440,7 @@ saveRDS(results6, 'results_hem_case6.rds')
 
 ```{r}
 plot6 <- ggplot(results6, aes(x=modal, y=pval, shape=modal)) +
-  geom_point(size=2) +
+  geom_jitter(size=2) +
   ggtitle("Case 6: Disparate Demographic") +
   xlab("") +
   ylab("") +
@@ -451,7 +456,7 @@ plot6 <- ggplot(results6, aes(x=modal, y=pval, shape=modal)) +
 1) Compute test statistic given the default partitioning, and obtain $\tau_{observed}$, as the maximum magnitude of difference in  ipsilateral vs. contralateral connectivity between any pair of 2 subjects.
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
-```{r}
+```{r, warnings=FALSE}
 dwi_pair_results <- case.experiment.pairwise(dwi.models, dwi.datasets, 'dMRI', nrep=1000)
 fmri_pair_results <- case.experiment.pairwise(fmri.models, fmri.datasets, 'fMRI', nrep=1000)
 results_pair <- list(dwi_pair_results, fmri_pair_results)

@@ -152,8 +152,7 @@ gs.siem.batch.perm <- function(models, Z, i=1, j=2, tstat=gs.siem.batch.tstat, n
     tstat.alt <= null
   })
   # compute E[tstat.null > tstat.alt]
-  cmp <- abind::abind(cmp, along=0)
-  P <- colMeans(tstat.nulls, dims=1)
+  P <- colMeans(abind::abind(cmp, along=0), dims=1)
   return(list(tstat.alt=tstat.alt, tstat.nulls=tstat.nulls, P=P))
 }
 
@@ -194,7 +193,7 @@ gs.siem.batch.tstat <- function(models, Z, i=1, j=2, return="full") {
     }
   }
   # return the statistic depending on how the user specifies
-  if (return="full") {
+  if (return == "full") {
     stat <-  D
   } else if (return == "max") {
     stat <- max(D)
