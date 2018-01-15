@@ -70,7 +70,7 @@ For details on the model, please see [SIEM model](http://docs.neurodata.io/graph
 
 # Real Data Experiments
 
-In this notebook, we determine whether there exists a batch effect in the difference in connectivity $p_{homo}$ homotopically (same region, opposite hemisphere) vs $p_{hetero}$ heterotopically (different region) connectivity within a particular modality. We consider $\delta_{x} = p_{homo} - p_{hetero}$ to be the difference in connectivity for a graph from a graph or collection of graphs from a particular modality $x$.
+In this notebook, we determine whether there exists a batch effect in the difference in connectivity $\bar{r}_{homo}$ homotopically (same region, opposite hemisphere) vs $\bar{r}_{hetero}$ heterotopically (different region) connectivity within a particular modality. We consider $\delta_{x} = \bar{r}_{homo} - \bar{r}_{hetero}$ to be the difference in connectivity for a graph from a graph or collection of graphs from a particular modality $x$. Here, $\bar{r}$ is the average rank within a particular region.
 
 ## Tests
 
@@ -79,8 +79,8 @@ In this notebook, we determine whether there exists a batch effect in the differ
 Our test for this notebook is as follows:
 
 \begin{align*}
-  H_0: p_{homo} \leq p_{hetero} \\
-  H_A: p_{homo} > p_{hetero}
+  H_0: \bar{r}_{homo} \leq \bar{r}_{hetero} \\
+  H_A: \bar{r}_{homo} > \bar{r}_{hetero}
 \end{align*}
 
 We will use a $1$-sample test to determine whether within a single graph we can determine a significant difference in connectivity.  
@@ -96,7 +96,7 @@ test_statistic(models, grouping):
   compute the average p_{homo} and p_{hetero} for each unique grouping label.
   For each i, j pair of unique grouping labels:
     stat[i, j] = |p_{homo, 1} - p_{homo, 2} - (p_{hetero, 1} - p_{hetero, 2})|
-  return max(stats)  # test statistic is the pairing with the greatest magnitude
+  return stats  # test statistic is the pairing with the greatest magnitude
   
 permutation_test(models, batch_grouping):
   compute the test statistic for the graphs given the default batch grouping.

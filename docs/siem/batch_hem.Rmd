@@ -70,7 +70,8 @@ For details on the model, please see [SIEM model](http://docs.neurodata.io/graph
 
 # Real Data Experiments
 
-In this notebook, we determine whether there exists a batch effect in the difference in connectivity $p_{ipsi}$ ipsilaterally (same hemisphere) vs $p_{contra}$ contra-laterally (different region) connectivity within a particular modality. We consider $\delta_{x} = p_{ips} - p_{contra}$ to be the difference in connectivity for a graph from a graph or collection of graphs from a particular modality $x$.
+
+In this notebook, we determine whether there exists a batch effect in the difference in connectivity $\bar{r}_{ipsi}$ homotopically (same region, opposite hemisphere) vs $\bar{r}_{contra}$ heterotopically (different region) connectivity within a particular modality. We consider $\delta_{x} = \bar{r}_{ipsi} - \bar{r}_{contra}$ to be the difference in connectivity for a graph from a graph or collection of graphs from a particular modality $x$. Here, $\bar{r}$ is the average rank within a particular region.
 
 ## Tests
 
