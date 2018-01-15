@@ -126,6 +126,7 @@ gs.siem.model.params <- function(data) {
 #'
 #' A function that computes a test statistic associated with a particular arrangement of graphs
 #' using pairs of edge community estimators estimated by the SIEM.
+#' @import abind
 #' @param models [[n]] a list of the models fit to each of the n samples.
 #' @param Z [n] an array of the labels associated with each model.
 #' @param i=1 the first edge set to use in the comparison.
@@ -134,47 +135,73 @@ gs.siem.model.params <- function(data) {
 #' @param nperm=1000 the number of permutations for testing.
 #' @return tstat.alt the test statistic given the current Z orderings.
 #' @return tstat.null the test statistics of each permutation of the Z orderings.
-#' @return p the expectation of tstat.null >= tstat.alt.
+#' @return P the estimator of E[tstat.null >= tstat.alt.]
 #' @seealso \code{\link{gs.siem.fit}}
 #' @author Eric Bridgeford
 #' @export
 gs.siem.batch.perm <- function(models, Z, i=1, j=2, tstat=gs.siem.batch.tstat, nperm=1000) {
   tstat.alt <- do.call(tstat, list(models, Z, i=1, j=2))
-  tstat.nulls <- array(NaN, dim=c(nperm))
-  for (j in 1:nperm) {
+  # compute the null distribution by permuting the observed labels
+  tstat.nulls <- lapply(1:nperm, function(k) {
     permuted_ss <- sample(Z, size=length(Z))
-    tstat.nulls[j] <-  do.call(tstat, list(models, permuted_ss, i=1, j=2))  # get test statistic of permuted data
-  }
-  return(list(tstat.alt=tstat.alt, tstat.nulls=tstat.nulls, p=sum(tstat.nulls >= tstat.alt)/nperm))
+    null <- do.call(tstat, list(models, permuted_ss, i=i, j=j))  # get test statistic of permuted data
+    return(null)
+  })
+  # compare the test statistic of the observed data to the alternative statistics
+  cmp <- lapply(tstat.nulls, function(null) {
+    tstat.alt <= null
+  })
+  # compute E[tstat.null > tstat.alt]
+  cmp <- abind::abind(cmp, along=0)
+  P <- colMeans(tstat.nulls, dims=1)
+  return(list(tstat.alt=tstat.alt, tstat.nulls=tstat.nulls, P=P))
 }
 
 #' Test Statistic for Batch Detection
 #'
 #' A function that computes a test statistic associated with a set of estimators.
+#' Given a list of SIEM models and an array of labels, computes the mean estimator for
+#' two pairs of the average edge-set estimators (called p and q). For each pair of unique labels
+#' in the data set, computes the distance between the pairs of estimators assiciated with the unique labels as
+#' D_{ij} = |p_i - p_j - (q_i - q_j)|.
 #' @param models [[n]] a list of the models fit to each of the n samples.
 #' @param Z [n] an array of the labels associated with each model.
 #' @param i=1 the first edge set to use in the comparison.
 #' @param j=2 the second edge set to use in the comparison.
-#' @return tstat the test statistic.
-#' @return D the distance matrix.
+#' @param return="full" How to return the test statistic.
+#' \itemize{
+#' \item{"full"}{return the full distance matrix as the statistic.}
+#' \item{"max"}{return the max value of the distance matrix.}
+#' \item{"mean"}{return the mean value of the distance matrix.}
+#' \item{"min"}{return the min value of the distance matrix.}
+#' }
+#' @return stat the test statistic.
 #' @author Eric Bridgeford
 #' @export
-gs.siem.batch.tstat <- function(models, Z, i=1, j=2) {
+gs.siem.batch.tstat <- function(models, Z, i=1, j=2, return="full") {
   p <- sapply(models, function(model) model$pr[i])
   q <- sapply(models, function(model) model$pr[j])
-
+  # compute the average p and q associated with each unique Z label
   Zset <- unique(Z)
   n <- length(Zset)
   pset <- sapply(Zset, function(z) mean(p[Z == z]))
   qset <- sapply(Zset, function(z) mean(q[Z == z]))
-
+  # for each pair of unique labels, compute the distance between the estimators
   D <- array(NaN, dim=c(n, n))
   for (i in 1:n) {
     for (j in i:n) {
       D[i, j] <- abs(pset[i] - pset[j] - (qset[i] - qset[j]))
     }
   }
-
-  tstat <- max(D, na.rm=TRUE)
-  return(tstat=tstat)
+  # return the statistic depending on how the user specifies
+  if (return="full") {
+    stat <-  D
+  } else if (return == "max") {
+    stat <- max(D)
+  } else if (return == "mean") {
+    stat <- mean(D)
+  } else if (return == "min") {
+    stat  <- min(D)
+  }
+  return(stat)
 }
