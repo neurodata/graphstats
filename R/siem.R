@@ -122,6 +122,8 @@ gs.siem.model.params <- function(data) {
   return(list(p=m.mu, var=m.var))
 }
 
+is.defined = function(x)!is.null(x)
+
 #' SIEM for Batch Detection
 #'
 #' A function that computes a test statistic associated with a particular arrangement of graphs
@@ -140,6 +142,8 @@ gs.siem.model.params <- function(data) {
 #' @author Eric Bridgeford
 #' @export
 gs.siem.batch.perm <- function(models, Z, i=1, j=2, tstat=gs.siem.batch.tstat, nperm=1000) {
+  Z <- Z[which(sapply(models, is.defined))]
+  models <- models[which(sapply(models, is.defined))]
   tstat.alt <- do.call(tstat, list(models, Z, i=1, j=2))
   # compute the null distribution by permuting the observed labels
   tstat.nulls <- lapply(1:nperm, function(k) {
@@ -152,7 +156,7 @@ gs.siem.batch.perm <- function(models, Z, i=1, j=2, tstat=gs.siem.batch.tstat, n
     tstat.alt <= null
   })
   # compute E[tstat.null > tstat.alt]
-  P <- colMeans(abind::abind(cmp, along=0), dims=1)
+  P <- colMeans(abind::abind(cmp, along=0), dims=1) + 1/nperm
   return(list(tstat.alt=tstat.alt, tstat.nulls=tstat.nulls, P=P))
 }
 
@@ -183,8 +187,8 @@ gs.siem.batch.tstat <- function(models, Z, i=1, j=2, return="full") {
   # compute the average p and q associated with each unique Z label
   Zset <- unique(Z)
   n <- length(Zset)
-  pset <- sapply(Zset, function(z) mean(p[Z == z]))
-  qset <- sapply(Zset, function(z) mean(q[Z == z]))
+  pset <- sapply(Zset, function(z) mean(p[Z == z], na.rm=TRUE))
+  qset <- sapply(Zset, function(z) mean(q[Z == z], na.rm=TRUE))
   # for each pair of unique labels, compute the distance between the estimators
   D <- array(NaN, dim=c(n, n))
   for (i in 1:n) {
