@@ -15,6 +15,8 @@ require(igraph)
 require(stringr)
 require(gridExtra)
 require(scales)
+require(data.table)
+require(grid)
 source('../../R/siem.R')
 
 parse_class <- function(basepath, dsets, subjects) {
@@ -180,6 +182,21 @@ g_legend <- function(a.gplot){
   legend <- tmp$grobs[[leg]]
   return(legend)
 }
+
+is.defined = function(x)!is.null(x)
+
+extract_params <- function(models, Z, i=1, j=2, modal=NULL) {
+# aggregate p and qs
+  params <- lapply(unique(Z), function(z) {
+    ss <- which(Z == z)
+    mods <- dwi.models[ss]
+    p <- sapply(mods, function(model) model$pr[i])
+    q <- sapply(mods, function(model) model$pr[j])
+    pm <- mean(p); qm <- mean(q); dm <- pm - qm
+    return(data.frame(p=pm, q=qm, d=dm, dataset=z, size=length(ss), modal=modal))
+  })
+  return(do.call(rbind, params))
+}
 ```
 
 ## Raw Data
@@ -245,6 +262,12 @@ for (i in 1:nroi) {
 Es <- list(group1, group2)
 dwi.rank.graphs <- gs.xfm.aaply(dwi.graphs, gs.xfm.rank_graph)
 dwi.models <- suppressWarnings(gs.xfm.alply(dwi.rank.graphs, gs.siem.fit, Es))
+incl <- which(sapply(dwi.models, is.defined))
+dwi.datasets <- dwi.datasets[incl]
+dwi.sessions <- dwi.sessions[incl]
+dwi.sexs <- dwi.sexs[incl]
+dwi.subjects <- dwi.subjects[incl]
+dwi.models <- dwi.models[incl]
 ```
 
 
@@ -285,6 +308,51 @@ for (i in 1:nroi) {
 Es <- list(group1, group2)
 fmri.rank.graphs <- gs.xfm.aaply(fmri.graphs, gs.xfm.rank_graph)
 fmri.models <- suppressWarnings(gs.xfm.alply(fmri.rank.graphs, gs.siem.fit, Es))
+
+incl <- which(sapply(fmri.models, is.defined))
+fmri.datasets <- fmri.datasets[incl]
+fmri.sessions <- fmri.sessions[incl]
+fmri.sexs <- fmri.sexs[incl]
+fmri.subjects <- fmri.subjects[incl]
+fmri.models <- fmri.models[incl]
+```
+
+Map a color vector:
+
+```{r}
+total.dsets <- union(dwi.datasets, fmri.datasets)
+cols <- c("#d5512b","#5970d8","#99b534","#9e5cd0","#59b648","#c74bae","#4bbe7c","#d93f7f",
+          "#387e4a","#d2414f","#4ebdb0","#d98d2f","#5e98d3","#c6ab43","#725a9d","#99b36d",
+          "#b98ed8","#677629","#d77fb9","#92692e","#9c4467","#e1966c","#dc7b88","#ac5336")
+names(cols) <- total.dsets
+```
+
+# Pre-Experimental: Visualizing P and Q across Studies
+
+```{r}
+dwi.params <- extract_params(dwi.models, dwi.datasets, i=1, j=2, modal='dMRI')
+fmri.params <- extract_params(fmri.models, fmri.datasets, i=1, j=2, modal='fMRI')
+params <- rbind(dwi.params, fmri.params)
+colnames(params)[3] <- "p - q"
+# params <- melt(params, id=c("dataset", "modal", "size"))
+# plot_pre <- ggplot(params, aes(x=modal, y=value, shape=variable, size=size, color=dataset)) +
+#   geom_jitter() +
+#   scale_shape_discrete(breaks = c("p", "q", "p - q")) +
+#   xlab("Modality") +
+#   ylab("Value") +
+#   theme_bw() +
+#   guides(size=FALSE) +
+#   ggtitle("Exploratory Analysis of Within-Dataset Rank") +
+#   labs(shape="Variable", color="Dataset")
+plot_pre <- ggplot(params, aes(x=p, y=q, shape=modal, size=size, color=dataset)) +
+  geom_point() +
+  scale_color_manual(values=cols) +
+  xlab(TeX("$\\hat{p}$")) +
+  ylab(TeX("$\\hat{q}$")) +
+  theme_bw() +
+  guides(size=FALSE) +
+  ggtitle("Exploratory Analysis") +
+  labs(shape="Modality", color="Dataset")
 ```
 
 # Case 1: Session Partitioning
@@ -305,13 +373,15 @@ saveRDS(results1, 'results_bil_case1.rds')
 ```{r}
 results1 <- readRDS('results_bil_case1.rds')
 plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
+  scale_color_manual(values=cols) +
   geom_jitter(size=2) +
   ggtitle("Case 1: Sessions") +
   ylab(TeX("$p$-Value")) +
   xlab("Modality") +
   scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
   labs(shape="Modality", color="Dataset") +
-  guides(color=guide_legend(ncol=2))
+  guides(color=guide_legend(ncol=2), shape=FALSE) +
+  theme_bw()
 ```
 
 # Case 2: Subject Partitioning
@@ -331,12 +401,26 @@ saveRDS(results2, 'results_bil_case2.rds')
 
 ```{r}
 results2 <- readRDS('results_bil_case2.rds')
-plot2 <- ggplot(results2, aes(x=modal, y=pval, shape=modal, color=dataset, group=dataset)) +
-  geom_jitter(size=2) +
-  ggtitle("Case 2: Subjects") +
+dwi.plot2 <- ggplot(results2[results2$modal == 'dMRI',], aes(pval, color=dataset)) +
+  geom_density(alpha=0.2, size=1.5) +
+  scale_color_manual(values=cols) +
   xlab("") +
+  coord_flip() +
   ylab("") +
-  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+  theme_bw() +
+  scale_x_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+  
+fmri.plot2 <- ggplot(results2[results2$modal == 'fMRI',], aes(pval, color=dataset)) +
+  geom_density(alpha=0.2, size=1.5) +
+  scale_color_manual(values=cols) +
+  xlab("") +
+  coord_flip() +
+  ylab("") +
+  theme_bw() +
+  scale_x_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+plot2 <- grid.arrange(dwi.plot2 + theme(legend.position=NaN) + ylab("dMRI"),
+                      fmri.plot2 + theme(legend.position=NaN) + ylab("fMRI"),
+                      nrow=1, top = textGrob("Case 2: Subjects",gp=gpar(fontsize=14)))
 ```
 
 # Case 3: Same Sex
@@ -358,10 +442,12 @@ saveRDS(results3, 'results_bil_case3.rds')
 results3 <- readRDS('results_bil_case3.rds')
 plot3 <- ggplot(results3, aes(x=modal, y=pval, shape=modal, group=dataset, color=dataset)) +
   geom_jitter(size=2) +
+  scale_color_manual(values=cols) +
   ggtitle("Case 3: Same Sex") +
   xlab("") +
   ylab("") +
-  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+  theme_bw()
 ```
 
 # Case 4: Same Site
@@ -393,7 +479,8 @@ plot4 <- ggplot(results4, aes(x=modal, y=pval, shape=modal, color=dataset, group
   xlab("") +
   ylab("") +
   scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
-  labs(shape="Modality", color="Dataset")
+  labs(shape="Modality", color="Site") +
+  theme_bw()
 ```
 
 # Case 5: Same Demographics
@@ -423,9 +510,11 @@ results5 <- readRDS('results_bil_case5.rds')
 plot5 <- ggplot(results5, aes(x=modal, y=pval, color=dset1, shape=modal)) +
   geom_jitter(size=2) +
   ggtitle("Case 5: Same Demographic") +
+  scale_color_manual(values=cols) +
   xlab("") +
   ylab("") +
-  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+  theme_bw()
 ```
 
 # Case 6: Disparate Demographics
@@ -448,9 +537,11 @@ results6 <- readRDS('results_bil_case6.rds')
 plot6 <- ggplot(results6, aes(x=modal, y=pval, color=dset1, shape=modal)) +
   geom_jitter(size=2) +
   ggtitle("Case 6: Disparate Demographic") +
+  scale_color_manual(values=cols) +
   xlab("") +
   ylab("") +
-  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1))
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+  theme_bw()
 ```
 
 # Pairwise Study Comparison
@@ -475,10 +566,12 @@ saveRDS(results_pair, 'results_bil_pair.rds')
 
 ```{r, fig.width=14, fig.height=8}
 results_pair <- readRDS('results_bil_pair.rds')
+dwi_pair_results <- results_pair[[1]]
+fmri_pair_results <- results_pair[[2]]
 top_leg <- g_legend(plot1)
 bot_leg <- g_legend(plot4)
-grid.arrange(arrangeGrob(plot1 + theme(legend.position=NaN),
-                         plot2 + theme(legend.position=NaN),
+bottom <- grid.arrange(arrangeGrob(plot1 + theme(legend.position=NaN),
+                         plot2,
                          plot3 + theme(legend.position=NaN),
                          plot4 + theme(legend.position=NaN),
                          plot5 + theme(legend.position=NaN),
@@ -490,14 +583,31 @@ grid.arrange(arrangeGrob(plot1 + theme(legend.position=NaN),
 ### DWI
 
 ```{r, fig.height=5, fig.width=6}
-gs.plot.plot_matrix(log10(dwi_pair_results$D + .0001), vfactor = TRUE, xlabel="Dataset", ylabel="Dataset",
+dwi.pair <- gs.plot.plot_matrix(dwi_pair_results$D, vfactor = TRUE, xlabel="Dataset", ylabel="Dataset",
                     vlist = dwi_pair_results$dsets, legend.name=TeX("$log_{10}(p)$"),
-                    title = "DWI Paired Batch Investigation")
+                    title = "DWI Paired Batch") +
+  scale_fill_gradient(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
+                      limits=c(0.001, 1), low="red", high="white")
 ```
 ### fMRI
 
 ```{r, fig.height=5, fig.width=6}
-gs.plot.plot_matrix(log10(fmri_pair_results$D + .0001), vfactor = TRUE, xlabel="Dataset", ylabel="Dataset",
+fmri.pair <- gs.plot.plot_matrix(fmri_pair_results$D, vfactor = TRUE,
+                                 xlabel="Dataset", ylabel="Dataset",
                     vlist = fmri_pair_results$dsets, legend.name=TeX("$log_{10}(p)$"),
-                    title = "fMRI Paired Batch Investigation")
+                    title = "fMRI Paired Batch") +
+  scale_fill_gradient(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
+                      limits=c(0.001, 1), low="red", high="white")
+```
+
+# Combined plot
+
+```{r, fig.height=13, fig.width=15}
+pair_leg <- g_legend(dwi.pair)
+top <- grid.arrange(plot_pre + theme(legend.position=NaN),
+                     grid.arrange(dwi.pair + theme(legend.position=NaN),
+                                  fmri.pair + theme(legend.position=NaN),
+                                  pair_leg, widths=c(0.4, 0.4, 0.2)),
+                     widths=c(0.2, 0.7), nrow=1)
+grid.arrange(top, bottom, heights=c(0.4, 0.6))
 ```

@@ -142,8 +142,9 @@ is.defined = function(x)!is.null(x)
 #' @author Eric Bridgeford
 #' @export
 gs.siem.batch.perm <- function(models, Z, i=1, j=2, tstat=gs.siem.batch.tstat, nperm=1000) {
-  Z <- Z[which(sapply(models, is.defined))]
-  models <- models[which(sapply(models, is.defined))]
+  incl <- which(sapply(models, is.defined))
+  Z <- Z[incl]
+  models <- models[incl]
   tstat.alt <- do.call(tstat, list(models, Z, i=1, j=2))
   # compute the null distribution by permuting the observed labels
   tstat.nulls <- lapply(1:nperm, function(k) {
