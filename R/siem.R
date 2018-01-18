@@ -117,7 +117,7 @@ model.var <- function(p, n) {
 #' @author Eric Bridgeford
 gs.siem.model.params <- function(data) {
   n <- length(data)
-  m.mu <- sum(data)/n
+  m.mu <- mean(data, na.rm=TRUE)
   m.var <- model.var(m.mu, n)
   return(list(p=m.mu, var=m.var))
 }

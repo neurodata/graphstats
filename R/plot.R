@@ -31,6 +31,8 @@ gs.plot.plot_matrix <- function(mtx, title="",xlabel="", ylabel="", legend.name=
     if  (!is.null(vlist)) {
       dm$x <- plyr::mapvalues(dm$x, from=1:length(vlist), to=vlist)
       dm$y <- plyr::mapvalues(dm$y, from=1:length(vlist), to=vlist)
+      dm$x <- ordered(dm$x, levels=vlist)
+      dm$y <- ordered(dm$y, levels=vlist)
     }
   }
   if (ffactor) {
@@ -54,7 +56,7 @@ gs.plot.plot_matrix <- function(mtx, title="",xlabel="", ylabel="", legend.name=
       ggplot2::theme(text=element_text(size=font.size))
   } else {
     sqplot <- sqplot +
-      ggplot2::theme(text=element_text(size=font.size, legend.position="none"))
+      ggplot2::theme(text=element_text(size=font.size), legend.position="none")
   }
   if (!is.null(vlist)) {
     sqplot <- sqplot +
