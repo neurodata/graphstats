@@ -1,0 +1,113 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+require(fmriutils)
+require(graphstats)
+require(mgc)
+require(ggplot2)
+require(latex2exp)
+require(igraph)
+require(stringr)
+require(gridExtra)
+require(scales)
+require(data.table)
+require(grid)
+source('../../R/siem.R')
+
+localpath <- '/home/eric/Documents/research/R-fmri/graphstats'
+```
+
+```{r}
+colors <- readRDS('colors.rds')
+svals <- colors$svals; cols <- colors$cols
+```
+# Aggregate plots
+
+```{r}
+panel_plots <- list()
+files <- c("params", "pair", "case1", "case2", "case3", "case4", "case5", "case6")
+title <- c("Exploratory", "Paired", "Sessions", "Subjects", "Sexs", "Within Site",
+           "Within Demographic", "Disparate Demographic")
+modal_plots <- list(dMRI=list(), fMRI=list())
+counters <- list(dMRI=1, fMRI=1)
+for (pp in 1:length(files)) {
+  for (modal in names(modal_plots)) {
+    if (modal == 'dmri') {
+      path_str <- 'hem'
+    } else {
+      path_str <- 'bil'
+    }
+    fpath <- file.path(localpath, 'docs/siem',
+                       paste("results", path_str, sprintf('%s.rds', files[pp]), sep="_"))
+    param = readRDS(fpath)
+    if (pp == 2) {
+      results <- param[[which(modal == names(modal_plots))]]$data
+      dsets <- param[[which(modal == names(modal_plots))]]$dsets
+      results$dset1 <- ordered(results$dset1, levels=names(svals))
+      results$dset2 <- ordered(results$dset2, levels=rev(names(svals)))
+    } else {
+      results <- param[param$modal == modal,]
+      if (pp %in% c(7, 8)) {
+        results$dset1 <- ordered(results$dset1, levels=names(svals))
+        results$dset2 <- ordered(results$dset2, levels=names(svals))
+      } else {
+        results$dataset <- ordered(results$dataset, levels=names(svals))
+      }
+    }
+    if (files[pp] == 'params') {
+      plot <- ggplot(results, aes(x=p, y=q, size=size, color=dataset)) +
+        geom_point(alpha=1) +
+        scale_color_manual(name="Dataset", values=cols) +
+        scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
+        xlab(TeX("$\\hat{p}$")) +
+        ylab(TeX("$\\hat{q}$")) +
+        theme_bw() +
+        ggtitle("Exploratory Analysis") +
+        labs(shape="Modality", color="Dataset")
+    } else if (files[pp] == 'pair') {
+      plot <- ggplot(results, aes(x=dset1, y=dset2, fill=pval)) +
+        geom_tile() +
+        ggtitle(title[pp]) +
+        xlab("Dataset") +
+        ylab("Dataset") +
+        scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
+                             colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"), limits=c(0.001, 1)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    } else if (files[pp] == 'case2') {
+      plot <- ggplot(results, aes(pval, color=dataset, size=size)) +
+        geom_density(alpha=0.2) +
+        scale_color_manual(name="Dataset", values=cols) +
+        xlab("") +
+        coord_flip() +
+        ylab("") +
+        theme_bw() +
+        scale_x_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+        ggtitle(title[pp])
+    }  else {
+      if (pp %in% c(7, 8)) {
+        plot <- ggplot(results, aes(x=modal, y=pval, color=dset1, size=size)) +
+          scale_size_continuous(name="Dataset", breaks=svals)
+      } else if (!(pp %in% c(6))) {
+        plot <- ggplot(results, aes(x=modal, y=pval, color=dataset, size=size)) +
+          scale_size_continuous(name="Dataset", breaks=svals)
+      } else {
+        plot <- ggplot(results, aes(x=modal, y=pval, color=dataset, size=3))
+      }
+      plot <- plot +
+        geom_jitter(alpha=0.8, width=0.25, height=0) +
+        scale_color_manual(name="Dataset", values=cols) +
+        ggtitle(title[pp]) +
+        ylab(TeX("$p$-Value")) +
+        xlab("Modality") +
+        scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .001, .01, .1, 1)) +
+        labs(shape="Modality", color="Dataset") +
+        theme_bw() +
+        ggtitle(title[pp])
+    }
+    modal_plots[[modal]][[pp]] <- plot
+  }
+}
+```
