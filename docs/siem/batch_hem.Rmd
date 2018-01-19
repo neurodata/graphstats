@@ -600,24 +600,33 @@ bottom <- grid.arrange(arrangeGrob(plot1 + theme(legend.position=NaN),
 ```
 ## Pairwise Comparisons
 
-### DWI
+### dMRI
 
 ```{r, fig.height=5, fig.width=6}
-dwi.pair <- gs.plot.plot_matrix(dwi_pair_results$D, vfactor = TRUE, xlabel="Dataset", ylabel="Dataset",
-                    vlist = dwi_pair_results$dsets, legend.name=TeX("$log_{10}(p)$"),
-                    title = "DWI Paired Batch") +
-  scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
-                       colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"), limits=c(0.001, 1))
+dwi_pair_results$data$dset1 <- ordered(dwi_pair_results$data$dset1, levels=names(svals))
+dwi_pair_results$data$dset2 <- ordered(dwi_pair_results$data$dset2, levels=names(svals))
+dwi.pair <- ggplot(dwi_pair_results$data, aes(x=dset1, y=dset2, fill=pval)) +
+        geom_tile() +
+        ggtitle("dMRI Paired Batch") +
+        xlab("Dataset") +
+        ylab("Dataset") +
+        scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
+                             colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"), limits=c(0.001, 1)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 ### fMRI
 
 ```{r, fig.height=5, fig.width=6}
-fmri.pair <- gs.plot.plot_matrix(fmri_pair_results$D, vfactor = TRUE,
-                                 xlabel="Dataset", ylabel="Dataset",
-                    vlist = fmri_pair_results$dsets, legend.name=TeX("$log_{10}(p)$"),
-                    title = "fMRI Paired Batch") +
-  scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
-                       colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"), limits=c(0.001, 1))
+fmri_pair_results$data$dset1 <- ordered(fmri_pair_results$data$dset1, levels=names(svals))
+fmri_pair_results$data$dset2 <- ordered(fmri_pair_results$data$dset2, levels=names(svals))
+fmri.pair <- ggplot(fmri_pair_results$data, aes(x=dset1, y=dset2, fill=pval)) +
+        geom_tile() +
+        ggtitle("fMRI Paired Batch") +
+        xlab("Dataset") +
+        ylab("Dataset") +
+        scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
+                             colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"), limits=c(0.001, 1)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 # Combined plot

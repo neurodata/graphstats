@@ -116,6 +116,7 @@ model.var <- function(p, n) {
 #' @return var the variance associated with a particular edge community.
 #' @author Eric Bridgeford
 gs.siem.model.params <- function(data) {
+  data <- data[which(!is.na(data))]
   n <- length(data)
   m.mu <- mean(data, na.rm=TRUE)
   m.var <- model.var(m.mu, n)
