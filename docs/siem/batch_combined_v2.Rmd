@@ -1,0 +1,157 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+require(fmriutils)
+require(graphstats)
+require(ggplot2)
+require(latex2exp)
+require(igraph)
+require(stringr)
+require(gridExtra)
+require(scales)
+require(data.table)
+require(grid)
+source('../../R/siem.R')
+
+localpath <- '/home/eric/Documents/research/R-fmri/graphstats'
+
+
+g_legend <- function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+```
+
+```{r}
+colors <- readRDS('colors.rds')
+svals <- colors$svals; cols <- colors$cols
+svals['BNU'] <- svals['BNU1'] + svals['BNU3']
+svals['Templeton'] <- svals['Templeton114'] + svals['Templeton255']
+```
+# Aggregate plots
+
+```{r, fig.show='hide'}
+panel_plots <- list()
+files <- c("params", "pair", "case1", "case2", "case3", "case4", "case5", "case6")
+title <- c("Exploratory", "Paired", "Case 1", "Case 2", "Case 3", "Case 4",
+           "Case 5", "Case 6")
+modal_plots <- list(dMRI=list(), fMRI=list())
+counters <- list(dMRI=1, fMRI=1)
+case_dat <- list()
+for (modal in names(modal_plots)) {
+  if (modal == 'dMRI') {
+    path_str <- 'hem'
+  } else {
+    path_str <- 'bil'
+  }
+  top_plots <- list()
+  for (pp in 1:2) {
+    fpath <- file.path(localpath, 'docs/siem',
+                       paste("results", path_str, sprintf('%s.rds', files[pp]), sep="_"))
+    param = readRDS(fpath)
+    if (pp == 2) {
+      results <- param[[which(modal == names(modal_plots))]]$data
+      dsets <- param[[which(modal == names(modal_plots))]]$dsets
+      results$dset1 <- ordered(results$dset1, levels=names(svals))
+      results$dset2 <- ordered(results$dset2, levels=rev(names(svals)))
+    } else {
+      results <- param[param$modal == modal,]
+    }
+    if (pp == 1) {
+      plot <- ggplot(results, aes(x=p, y=q, size=size/20, color=dataset)) +
+        geom_point(alpha=0.8) +
+        scale_color_manual(name="Dataset", values=cols) +
+        scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
+        xlab(TeX("$\\hat{p}$")) +
+        ylab(TeX("$\\hat{q}$")) +
+        theme_bw() +
+        ggtitle("Exploratory Analysis") +
+        labs(shape="Modality", color="Dataset") +
+        theme_bw() +
+        theme(legend.position="none")
+    } else if (files[pp] == 'pair') {
+      plot <- ggplot(results, aes(x=dset1, y=dset2, fill=pval)) +
+        geom_tile() +
+        ggtitle(title[pp]) +
+        xlab("Dataset") +
+        ylab("Dataset") +
+        scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
+                             colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"),
+                             limits=c(0.001, 1)) +
+        theme_bw()
+      p_leg <- g_legend(plot)
+      plot <- plot +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
+    }
+    top_plots[[pp]] <- plot
+  }
+  top_plot <- grid.arrange(grobs=top_plots, ncol=2)
+  cases <- data.frame(case=c(), pval=c(), dataset=c(), size=c())
+  for (pp in 3:length(files)) {
+    fpath <- file.path(localpath, 'docs/siem',
+                       paste("results", path_str, sprintf('%s.rds', files[pp]), sep="_"))
+    param = readRDS(fpath)
+    results <- param[param$modal == modal,]
+    if (pp %in% c(7, 8)) {
+      new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dset1, size=results$size)
+    } else {
+      new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dataset, size=results$size)
+    }
+    cases <- rbind(cases, new_dat)
+  }
+  cases$dataset <- ordered(cases$dataset, levels=names(cols))
+  bottom_plot <- ggplot(cases, aes(x=case, y=pval, color=dataset, size=size), drop=FALSE) +
+    geom_jitter(alpha=0.8, width=0.1, height=0) +
+    scale_color_manual(name="Dataset", values=cols) +
+    scale_size_continuous(name="Dataset",  breaks=svals, range=c(0.5, 2)) +
+    scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .01, .1, 1)) +
+    xlab("Investigation") +
+    ylab(TeX("$p$-value")) +
+    ggtitle("Batch Effect Investigation") +
+    theme_bw() +
+    theme(legend.position="none")
+  modal_plots[[modal]] <- list(top_plot, bottom_plot)
+  
+  case_dat[[modal]] <- cbind(cases, modal)
+}
+```
+
+## Legends
+
+We make a combined plot just to get the dataset legend:
+
+```{r, fig.show='hide'}
+case_leg_dat <- do.call(rbind, case_dat)
+case_combined <- ggplot(case_leg_dat, aes(x=case, y=pval, color=dataset, size=size)) +
+  geom_jitter(alpha=0.8, width=0.25, height=0) +
+  scale_color_manual(name="Dataset", values=cols) +
+  scale_size_continuous(name="Dataset",  breaks=svals, range=c(0.5, 2)) +
+  scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .01, .1, 1)) +
+  xlab("Investigation") +
+  ylab(TeX("$p$-value")) +
+  ggtitle("Batch Effect Investigation") +
+  theme_bw()
+case_leg <- g_legend(case_combined)
+```
+
+
+# Combined Plot
+
+```{r, fig.show='hide'}
+dmri <- grid.arrange(grobs=modal_plots$dMRI, ncol=1,
+                     top=textGrob("dMRI Hemispheric", gp=gpar(fontsize=20)))
+fmri <- grid.arrange(grobs=modal_plots$fMRI, ncol=1,
+                     top=textGrob("fMRI Homotopic", gp=gpar(fontsize=20)))
+legs <- grid.arrange(p_leg, case_leg, ncol=1)
+```
+
+```{r, fig.height=12, fig.width=24}
+grid.arrange(dmri, fmri, legs, widths=c(0.44, 0.44, 0.12))
+```

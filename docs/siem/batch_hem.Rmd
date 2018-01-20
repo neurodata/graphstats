@@ -117,6 +117,7 @@ get_results <- function(tstat.out) {
   return(P[upper.tri(P, diag=FALSE)])
 }
 
+
 case.experiment.within <- function(models, datasets.labs, split.labs, modal, nrep=1000) {
   # partition the models that do not have the split data
   include_sets <- which(!is.nan(split.labs))
@@ -125,7 +126,7 @@ case.experiment.within <- function(models, datasets.labs, split.labs, modal, nre
   incl.split.labs <- split.labs[include_sets]
   
   dsets <- unique(incl.datasets.labs)
-  results <- data.frame(dataset=c(), pval=c())
+  results <- data.frame(dataset=c(), pval=c(), modal=c(), size=c())
   
   for (i in 1:length(dsets)) {
     ss <- which(incl.datasets.labs == dsets[i])
@@ -147,7 +148,7 @@ case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
   datasets.labs <- datasets.labs[include_sets]
   
   dsets <- unique(datasets.labs)
-  results <- data.frame(dataset=c(), pval=c())
+  results <- data.frame(dataset=c(), pval=c(), modal=c(), size=c())
   
   perm.result <- gs.siem.batch.perm(models, datasets.labs, i=1, j=2, nperm=nrep)
   results <- rbind(results, data.frame(dataset='set', pval=get_results(perm.result), modal=modal, size=length(ss)))
@@ -161,15 +162,17 @@ case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000) {
   datasets.labs <- datasets.labs[include_sets]
   
   dsets <- unique(datasets.labs)
-  results <- data.frame(dset1=c(), dset2=c(), pval=c(), modality=c())
+  results <- data.frame(dset1=c(), dset2=c(), pval=c(), size=c(), modality=c())
   D <- array(0, dim=c(length(dsets), length(dsets)))
   for (i in 1:(length(dsets) - 1)) {
     ss1 <- datasets.labs %in% dsets[i]
     for (j in ((i+1):length(dsets))) {
       ss <- datasets.labs %in% c(dsets[i], dsets[j])
       perm.result <- gs.siem.batch.perm(models[ss], datasets.labs[ss], i=1, j=2, nperm=nrep)
-      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=get_results(perm.result), modal=modal, size=sum(ss1)))
-      results <- rbind(results, data.frame(dset1=dsets[j], dset2=dsets[i], pval=get_results(perm.result), modal=modal, size=sum(ss1)))
+      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=get_results(perm.result),
+                                           modal=modal, size=sum(ss1)))
+      results <- rbind(results, data.frame(dset1=dsets[j], dset2=dsets[i], pval=get_results(perm.result),
+                                           modal=modal, size=sum(ss1)))
       D[i, j] <- get_results(perm.result)
     }
   }
@@ -348,6 +351,10 @@ fmri.params <- extract_params(fmri.models, fmri.datasets, i=1, j=2, modal='fMRI'
 params <- rbind(dwi.params, fmri.params)
 colnames(params)[3] <- "p - q"
 saveRDS(params, 'results_hem_params.rds')
+```
+
+```{r}
+params <- readRDS('results_hem_params.rds')
 # params <- melt(params, id=c("dataset", "modal", "size"))
 # plot_pre <- ggplot(params, aes(x=modal, y=value, shape=variable, size=size, color=dataset)) +
 #   geom_jitter() +
