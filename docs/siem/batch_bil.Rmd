@@ -423,8 +423,8 @@ plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, size=
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r, warning=FALSE}
-results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=100),
-      case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=100))
+results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000),
+      case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000))
 saveRDS(results2, 'results_bil_case2.rds')
 ```
 

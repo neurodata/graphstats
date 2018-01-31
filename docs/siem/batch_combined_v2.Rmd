@@ -16,6 +16,7 @@ require(gridExtra)
 require(scales)
 require(data.table)
 require(grid)
+require(ggbeeswarm)
 source('../../R/siem.R')
 
 localpath <- '/home/eric/Documents/research/R-fmri/graphstats'
@@ -65,12 +66,14 @@ for (modal in names(modal_plots)) {
       results <- param[param$modal == modal,]
     }
     if (pp == 1) {
-      plot <- ggplot(results, aes(x=p, y=q, size=size/20, color=dataset)) +
-        geom_point(alpha=0.8) +
+      plot <- ggplot(results, aes(x=p)) +
+        geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
+        geom_density(data=results, aes(p), alpha=1) +
+        xlim(c(2875, 3125)) +
         scale_color_manual(name="Dataset", values=cols) +
         scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
         xlab(TeX("$\\hat{p}$")) +
-        ylab(TeX("$\\hat{q}$")) +
+        ylab(TeX("Density")) +
         theme_bw() +
         ggtitle("Exploratory Analysis") +
         labs(shape="Modality", color="Dataset") +
@@ -104,14 +107,19 @@ for (modal in names(modal_plots)) {
     } else {
       new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dataset, size=results$size)
     }
+    if (pp == 4) {
+      new_dat <- data.table(new_dat)
+      new_dat <- aggregate(pval ~ case + dataset + size, data = new_dat, FUN = mean)
+    }
     cases <- rbind(cases, new_dat)
   }
   cases$dataset <- ordered(cases$dataset, levels=names(cols))
   bottom_plot <- ggplot(cases, aes(x=case, y=pval, color=dataset, size=size), drop=FALSE) +
-    geom_jitter(alpha=0.8, width=0.1, height=0) +
+    geom_quasirandom(width=0.25) +
     scale_color_manual(name="Dataset", values=cols) +
     scale_size_continuous(name="Dataset",  breaks=svals, range=c(0.5, 2)) +
     scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .01, .1, 1)) +
+    #geom_violin(datt=cases, aes(x=case, y=pval, group='black', color='black')) +
     xlab("Investigation") +
     ylab(TeX("$p$-value")) +
     ggtitle("Batch Effect Investigation") +
