@@ -195,8 +195,9 @@ extract_params <- function(models, Z, i=1, j=2, modal=NULL) {
     mods <- dwi.models[ss]
     p <- sapply(mods, function(model) model$pr[i])
     q <- sapply(mods, function(model) model$pr[j])
-    pm <- mean(p); qm <- mean(q); dm <- pm - qm
-    return(data.frame(p=pm, q=qm, d=dm, dataset=z, size=length(ss), modal=modal))
+    # pm <- mean(p); qm <- mean(q); dm <- pm - qm
+    d <- p - q
+    return(data.frame(p=p, q=q, d=d, dataset=z, size=length(ss), modal=modal))
   })
   df <- do.call(rbind, params)
   return(df)

@@ -46,8 +46,11 @@ counters <- list(dMRI=1, fMRI=1)
 case_dat <- list()
 nroi <- 70
 ne <- nroi^2
-maxp <- c((ne + ne/2)/2, (ne + (ne - nroi))/2)
-for (modal in names(modal_plots)) {
+maxp <- c((ne + ne/2 + 1)/2, (ne + (ne - nroi + 1))/2)
+minp <- c((ne/2 + 1)/2, (nroi + 1)/2)
+#minp <- c(0, 0)
+for (i in 1:length(names(modal_plots))) {
+  modal <- names(modal_plots)[i]
   if (modal == 'dMRI') {
     path_str <- 'hem'
   } else {
@@ -66,13 +69,13 @@ for (modal in names(modal_plots)) {
       results <- param[param$modal == modal,]
     }
     if (pp == 1) {
-      plot <- ggplot(results, aes(x=p)) +
-        geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
-        geom_density(data=results, aes(p), alpha=1) +
-        xlim(c(2875, maxp[pp])) +
-        scale_color_manual(name="Dataset", values=cols) +
+      plot <- ggplot(results, aes(p, size=0.2*size, color=dataset)) +
+        # geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
+        geom_density(alpha=1) +
+        xlim(c(minp[i], maxp[i])) +
+        scale_fill_manual(name="Dataset", values=cols) +
         scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
-        xlab(TeX("$\\hat{p}$")) +
+        xlab(TeX("$\\mathbb{E}[\\hat{p}]$")) +
         ylab(TeX("Density")) +
         theme_bw() +
         ggtitle("Exploratory Analysis") +
@@ -107,8 +110,18 @@ for (modal in names(modal_plots)) {
       new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dataset, size=results$size)
     }
     if (pp == 4) {
-      new_dat <- data.table(new_dat)
-      new_dat <- aggregate(pval ~ case + dataset + size, data = new_dat, FUN = mean)
+      dsets <- unique(results$dataset)
+      dset_size <- array(0, dim=c(length(dsets)))
+      new_dat <- data.frame(case = c(), pval=c(), dataset=c(), size=c())
+      for (z in 1:length(dsets)) {
+        ss <- results$dataset == dsets[z]
+        num_samp <- round(log2(sum(ss) + 1))
+        num_samp <- ifelse(num_samp > 1, num_samp*2, num_samp)
+        sampls <- sample(which(ss), size=num_samp)
+        which_res <- results[sampls,]
+        new_dat <- rbind(new_dat, data.frame(case=title[pp], pval=which_res$pval, dataset=which_res$dataset, size=which_res$size))
+      }
+      
     }
     cases <- rbind(cases, new_dat)
   }
