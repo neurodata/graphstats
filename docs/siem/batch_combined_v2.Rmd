@@ -19,8 +19,6 @@ require(grid)
 require(ggbeeswarm)
 source('../../R/siem.R')
 
-localpath <- '/home/eric/Documents/research/R-fmri/graphstats'
-
 
 g_legend <- function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
@@ -31,7 +29,7 @@ g_legend <- function(a.gplot){
 ```
 
 ```{r}
-colors <- readRDS('colors.rds')
+colors <- readRDS('./data/colors.rds')
 svals <- colors$svals; cols <- colors$cols
 svals['BNU'] <- svals['BNU1'] + svals['BNU3']
 svals['Templeton'] <- svals['Templeton114'] + svals['Templeton255']
@@ -54,8 +52,7 @@ for (modal in names(modal_plots)) {
   }
   top_plots <- list()
   for (pp in 1:2) {
-    fpath <- file.path(localpath, 'docs/siem',
-                       paste("results", path_str, sprintf('%s.rds', files[pp]), sep="_"))
+    fpath <- paste("data/results", path_str, sprintf('%s.rds', files[pp]), sep="_")
     param = readRDS(fpath)
     if (pp == 2) {
       results <- param[[which(modal == names(modal_plots))]]$data
@@ -98,8 +95,7 @@ for (modal in names(modal_plots)) {
   top_plot <- grid.arrange(grobs=top_plots, ncol=2)
   cases <- data.frame(case=c(), pval=c(), dataset=c(), size=c())
   for (pp in 3:length(files)) {
-    fpath <- file.path(localpath, 'docs/siem',
-                       paste("results", path_str, sprintf('%s.rds', files[pp]), sep="_"))
+    fpath <- paste("data/results", path_str, sprintf('%s.rds', files[pp]), sep="_")
     param = readRDS(fpath)
     results <- param[param$modal == modal,]
     if (pp %in% c(7, 8)) {
