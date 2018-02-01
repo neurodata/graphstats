@@ -44,6 +44,9 @@ title <- c("Exploratory", "Paired", "Case 1", "Case 2", "Case 3", "Case 4",
 modal_plots <- list(dMRI=list(), fMRI=list())
 counters <- list(dMRI=1, fMRI=1)
 case_dat <- list()
+nroi <- 70
+ne <- nroi^2
+maxp <- c((ne + ne/2)/2, (ne + (ne - nroi))/2)
 for (modal in names(modal_plots)) {
   if (modal == 'dMRI') {
     path_str <- 'hem'
@@ -66,7 +69,7 @@ for (modal in names(modal_plots)) {
       plot <- ggplot(results, aes(x=p)) +
         geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
         geom_density(data=results, aes(p), alpha=1) +
-        xlim(c(2875, 3125)) +
+        xlim(c(2875, maxp[pp])) +
         scale_color_manual(name="Dataset", values=cols) +
         scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
         xlab(TeX("$\\hat{p}$")) +
