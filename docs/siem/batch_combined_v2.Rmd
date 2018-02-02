@@ -17,6 +17,7 @@ require(scales)
 require(data.table)
 require(grid)
 require(ggbeeswarm)
+require(ggridges)
 source('../../R/siem.R')
 
 
@@ -46,9 +47,13 @@ counters <- list(dMRI=1, fMRI=1)
 case_dat <- list()
 nroi <- 70
 ne <- nroi^2
-maxp <- c((ne + ne/2 + 1)/2, (ne + (ne - nroi + 1))/2)
-minp <- c((ne/2 + 1)/2, (nroi + 1)/2)
+minpos <- c((ne/2 + 1)/2, (nroi + 1)/2)
+maxpos <- c((ne + ne/2 + 1)/2, (ne + ne - nroi + 1)/2)
+minp <- c(0.4, 0.5)
+maxp <- c(0.55, 0.7)
+cutoff = 0.05
 #minp <- c(0, 0)
+proportion <- data.frame(case=c(), prop=c())
 for (i in 1:length(names(modal_plots))) {
   modal <- names(modal_plots)[i]
   if (modal == 'dMRI') {
@@ -67,16 +72,18 @@ for (i in 1:length(names(modal_plots))) {
       results$dset2 <- ordered(results$dset2, levels=rev(names(svals)))
     } else {
       results <- param[param$modal == modal,]
+      results$dataset <- ordered(results$dataset, levels=names(svals))
     }
     if (pp == 1) {
-      plot <- ggplot(results, aes(p, size=0.2*size, color=dataset)) +
+      results$p <- (results$p - minpos[i])/maxpos[i]
+      plot <- ggplot(results, aes(x=p, y=dataset, fill=dataset)) +
         # geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
-        geom_density(alpha=1) +
+        geom_density_ridges2(alpha=0.5) +
         xlim(c(minp[i], maxp[i])) +
         scale_fill_manual(name="Dataset", values=cols) +
-        scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
-        xlab(TeX("$\\mathbb{E}[\\hat{p}]$")) +
-        ylab(TeX("Density")) +
+        #scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
+        xlab(TeX("$E\\[\\hat{p}\\]$")) +
+        ylab(TeX("Dataset")) +
         theme_bw() +
         ggtitle("Exploratory Analysis") +
         labs(shape="Modality", color="Dataset") +
@@ -109,6 +116,7 @@ for (i in 1:length(names(modal_plots))) {
     } else {
       new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dataset, size=results$size)
     }
+    proportion <- rbind(proportion, data.frame(case=title[pp], prop=sum(results$pval < cutoff)/length(results$pval)))
     if (pp == 4) {
       dsets <- unique(results$dataset)
       dset_size <- array(0, dim=c(length(dsets)))
@@ -125,6 +133,7 @@ for (i in 1:length(names(modal_plots))) {
     }
     cases <- rbind(cases, new_dat)
   }
+  hline = data.frame(y=cutoff, type="sig")
   cases$dataset <- ordered(cases$dataset, levels=names(cols))
   bottom_plot <- ggplot(cases, aes(x=case, y=pval, color=dataset, size=size), drop=FALSE) +
     geom_quasirandom(width=0.25) +
@@ -133,7 +142,9 @@ for (i in 1:length(names(modal_plots))) {
     scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .01, .1, 1)) +
     #geom_violin(datt=cases, aes(x=case, y=pval, group='black', color='black')) +
     xlab("Investigation") +
-    ylab(TeX("$p$-value")) +
+    ylab(TeX("$log(p)$-value")) +
+    geom_hline(data=hline, aes(yintercept=y, linetype=type)) +
+    scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05"), TeX)) +
     ggtitle("Batch Effect Investigation") +
     theme_bw() +
     theme(legend.position="none")
@@ -157,6 +168,8 @@ case_combined <- ggplot(case_leg_dat, aes(x=case, y=pval, color=dataset, size=si
   xlab("Investigation") +
   ylab(TeX("$p$-value")) +
   ggtitle("Batch Effect Investigation") +
+  geom_hline(data=hline, aes(yintercept=y, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05"), TeX)) +
   theme_bw()
 case_leg <- g_legend(case_combined)
 ```
@@ -165,9 +178,9 @@ case_leg <- g_legend(case_combined)
 # Combined Plot
 
 ```{r, fig.show='hide'}
-dmri <- grid.arrange(grobs=modal_plots$dMRI, ncol=1,
+dmri <- grid.arrange(grobs=modal_plots$dMRI, heights=c(0.45, 0.55), ncol=1,
                      top=textGrob("dMRI Hemispheric", gp=gpar(fontsize=20)))
-fmri <- grid.arrange(grobs=modal_plots$fMRI, ncol=1,
+fmri <- grid.arrange(grobs=modal_plots$fMRI, heights=c(0.45, 0.55), ncol=1,
                      top=textGrob("fMRI Homotopic", gp=gpar(fontsize=20)))
 legs <- grid.arrange(p_leg, case_leg, ncol=1)
 ```

@@ -111,12 +111,42 @@ permutation_test(models, batch_grouping):
 Or the fraction of times that the maximum magnitude of a model fit difference exceeds the observed maximumm magnitude of a model fit difference.
 
 ```{r}
-get_results <- function(tstat.out) {
+get_all_results <- function(tstat.out) {
   P <- tstat.out$P
   return(P[upper.tri(P, diag=FALSE)])
 }
 
-case.experiment.within <- function(models, datasets.labs, split.labs, modal, nrep=1000) {
+persub_results <- function(tstat.out) {
+  P <- tstat.out$P
+  return(apply(P, 1, mean))
+}
+
+case2.perm <- function(models, Z, i=1, j=2, ...) {
+  incl <- which(sapply(models, is.defined))
+  Z <- Z[incl]
+  Zset <- unique(Z)
+  models <- models[incl]
+  
+  P <- array(NaN, dim=c(length(Zset)))
+  for (i in 1:length(Zset)) {
+    sis <- which(Zset == Zset[i])
+    sips <- which(Zset != Zset[i])
+    alt <- mean(sapply(1:length(sis), function(k) {
+      sapply(sis[sis != k], function(l) {
+        p[sis[k]] - p[sis[l]] - (q[sis[k]] - q[sis[l]])
+        })}))
+    null <- sapply(1:length(sis), function(k) {
+      sapply(sis[sis != k], function(l) {
+        p[sis[k]] - p[sis[l]] - (q[sis[k]] - q[sis[l]])
+        })})
+    P[i] <- sum(null > alt)/length(null)
+  }
+  return(list(P=P))
+}
+
+
+case.experiment.within <- function(models, datasets.labs, split.labs, modal, nrep=1000,
+                                   simplify=get_all_results, stat=gs.siem.batch.perm) {
   # partition the models that do not have the split data
   include_sets <- which(!is.nan(split.labs))
   incl.models <- models[include_sets]
@@ -131,15 +161,17 @@ case.experiment.within <- function(models, datasets.labs, split.labs, modal, nre
     model_ss <- incl.models[ss]  # subset one dataset of models
     split_ss <- incl.split.labs[ss]
     if (length(unique(split_ss)) > 1) {
-      perm.result <- gs.siem.batch.perm(model_ss, split_ss, i=1, j=2, nperm=nrep)
-      results <- rbind(results, data.frame(dataset=dsets[i], pval=get_results(perm.result), modal=modal, size=length(ss)))
+      perm.result <- do.call(stat, list(model_ss, split_ss, i=1, j=2, nperm=nrep))
+      pv <- do.call(simplify, list(perm.result))
+      results <- rbind(results, data.frame(dataset=dsets[i], pval=pv, modal=modal,
+                                           size=length(ss)))
     }
   }
   return(results)
 }
 
-
-case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
+case.experiment.between <- function(models, datasets.labs, modal, nrep=1000, simplify=get_all_results,
+                                    stat=gs.siem.batch.perm) {
   # partition the models that do not have the split data
   include_sets <- which(!is.nan(datasets.labs))
   models <- models[include_sets]
@@ -148,12 +180,14 @@ case.experiment.between <- function(models, datasets.labs, modal, nrep=1000) {
   dsets <- unique(datasets.labs)
   results <- data.frame(dataset=c(), pval=c(), modal=c(), size=c())
   
-  perm.result <- gs.siem.batch.perm(models, datasets.labs, i=1, j=2, nperm=nrep)
-  results <- rbind(results, data.frame(dataset='set', pval=get_results(perm.result), modal=modal, size=length(ss)))
+  perm.result <- do.call(stat, list(model_ss, split_ss, i=1, j=2, nperm=nrep))
+  pv <- do.call(simplify, list(perm.result))
+  results <- rbind(results, data.frame(dataset='set', pval=pv, modal=modal, size=length(ss)))
   return(results)
 }
 
-case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000) {
+case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000, simplify=get_all_results,
+                                     stat=gs.siem.batch.perm) {
   # partition the models that do not have the split data
   include_sets <- which(!is.nan(datasets.labs))
   models <- models[include_sets]
@@ -166,10 +200,11 @@ case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000) {
     ss1 <- datasets.labs %in% dsets[i]
     for (j in ((i+1):length(dsets))) {
       ss <- datasets.labs %in% c(dsets[i], dsets[j])
-      perm.result <- gs.siem.batch.perm(models[ss], datasets.labs[ss], i=1, j=2, nperm=nrep)
-      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=get_results(perm.result),
+      perm.result <- do.call(stat, list(model_ss, split_ss, i=1, j=2, nperm=nrep))
+      pv <- do.call(simplify, list(perm.result))
+      results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=pv,
                                            modal=modal, size=sum(ss1)))
-      results <- rbind(results, data.frame(dset1=dsets[j], dset2=dsets[i], pval=get_results(perm.result),
+      results <- rbind(results, data.frame(dset1=dsets[j], dset2=dsets[i], pval=pv,
                                            modal=modal, size=sum(ss1)))
       D[i, j] <- get_results(perm.result)
     }
@@ -424,9 +459,11 @@ plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, size=
 2) permute the set labels of the combined set $nperm$ times (maintaining sex of each graph) to obtain the distribution of $\tau_{null}$, reporting $\hat{p}$, the estimator of $\mathbb{E}\left[\tau_{null} < \tau_{observed}\right]$
 
 ```{r, warning=FALSE}
-results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000),
-      case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000))
-saveRDS(results2, 'results_bil_case2.rds')
+results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000,
+                                         simplify=persub_results),
+      case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000,
+                             simplify=persub_results))
+saveRDS(results2, 'results_hem_case2.rds')
 ```
 
 ```{r}
