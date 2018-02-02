@@ -127,21 +127,26 @@ case2.perm <- function(models, Z, i=1, j=2, ...) {
   Z <- Z[incl]
   Zset <- unique(Z)
   models <- models[incl]
+  p <- sapply(models, function(model) model$pr[i])
+  q <- sapply(models, function(model) model$pr[j])
   
   P <- array(NaN, dim=c(length(Zset)))
-  for (i in 1:length(Zset)) {
-    sis <- which(Zset == Zset[i])
-    sips <- which(Zset != Zset[i])
-    alt <- mean(sapply(1:length(sis), function(k) {
-      sapply(sis[sis != k], function(l) {
-        p[sis[k]] - p[sis[l]] - (q[sis[k]] - q[sis[l]])
-        })}))
-    null <- sapply(1:length(sis), function(k) {
-      sapply(sis[sis != k], function(l) {
-        p[sis[k]] - p[sis[l]] - (q[sis[k]] - q[sis[l]])
-        })})
-    P[i] <- sum(null > alt)/length(null)
+  D <- array(NaN, dim=c(length(Z), length(Z)))
+  for (i in 1:length(models)) {
+    for (j in 1:length(models)) {
+      D[i, j] <- p[i] - p[j] - (q[i] - q[j])
+    }
   }
+  diag(D) <- NaN  # ignore self connections
+  
+  for (i in 1:length(Zset)) {
+    sis <- which(Z == Zset[i])
+    sjs <- which (Z != Zset[i])
+    alt <- mean(D[sis, sis], na.rm=TRUE)
+    null <- D[sis, sjs]
+    P[i] <- mean(alt > null)/length(null)
+  }
+
   return(list(P=P))
 }
 
@@ -451,9 +456,9 @@ plot1 <- ggplot(results1, aes(x=modal, y=pval, shape=modal, color=dataset, size=
 
 ```{r, warning=FALSE}
 results2 <- rbind(case.experiment.within(dwi.models, dwi.datasets, dwi.subjects, 'dMRI', nrep=1000,
-                                         simplify=persub_results),
+                                         simplify=persub_results, stat=case2.perm),
       case.experiment.within(fmri.models, fmri.datasets, fmri.subjects, 'fMRI', nrep=1000,
-                             simplify=persub_results))
+                             simplify=persub_results, stat=case2.perm))
 saveRDS(results2, 'results_hem_case2.rds')
 ```
 
