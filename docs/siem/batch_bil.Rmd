@@ -113,7 +113,13 @@ Or the fraction of times that the maximum magnitude of a model fit difference ex
 ```{r}
 get_all_results <- function(tstat.out) {
   P <- tstat.out$P
-  return(P[upper.tri(P, diag=FALSE)])
+  if (length(P) > 1) {
+    return(P[upper.tri(P, diag=FALSE)])
+  } else if (length(P) == 1) {
+    return(P)
+  } else {
+    return(NaN)
+  }
 }
 
 persub_results <- function(tstat.out) {
@@ -133,7 +139,7 @@ case2.perm <- function(models, Z, i=1, j=2, ...) {
   D <- array(NaN, dim=c(length(Z), length(Z)))
   for (i in 1:length(models)) {
     for (j in 1:length(models)) {
-      D[i, j] <- p[i] - p[j] - (q[i] - q[j])
+      D[i, j] <- abs(p[i] - p[j] - (q[i] - q[j]))
     }
   }
   diag(D) <- NaN  # ignore self connections
@@ -143,7 +149,7 @@ case2.perm <- function(models, Z, i=1, j=2, ...) {
     sjs <- which (Z != Zset[i])
     alt <- mean(D[sis, sis], na.rm=TRUE)
     null <- D[sis, sjs]
-    P[i] <- mean(alt > null)/length(null)
+    P[i] <- mean(c(alt > null))
   }
 
   return(list(P=P))
@@ -204,13 +210,15 @@ case.experiment.pairwise <- function(models, datasets.labs, modal, nrep=1000, si
     ss1 <- datasets.labs %in% dsets[i]
     for (j in ((i+1):length(dsets))) {
       ss <- datasets.labs %in% c(dsets[i], dsets[j])
+      model_ss <- models[ss]
+      split_ss <- datasets.labs[ss]
       perm.result <- do.call(stat, list(model_ss, split_ss, i=1, j=2, nperm=nrep))
       pv <- do.call(simplify, list(perm.result))
       results <- rbind(results, data.frame(dset1=dsets[i], dset2=dsets[j], pval=pv,
                                            modal=modal, size=sum(ss1)))
       results <- rbind(results, data.frame(dset1=dsets[j], dset2=dsets[i], pval=pv,
                                            modal=modal, size=sum(ss1)))
-      D[i, j] <- get_results(perm.result)
+      D[i, j] <- pv
     }
   }
   D <- D + t(D) - diag(diag(D))
@@ -537,6 +545,9 @@ dwi.studies <- dwi.datasets
 fmri.studies <- fmri.datasets
 dwi.studies[dwi.studies == 'BNU1' | dwi.studies == 'BNU3'] <- 'BNU'
 fmri.studies[fmri.studies == 'BNU1' | fmri.studies == 'BNU3'] <- 'BNU'
+fmri.studies[fmri.studies == 'BNU1'] <- 'BNU'
+fmri.studies[grep('SWU', fmri.studies)] <- 'SWU'
+fmri.studies[grep('IPCAS', fmri.studies)] <- 'IPCAS'
 dwi.studies[dwi.studies == 'Templeton114' | dwi.studies == 'Templeton255'] <- 'Templeton'
 
 results4 <- rbind(case.experiment.within(dwi.models, dwi.studies, dwi.datasets, 'dMRI', nrep=1000),

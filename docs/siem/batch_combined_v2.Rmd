@@ -34,14 +34,16 @@ colors <- readRDS('./data/colors.rds')
 svals <- colors$svals; cols <- colors$cols
 svals['BNU'] <- svals['BNU1'] + svals['BNU3']
 svals['Templeton'] <- svals['Templeton114'] + svals['Templeton255']
+svals['SWU'] <- svals['SWU1'] + svals['SWU2'] + svals['SWU3'] + svals['SWU4']
+svals['IPCAS'] <- svals['IPCAS1'] + svals['IPCAS2'] + svals['IPCAS5'] + svals['IPCAS6'] + svals['IPCAS8']
 ```
 # Aggregate plots
 
 ```{r, fig.show='hide'}
 panel_plots <- list()
 files <- c("params", "pair", "case1", "case2", "case3", "case4", "case5", "case6")
-title <- c("Exploratory", "Paired", "Case 1", "Case 2", "Case 3", "Case 4",
-           "Case 5", "Case 6")
+title <- c("Exploratory", "(%s.%s) Prevalence of Batch\n        Effects Between Studies", "Sessions", "Subjects", "Sexs", "Sites",
+           "Demographics", "All Studies")
 modal_plots <- list(dMRI=list(), fMRI=list())
 counters <- list(dMRI=1, fMRI=1)
 case_dat <- list()
@@ -52,6 +54,13 @@ maxpos <- c((ne + ne/2 + 1)/2, (ne + ne - nroi + 1)/2)
 minp <- c(0.4, 0.5)
 maxp <- c(0.55, 0.7)
 cutoff = 0.05
+letters=c("A", "B")
+temps = c("Templeton114", "Templeton255", "Templeton")
+temprep = c("Temp114", "Temp255", "Temp")
+
+names(svals)[names(svals) %in% temps] = temprep[match(names(svals)[names(svals) %in% temps], temps)]
+names(cols)[names(cols) %in% temps] = temprep[match(names(cols)[names(cols) %in% temps], temps)]
+roman=c("i","ii", "iii")
 #minp <- c(0, 0)
 proportion <- data.frame(case=c(), prop=c())
 for (i in 1:length(names(modal_plots))) {
@@ -67,10 +76,16 @@ for (i in 1:length(names(modal_plots))) {
     param = readRDS(fpath)
     if (pp == 2) {
       results <- param[[which(modal == names(modal_plots))]]$data
+      results$dset1 <- as.character(results$dset1)
+      results$dset2 <- as.character(results$dset2)
+      results$dset1[results$dset1 %in% temps] = temprep[match(results$dset1[results$dset1 %in% temps], temps)]
+      results$dset2[results$dset2 %in% temps] = temprep[match(results$dset2[results$dset2 %in% temps], temps)]
       dsets <- param[[which(modal == names(modal_plots))]]$dsets
       results$dset1 <- ordered(results$dset1, levels=names(svals))
       results$dset2 <- ordered(results$dset2, levels=rev(names(svals)))
     } else {
+      param$dataset <- as.character(param$dataset)
+      param$dataset[param$dataset %in% temps] = temprep[match(param$dataset[param$dataset %in% temps], temps)]
       results <- param[param$modal == modal,]
       results$dataset <- ordered(results$dataset, levels=names(svals))
     }
@@ -80,21 +95,21 @@ for (i in 1:length(names(modal_plots))) {
         # geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
         geom_density_ridges2(alpha=0.5) +
         xlim(c(minp[i], maxp[i])) +
-        scale_fill_manual(name="Dataset", values=cols) +
-        #scale_size_continuous(name="Dataset", labels=names(svals), breaks=svals) +
+        scale_fill_manual(name="Study", values=cols) +
+        #scale_size_continuous(name="Study", labels=names(svals), breaks=svals) +
         xlab(TeX("$E\\[\\hat{p}\\]$")) +
-        ylab(TeX("Dataset")) +
+        ylab(TeX("Study")) +
         theme_bw() +
-        ggtitle("Exploratory Analysis") +
-        labs(shape="Modality", color="Dataset") +
+        ggtitle(sprintf("(%s.%s) Estimate of Model Fit", letters[i], roman[1])) +
+        labs(shape="Modality", color="Study") +
         theme_bw() +
         theme(legend.position="none")
     } else if (files[pp] == 'pair') {
       plot <- ggplot(results, aes(x=dset1, y=dset2, fill=pval)) +
         geom_tile() +
-        ggtitle(title[pp]) +
-        xlab("Dataset") +
-        ylab("Dataset") +
+        ggtitle(sprintf(title[pp], letters[i], roman[2])) +
+        xlab("Study") +
+        ylab("Study") +
         scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
                              colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"),
                              limits=c(0.001, 1)) +
@@ -112,40 +127,32 @@ for (i in 1:length(names(modal_plots))) {
     param = readRDS(fpath)
     results <- param[param$modal == modal,]
     if (pp %in% c(7, 8)) {
+      results$dset1 <- as.character(results$dset1)
+      results$dset2 <- as.character(results$dset2)
+      results$dset1[results$dset1 %in% temps] = temprep[match(results$dset1[results$dset1 %in% temps], temps)]
+      results$dset2[results$dset2 %in% temps] = temprep[match(results$dset2[results$dset2 %in% temps], temps)]
       new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dset1, size=results$size)
     } else {
+      results$dataset <- as.character(results$dataset)
+      results$dataset[results$dataset %in% temps] = temprep[match(results$dataset[results$dataset %in% temps], temps)]
       new_dat <- data.frame(case=title[pp], pval=results$pval, dataset=results$dataset, size=results$size)
     }
-    proportion <- rbind(proportion, data.frame(case=title[pp], prop=sum(results$pval < cutoff)/length(results$pval)))
-    if (pp == 4) {
-      dsets <- unique(results$dataset)
-      dset_size <- array(0, dim=c(length(dsets)))
-      new_dat <- data.frame(case = c(), pval=c(), dataset=c(), size=c())
-      for (z in 1:length(dsets)) {
-        ss <- results$dataset == dsets[z]
-        num_samp <- round(log2(sum(ss) + 1))
-        num_samp <- ifelse(num_samp > 1, num_samp*2, num_samp)
-        sampls <- sample(which(ss), size=num_samp)
-        which_res <- results[sampls,]
-        new_dat <- rbind(new_dat, data.frame(case=title[pp], pval=which_res$pval, dataset=which_res$dataset, size=which_res$size))
-      }
-      
-    }
+    proportion <- rbind(proportion, data.frame(case=title[pp], prop=mean(results$pval < cutoff, na.rm=TRUE)))
     cases <- rbind(cases, new_dat)
   }
   hline = data.frame(y=cutoff, type="sig")
   cases$dataset <- ordered(cases$dataset, levels=names(cols))
   bottom_plot <- ggplot(cases, aes(x=case, y=pval, color=dataset, size=size), drop=FALSE) +
-    geom_quasirandom(width=0.25) +
-    scale_color_manual(name="Dataset", values=cols) +
-    scale_size_continuous(name="Dataset",  breaks=svals, range=c(0.5, 2)) +
+    geom_quasirandom(width=0.25, alpha=0.7) +
+    scale_color_manual(name="Study", values=cols) +
+    scale_size_continuous(name="Study",  breaks=svals, range=c(0.5, 2)) +
     scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .01, .1, 1)) +
     #geom_violin(datt=cases, aes(x=case, y=pval, group='black', color='black')) +
-    xlab("Investigation") +
-    ylab(TeX("$log(p)$-value")) +
+    xlab("Pooling Strategy") +
+    ylab(TeX("$p$-value")) +
     geom_hline(data=hline, aes(yintercept=y, linetype=type)) +
     scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05"), TeX)) +
-    ggtitle("Batch Effect Investigation") +
+    ggtitle(sprintf("(%s.%s) Batch Effects of Common Pooling Strategies", letters[i], roman[3])) +
     theme_bw() +
     theme(legend.position="none")
   modal_plots[[modal]] <- list(top_plot, bottom_plot)
@@ -156,14 +163,14 @@ for (i in 1:length(names(modal_plots))) {
 
 ## Legends
 
-We make a combined plot just to get the dataset legend:
+We make a combined plot just to get the study legend:
 
 ```{r, fig.show='hide'}
 case_leg_dat <- do.call(rbind, case_dat)
 case_combined <- ggplot(case_leg_dat, aes(x=case, y=pval, color=dataset, size=size)) +
   geom_jitter(alpha=0.8, width=0.25, height=0) +
-  scale_color_manual(name="Dataset", values=cols) +
-  scale_size_continuous(name="Dataset",  breaks=svals, range=c(0.5, 2)) +
+  scale_color_manual(name="Study", values=cols) +
+  scale_size_continuous(name="Study",  breaks=svals, range=c(0.5, 2)) +
   scale_y_continuous(trans=log10_trans(), limits=c(.001, 1), breaks=c(.001, .01, .1, 1)) +
   xlab("Investigation") +
   ylab(TeX("$p$-value")) +
@@ -182,7 +189,7 @@ dmri <- grid.arrange(grobs=modal_plots$dMRI, heights=c(0.45, 0.55), ncol=1,
                      top=textGrob("dMRI Hemispheric", gp=gpar(fontsize=20)))
 fmri <- grid.arrange(grobs=modal_plots$fMRI, heights=c(0.45, 0.55), ncol=1,
                      top=textGrob("fMRI Homotopic", gp=gpar(fontsize=20)))
-legs <- grid.arrange(p_leg, case_leg, ncol=1)
+legs <- grid.arrange(p_leg, case_leg, heights=c(0.45, .55), ncol=1)
 ```
 
 ```{r, fig.height=12, fig.width=24}
