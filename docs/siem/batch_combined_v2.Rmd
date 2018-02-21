@@ -36,13 +36,14 @@ svals['BNU'] <- svals['BNU1'] + svals['BNU3']
 svals['Templeton'] <- svals['Templeton114'] + svals['Templeton255']
 svals['SWU'] <- svals['SWU1'] + svals['SWU2'] + svals['SWU3'] + svals['SWU4']
 svals['IPCAS'] <- svals['IPCAS1'] + svals['IPCAS2'] + svals['IPCAS5'] + svals['IPCAS6'] + svals['IPCAS8']
+cols['SWU'] <- '#5f5a0c'; cols['IPCAS'] <- '#ff0000'
 ```
 # Aggregate plots
 
 ```{r, fig.show='hide'}
 panel_plots <- list()
 files <- c("params", "pair", "case1", "case2", "case3", "case4", "case5", "case6")
-title <- c("Exploratory", "(%s.%s) Prevalence of Batch\n        Effects Between Studies", "Sessions", "Subjects", "Sexs", "Sites",
+title <- c("Exploratory", "(%s.%s) Between Study Batch Effect", "Sessions", "Individuals", "Sexes", "Sites",
            "Demographics", "All Studies")
 modal_plots <- list(dMRI=list(), fMRI=list())
 counters <- list(dMRI=1, fMRI=1)
@@ -51,8 +52,8 @@ nroi <- 70
 ne <- nroi^2
 minpos <- c((ne/2 + 1)/2, (nroi + 1)/2)
 maxpos <- c((ne + ne/2 + 1)/2, (ne + ne - nroi + 1)/2)
-minp <- c(0.4, 0.5)
-maxp <- c(0.55, 0.7)
+minp <- c(0.6, 0.5)
+maxp <- c(0.8, 0.7)
 cutoff = 0.05
 letters=c("A", "B")
 temps = c("Templeton114", "Templeton255", "Templeton")
@@ -90,20 +91,21 @@ for (i in 1:length(names(modal_plots))) {
       results$dataset <- ordered(results$dataset, levels=names(svals))
     }
     if (pp == 1) {
-      results$p <- (results$p - minpos[i])/maxpos[i]
+      results$p <- (results$p - minpos[i])/(maxpos[i] - minpos[i])
       plot <- ggplot(results, aes(x=p, y=dataset, fill=dataset)) +
         # geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
         geom_density_ridges2(alpha=0.5) +
         xlim(c(minp[i], maxp[i])) +
         scale_fill_manual(name="Study", values=cols) +
         #scale_size_continuous(name="Study", labels=names(svals), breaks=svals) +
-        xlab(TeX("$E\\[\\hat{p}\\]$")) +
+        xlab(TeX("Connection Strength")) +
         ylab(TeX("Study")) +
         theme_bw() +
-        ggtitle(sprintf("(%s.%s) Estimate of Model Fit", letters[i], roman[1])) +
+        ggtitle(sprintf("(%s.%s) Study-Wise Distributions", letters[i], roman[1])) +
         labs(shape="Modality", color="Study") +
         theme_bw() +
-        theme(legend.position="none")
+        theme(legend.position="none", axis.text=element_text(size=11), axis.title=element_text(size=14),
+              plot.title = element_text(hjust = -5))
     } else if (files[pp] == 'pair') {
       plot <- ggplot(results, aes(x=dset1, y=dset2, fill=pval)) +
         geom_tile() +
@@ -113,10 +115,13 @@ for (i in 1:length(names(modal_plots))) {
         scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
                              colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"),
                              limits=c(0.001, 1)) +
-        theme_bw()
+        theme_bw() +
+        theme(legend.text=element_text(size=10), legend.title=element_text(size=14))
       p_leg <- g_legend(plot)
       plot <- plot +
-        theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none")
+        theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position="none",
+              axis.text=element_text(size=10), axis.title=element_text(size=14),
+              plot.title = element_text(hjust = 1.4))
     }
     top_plots[[pp]] <- plot
   }
@@ -154,7 +159,8 @@ for (i in 1:length(names(modal_plots))) {
     scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05"), TeX)) +
     ggtitle(sprintf("(%s.%s) Batch Effects of Common Pooling Strategies", letters[i], roman[3])) +
     theme_bw() +
-    theme(legend.position="none")
+    theme(legend.position="none", axis.text=element_text(size=12.5), axis.title=element_text(size=14),
+          plot.title = element_text(hjust = -.1), axis.text.x = element_text(size=12.5, angle=20, hjust=1))
   modal_plots[[modal]] <- list(top_plot, bottom_plot)
   
   case_dat[[modal]] <- cbind(cases, modal)
@@ -177,7 +183,8 @@ case_combined <- ggplot(case_leg_dat, aes(x=case, y=pval, color=dataset, size=si
   ggtitle("Batch Effect Investigation") +
   geom_hline(data=hline, aes(yintercept=y, linetype=type)) +
   scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05"), TeX)) +
-  theme_bw()
+  theme_bw() +
+  theme(legend.text=element_text(size=10), legend.title=element_text(size=14))
 case_leg <- g_legend(case_combined)
 ```
 
@@ -192,6 +199,6 @@ fmri <- grid.arrange(grobs=modal_plots$fMRI, heights=c(0.45, 0.55), ncol=1,
 legs <- grid.arrange(p_leg, case_leg, heights=c(0.45, .55), ncol=1)
 ```
 
-```{r, fig.height=12, fig.width=24}
+```{r, fig.height=8.5, fig.width=16}
 grid.arrange(dmri, fmri, legs, widths=c(0.44, 0.44, 0.12))
 ```
