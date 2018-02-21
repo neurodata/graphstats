@@ -1,0 +1,28 @@
+---
+title: "Figure 4"
+author: "Eric Bridgeford"
+date: "February 21, 2018"
+output: html_document
+---
+
+```{r}
+require(fmriutils)
+require(graphstats)
+require(mgc)
+require(ggplot2)
+require(latex2exp)
+require(igraph)
+```
+
+# Diffusion
+
+```{r}
+
+```
+
+
+# Functional
+
+```{r}
+
+```
