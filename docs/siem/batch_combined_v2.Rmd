@@ -43,7 +43,7 @@ cols['SWU'] <- '#5f5a0c'; cols['IPCAS'] <- '#ff0000'
 ```{r, fig.show='hide'}
 panel_plots <- list()
 files <- c("params", "pair", "case1", "case2", "case3", "case4", "case5", "case6")
-title <- c("Exploratory", "(%s.%s) Between Study Batch Effect", "Sessions", "Individuals", "Sexes", "Sites",
+title <- c("Exploratory", "(%s.%s) Between Study Differences", "Sessions", "Individuals", "Sexes", "Sites",
            "Demographics", "All Studies")
 modal_plots <- list(dMRI=list(), fMRI=list())
 counters <- list(dMRI=1, fMRI=1)
@@ -58,7 +58,7 @@ cutoff = 0.05
 letters=c("A", "B")
 temps = c("Templeton114", "Templeton255", "Templeton")
 temprep = c("Temp114", "Temp255", "Temp")
-
+xl <- c("Ipsilateral", "Homotopic")
 names(svals)[names(svals) %in% temps] = temprep[match(names(svals)[names(svals) %in% temps], temps)]
 names(cols)[names(cols) %in% temps] = temprep[match(names(cols)[names(cols) %in% temps], temps)]
 roman=c("i","ii", "iii")
@@ -92,20 +92,23 @@ for (i in 1:length(names(modal_plots))) {
     }
     if (pp == 1) {
       results$p <- (results$p - minpos[i])/(maxpos[i] - minpos[i])
+      results.means <- aggregate(p ~ dataset + modal, data = data.table(results), FUN = mean)
+      order <- sort(results.means$p, index.return=TRUE)$ix
+      results$dataset <- factor(results$dataset, levels=results.means$dataset[order], ordered=TRUE)
       plot <- ggplot(results, aes(x=p, y=dataset, fill=dataset)) +
         # geom_point(data=results, aes(x=p, y=0, size=size/20, color=dataset), alpha=0.8) +
         geom_density_ridges2(alpha=0.5) +
         xlim(c(minp[i], maxp[i])) +
         scale_fill_manual(name="Study", values=cols) +
         #scale_size_continuous(name="Study", labels=names(svals), breaks=svals) +
-        xlab(TeX("Connection Strength")) +
+        xlab(sprintf("Normalized %s Strength", xl[i])) +
         ylab(TeX("Study")) +
         theme_bw() +
         ggtitle(sprintf("(%s.%s) Study-Wise Distributions", letters[i], roman[1])) +
         labs(shape="Modality", color="Study") +
         theme_bw() +
-        theme(legend.position="none", axis.text=element_text(size=11), axis.title=element_text(size=14),
-              plot.title = element_text(hjust = -5))
+        theme(legend.position="none", axis.text=element_text(size=11), axis.title=element_text(size=13),
+              plot.title = element_text(hjust = -3))
     } else if (files[pp] == 'pair') {
       plot <- ggplot(results, aes(x=dset1, y=dset2, fill=pval)) +
         geom_tile() +
@@ -113,7 +116,7 @@ for (i in 1:length(names(modal_plots))) {
         xlab("Study") +
         ylab("Study") +
         scale_fill_gradientn(name=TeX("$p$-value"), trans="log", breaks=c(0.001, 0.01, 0.1, 1),
-                             colours=c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3"),
+                             colours=rev(c("#f2f0f7", "#cbc9e2", "#9e9ac8", "#6a51a3")),
                              limits=c(0.001, 1)) +
         theme_bw() +
         theme(legend.text=element_text(size=10), legend.title=element_text(size=14))

@@ -8,21 +8,288 @@ output: html_document
 ```{r}
 require(fmriutils)
 require(graphstats)
-require(mgc)
 require(ggplot2)
 require(latex2exp)
 require(igraph)
+require(scales)
+require(gridExtra)
+require(grid)
+require(data.table)
+
+is.defined = function(x)!is.null(x)
+
+# accepts a matrix and thresholds/binarizes it
+thresh_matrix = function(matrix, thresh=0.5) {
+  thr = quantile(matrix, thresh)
+  return(ifelse(matrix > thr, 1, 0))
+}
+
+compute_params <- function(graphs, datasets, subjects, edges, thresh=-1) {
+  if (thresh >= 0) {
+    graphs <- lapply(1:dim(graphs)[1], function(i) thresh_matrix(graphs[i,,], thresh))
+  }
+  models <- suppressWarnings(lapply(graphs, function(graph) gs.siem.fit(graph, edges)))
+  incl <- which(sapply(models, is.defined))
+  models <- models[incl]
+  dsets <- datasets[incl]
+  subs <- subjects[incl]
+  e1.phat <- sapply(models, function(model) model$pr[1])
+  e2.phat <- sapply(models, function(model)model$pr[2])
+  delta <- sapply(models, function(model) model$dpr[1,2])
+  delta.var <- sapply(models, function(model)model$dvar[1,2])
+  phat.mu <- mean(delta)
+  phat.var <- graphstats:::model.var(mean(e1.phat), ne) + graphstats:::model.var(mean(e2.phat), ne)
+  return(list(models=models, datasets=datasets, subjects=subs, e1.phat=e1.phat, e2.phat=e2.phat,
+              delta=delta, phat.mu=phat.mu, phat.var=phat.var))
+}
+
+ne <- 1225
+nroi <- 70
+group1 <- c()  # edges in same hemisphere
+group2 <- c()  # edges across hemispheres
+for (i in 1:nroi) {
+  for (j in 1:nroi) {
+    idx <- (i - 1)*nroi + j
+    if (abs(j - i) == 35) {  # across hemispheric edges
+      group1 <- c(group1, idx)
+    } else if (i != j) {  # ignore diagonal
+      group2 <- c(group2, idx)
+    }
+  }
+}
+
+bilateral.edges <- list(group1, group2)
+
+ne = 1225
+nroi <- 70
+group1 <- c()  # edges in same hemisphere
+group2 <- c()  # edges across hemispheres
+for (i in 1:nroi) {
+  for (j in 1:nroi) {
+    idx <- (i - 1)*nroi + j
+    if ((i <= 35 & j <= 35) | (i > 35 & j > 35)) {
+      group1 <- c(group1, idx)
+    } else {
+      group2 <- c(group2, idx)
+    }
+  }
+}
+hemisphere.edges <- list(group1, group2)
+
+vline = data.frame(x=.05, type="sig")
+
+model.between <- function(fit) {
+  model.diff <- lapply(1:length(fit$models), function(i) {
+    diff = fit$models[[i]]$pr[1] - fit$models[[i]]$pr[2]
+    pval <- fit$models[[i]]$pv[1, 2]
+    data.frame(difference = diff, dataset=fit$datasets[i], pval=pval, dpr=fit$models[[i]]$dpr[1,2],
+               dvar=fit$models[[i]]$dvar[1,2], subject=fit$subjects[i])
+  })
+  return(do.call(rbind, model.diff))
+}
+
+model.across <- function(btwn.first, btwn.second) {
+  first.subs <- btwn.first$subject; second.subs <- btwn.second$subject
+  subs <- first.subs[first.subs %in% second.subs]
+
+  model.acr <- lapply(1:length(subs), function(i) {
+    sec <- btwn.second[as.character(second.subs) == subs[i],]
+    fir <- btwn.first[as.character(first.subs) == subs[i],]
+    res.out <- lapply(1:nrow(sec), function(j) {
+      sub.first <- fir[j,]
+      res.in <- lapply(1:nrow(fir), function(k) {
+        sub.second <- sec[k,]
+        pval <- gs.siem.sample.test(fir$dpr, sec$dpr, fir$dvar, sec$dvar, alt='greater', df=2)$p
+        data.frame(first = sub.first$difference, second=sub.second$difference,
+                   difference = sub.first$difference - sub.second$difference, pval=pval,
+                   dataset = as.character(sub.first$dataset), subject=as.character(subs[i]))
+      })
+      do.call(rbind, res.in)
+    })
+    do.call(rbind, res.out)
+  })
+  
+  return(do.call(rbind, model.acr))
+}
+
+g_legend <- function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
 ```
 
 # Diffusion
 
 ```{r}
+nroi <- 70
+dwi.dsets = c('BNU1', 'BNU3', 'HNU1', 'KKI2009', 'NKI1', 'NKIENH', 'MRN1313', 'Templeton114', 'Templeton255', 'SWU4')
+dwi.atlas = 'desikan'
+dwi.basepath = '/data/all_mr/dwi/edgelists'
 
+graphobj = fmriu.io.collection.open_graphs(basepath = dwi.basepath, atlases = dwi.atlas, datasets = dwi.dsets,
+                                           gname = 'graphs', fmt='edgelist', rtype = 'list')
+dwi.graphs = graphobj$graphs
+dwi.datasets = graphobj$dataset
+dwi.subjects = graphobj$subjects
+dwi.hem.fit <- compute_params(dwi.graphs, dwi.datasets, dwi.subjects, hemisphere.edges, thresh=0)
+dwi.bil.fit <- compute_params(dwi.graphs, dwi.datasets, dwi.subjects, bilateral.edges, thresh=0)
 ```
 
 
 # Functional
 
 ```{r}
+fmri.dsets = c('BNU1', 'BNU2', 'BNU3', 'HNU1', 'IBATRT', 'IPCAS1', 'IPCAS2', 'IPCAS5', 'IPCAS6', 'IPCAS8', 'MRN1', 'NYU1', 'SWU1', 'SWU2', 'SWU3', 'SWU4', 'UWM', 'XHCUMS')
+fmri.atlas = 'desikan-2mm'
+fmri.basepath = '/data/all_mr/fmri/ranked/edgelists/'
 
+graphobj = fmriu.io.collection.open_graphs(basepath = fmri.basepath, atlases = fmri.atlas, datasets=fmri.dsets, fmt='edgelist', rtype = 'list')
+fmri.graphs = graphobj$graphs
+fmri.datasets = graphobj$dataset
+fmri.subjects = graphobj$subjects
+fmri.hem.fit <- compute_params(fmri.graphs, fmri.datasets, fmri.subjects, hemisphere.edges, thresh=0.5)
+fmri.bil.fit <- compute_params(fmri.graphs, fmri.datasets, fmri.subjects, bilateral.edges, thresh=0.5)
 ```
+
+# Hemisphieric
+
+## Within Modality
+
+### dMRI
+
+```{r}
+dwi.hem.diff <- model.between(dwi.hem.fit)
+dwi.hem.diff$modality = 'dMRI'
+```
+
+### fMRI
+
+```{r}
+fmri.hem.diff <- model.between(fmri.hem.fit)
+fmri.hem.diff$modality = 'fMRI'
+```
+
+
+### Plot
+
+```{r}
+hem.diff <- rbind(dwi.hem.diff, fmri.hem.diff)
+hem.diff$modality <- factor(hem.diff$modality, levels=unique(hem.diff$modality))
+hem.diff$grouping = paste(hem.diff$dataset, hem.diff$modality)  # for the datasets that are shared
+btwn.hem <- ggplot(data=hem.diff, aes(difference, group=grouping, color=modality)) +
+  geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
+  xlim(0, 1) +
+  xlab(TeX('$\\delta = \\hat{p} - \\hat{q}$')) +
+  ylab("Normalized Density") +
+  theme_bw() +
+  labs(color="Modality") +
+  ggtitle("Hemispheric Intra-Modality")
+```
+
+## Between Modality
+
+### Plot
+
+# Bilateral
+
+## Within Modality
+
+### dMRI
+
+```{r}
+dwi.bil.diff <- model.between(dwi.bil.fit)
+dwi.bil.diff$modality = 'dMRI'
+```
+
+### fMRI
+
+```{r}
+fmri.bil.diff <- model.between(fmri.bil.fit)
+fmri.bil.diff$modality = 'fMRI'
+```
+
+### Plot
+
+```{r}
+bil.diff <- rbind(dwi.bil.diff, fmri.bil.diff)
+bil.diff$modality <- factor(bil.diff$modality, levels=unique(bil.diff$modality))
+bil.diff$grouping = paste(bil.diff$dataset, bil.diff$modality)  # for the datasets that are shared
+btwn.bil <- ggplot(data=bil.diff, aes(difference, group=grouping, color=modality)) +
+  geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
+  xlim(0, 1) +
+  xlab(TeX('$\\delta = \\hat{p} - \\hat{q}$')) +
+  ylab("Normalized Density") +
+  theme_bw() +
+  labs(color="Modality") +
+  ggtitle("Bilateral Intra-Modality")
+```
+
+## Between Modality
+
+```{r}
+hem.across <- model.across(dwi.hem.diff, fmri.hem.diff)
+bil.across <- model.across(fmri.bil.diff, dwi.bil.diff)
+```
+
+### Plot
+
+```{r}
+
+vline = data.frame(x=0, type="sig")
+across.hem <- ggplot(data=hem.across, aes(difference, color=dataset)) +
+  geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\hat{\\delta}_D = \\hat{\\delta}_F$"), TeX)) +
+  xlab(TeX('$\\hat{\\delta}_D - \\hat{\\delta}_F')) +
+  ylab("Normalized Density") +
+  theme_bw() +
+  labs(color="Dataset") +
+  ggtitle("Hemispheric Across Modality")
+
+vline = data.frame(x=0, type="sig")
+across.bil <- ggplot(data=bil.across, aes(difference, color=dataset)) +
+  geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\hat{\\delta}_D = \\hat{\\delta}_F$"), TeX)) +
+  xlab(TeX('$\\hat{\\delta}_F - \\hat{\\delta}_D')) +
+  ylab("Normalized Density") +
+  theme_bw() +
+  labs(color="Dataset") +
+  ggtitle("Bilateral Across Modality")
+```
+
+```{r}
+saveRDS(list(hem.across=hem.across, bil.across=bil.across, hem.diff=hem.diff, bil.diff=bil.diff), 'data/figure_4.rds')
+```
+
+# Combined
+
+```{r}
+top_leg <- g_legend(btwn.hem)
+bot_leg <- g_legend(across.hem)
+lefttit <- "Within vs. Across Hemisphere"
+righttit <- "Homotopic vs. Heterotopic"
+toptit <- "Within Modality"
+bottomtit <- "Across Modality"
+left.title <- textGrob(lefttit, gp=gpar(fontsize=18))
+right.title <- textGrob(righttit, gp=gpar(fontsize=18))
+top.title <- textGrob(toptit, gp=gpar(fontsize=18), rot=90)
+bottom.title <- textGrob(bottomtit, gp=gpar(fontsize=18), rot=90)
+empty.title <- textGrob("", gp=gpar(fontsize=18))
+
+top <- arrangeGrob(top.title, btwn.hem + theme(legend.position=NaN) + ggtitle("(A)"),
+                   btwn.bil + theme(legend.position=NaN,
+                                         axis.text.y = element_text(" "), axis.text.x = element_text(" ")) +
+                        ggtitle("(B)"),
+                   top_leg, nrow=1, widths=c(.1, .4, .4, .1))
+bottom <- arrangeGrob(bottom.title, across.hem + theme(legend.position=NaN) + ggtitle("(C)") + ylab(""),
+                      across.bil + theme(legend.position=NaN,
+                                         axis.text.y = element_text(" "), axis.text.x = element_text(" ")) +
+                        ggtitle("(D)"),
+                      bot_leg, nrow=1, widths=c(.1, .4, .4, .1))
+title <- arrangeGrob(empty.title, left.title, right.title, empty.title, widths=c(.1, .4, .4, .1), nrow=1)
+grid.arrange(title, top, bottom, nrow=3, heights=c(.1, .45, .45))
+```
+
