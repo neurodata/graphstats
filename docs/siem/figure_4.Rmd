@@ -88,16 +88,16 @@ model.between <- function(fit) {
   return(do.call(rbind, model.diff))
 }
 
-model.across <- function(btwn.first, btwn.second) {
-  first.subs <- btwn.first$subject; second.subs <- btwn.second$subject
+model.across <- function(within.first, within.second) {
+  first.subs <- within.first$subject; second.subs <- within.second$subject
   subs <- first.subs[first.subs %in% second.subs]
 
   model.acr <- lapply(1:length(subs), function(i) {
-    sec <- btwn.second[as.character(second.subs) == subs[i],]
-    fir <- btwn.first[as.character(first.subs) == subs[i],]
-    res.out <- lapply(1:nrow(sec), function(j) {
+    sec <- within.second[as.character(second.subs) == subs[i],]
+    fir <- within.first[as.character(first.subs) == subs[i],]
+    res.out <- lapply(1:nrow(fir), function(j) {
       sub.first <- fir[j,]
-      res.in <- lapply(1:nrow(fir), function(k) {
+      res.in <- lapply(1:nrow(sec), function(k) {
         sub.second <- sec[k,]
         pval <- gs.siem.sample.test(fir$dpr, sec$dpr, fir$dvar, sec$dvar, alt='greater', df=2)$p
         data.frame(first = sub.first$difference, second=sub.second$difference,
@@ -120,6 +120,16 @@ g_legend <- function(a.gplot){
 }
 ```
 
+```{r}
+colors <- readRDS('./data/colors.rds')
+svals <- colors$svals; cols <- colors$cols
+svals['BNU'] <- svals['BNU1'] + svals['BNU3']
+svals['Templeton'] <- svals['Templeton114'] + svals['Templeton255']
+svals['SWU'] <- svals['SWU1'] + svals['SWU2'] + svals['SWU3'] + svals['SWU4']
+svals['IPCAS'] <- svals['IPCAS1'] + svals['IPCAS2'] + svals['IPCAS5'] + svals['IPCAS6'] + svals['IPCAS8']
+cols['SWU'] <- '#5f5a0c'; cols['IPCAS'] <- '#ff0000'
+```
+
 # Diffusion
 
 ```{r}
@@ -129,7 +139,7 @@ dwi.atlas = 'desikan'
 dwi.basepath = '/data/all_mr/dwi/edgelists'
 
 graphobj = fmriu.io.collection.open_graphs(basepath = dwi.basepath, atlases = dwi.atlas, datasets = dwi.dsets,
-                                           gname = 'graphs', fmt='edgelist', rtype = 'list')
+                                           gname = 'graphs', fmt='edgelist', rtype = 'array')
 dwi.graphs = graphobj$graphs
 dwi.datasets = graphobj$dataset
 dwi.subjects = graphobj$subjects
@@ -145,7 +155,7 @@ fmri.dsets = c('BNU1', 'BNU2', 'BNU3', 'HNU1', 'IBATRT', 'IPCAS1', 'IPCAS2', 'IP
 fmri.atlas = 'desikan-2mm'
 fmri.basepath = '/data/all_mr/fmri/ranked/edgelists/'
 
-graphobj = fmriu.io.collection.open_graphs(basepath = fmri.basepath, atlases = fmri.atlas, datasets=fmri.dsets, fmt='edgelist', rtype = 'list')
+graphobj = fmriu.io.collection.open_graphs(basepath = fmri.basepath, atlases = fmri.atlas, datasets=fmri.dsets, fmt='edgelist', rtype = 'array')
 fmri.graphs = graphobj$graphs
 fmri.datasets = graphobj$dataset
 fmri.subjects = graphobj$subjects
@@ -175,20 +185,43 @@ fmri.hem.diff$modality = 'fMRI'
 ### Plot
 
 ```{r}
+vline = data.frame(x=0.0, type="sig")
 hem.diff <- rbind(dwi.hem.diff, fmri.hem.diff)
 hem.diff$modality <- factor(hem.diff$modality, levels=unique(hem.diff$modality))
 hem.diff$grouping = paste(hem.diff$dataset, hem.diff$modality)  # for the datasets that are shared
-btwn.hem <- ggplot(data=hem.diff, aes(difference, group=grouping, color=modality)) +
+within.hem <- ggplot(data=hem.diff, aes(difference, group=grouping, color=modality)) +
   geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
-  xlim(0, 1) +
   xlab(TeX('$\\delta = \\hat{p} - \\hat{q}$')) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dotted"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\delta_D = \\delta_F$"), TeX)) +
+  xlim(-1, 1) +
   ylab("Normalized Density") +
   theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
   labs(color="Modality") +
+  guides(linetype=FALSE) +
   ggtitle("Hemispheric Intra-Modality")
 ```
 
-## Between Modality
+### CDFs
+
+```{r}
+vline = data.frame(x=0.05, type="sig")
+hem.cdf <- ggplot(data=hem.diff, aes(x=pval, color=modality)) +
+  stat_ecdf(size=1, geom="line") +
+  scale_x_log10(limits=c(.001, 1), breaks=c(.001, .01, .1, 1), labels=c(.001, .01, .1, 1)) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05$"), TeX)) +
+  xlab(TeX('$p$-value')) +
+  ylab("Cumulative Distribution") +
+  theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
+  labs(color="Modality") +
+  guides(color=FALSE) +
+  ggtitle("Cumulative Distribution of P-values")
+```
+
+## Within Modality
 
 ### Plot
 
@@ -213,19 +246,41 @@ fmri.bil.diff$modality = 'fMRI'
 ### Plot
 
 ```{r}
+vline = data.frame(x=0.0, type="sig")
 bil.diff <- rbind(dwi.bil.diff, fmri.bil.diff)
 bil.diff$modality <- factor(bil.diff$modality, levels=unique(bil.diff$modality))
 bil.diff$grouping = paste(bil.diff$dataset, bil.diff$modality)  # for the datasets that are shared
-btwn.bil <- ggplot(data=bil.diff, aes(difference, group=grouping, color=modality)) +
+within.bil <- ggplot(data=bil.diff, aes(difference, group=grouping, color=modality)) +
   geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
-  xlim(0, 1) +
   xlab(TeX('$\\delta = \\hat{p} - \\hat{q}$')) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dotted"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\delta_D = \\delta_F$"), TeX)) +
   ylab("Normalized Density") +
   theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
+  xlim(-1, 1) +
   labs(color="Modality") +
+  guides(linetype=FALSE) +
   ggtitle("Bilateral Intra-Modality")
 ```
 
+### CDFs
+
+```{r}
+vline = data.frame(x=0.05, type="sig")
+bil.cdf <- ggplot(data=bil.diff, aes(x=pval, color=modality)) +
+  stat_ecdf(size=1, geom="line") +
+  scale_x_log10(limits=c(.001, 1), breaks=c(.001, .01, .1, 1), labels=c(.001, .01, .1, 1)) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05$"), TeX)) +
+  xlab(TeX('$p$-value')) +
+  ylab("Cumulative Distribution") +
+  theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
+  labs(color="Modality") +
+  guides(color=FALSE) +
+  ggtitle("Cumulative Distribution of P-values")
+```
 ## Between Modality
 
 ```{r}
@@ -236,29 +291,70 @@ bil.across <- model.across(fmri.bil.diff, dwi.bil.diff)
 ### Plot
 
 ```{r}
-
 vline = data.frame(x=0, type="sig")
 across.hem <- ggplot(data=hem.across, aes(difference, color=dataset)) +
   geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
   geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
-  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\hat{\\delta}_D = \\hat{\\delta}_F$"), TeX)) +
+  scale_linetype_manual(values=c("dotted"), name="Cutoff", breaks=c("sig"), labels=lapply(c("ipsi = contra"), TeX)) +
+  xlim(-1, 1) +
   xlab(TeX('$\\hat{\\delta}_D - \\hat{\\delta}_F')) +
   ylab("Normalized Density") +
+  scale_color_manual(values=cols) +
   theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
   labs(color="Dataset") +
+  guides(linetype=FALSE) +
   ggtitle("Hemispheric Across Modality")
 
 vline = data.frame(x=0, type="sig")
 across.bil <- ggplot(data=bil.across, aes(difference, color=dataset)) +
   geom_line(aes(y=..scaled..), stat="density", size=1, adjust=1.5) +
   geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
-  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\hat{\\delta}_D = \\hat{\\delta}_F$"), TeX)) +
+  scale_linetype_manual(values=c("dotted"), name="Cutoff", breaks=c("sig"), labels=lapply(c("homo = hetero"), TeX)) +
+  xlim(-1, 1) +
   xlab(TeX('$\\hat{\\delta}_F - \\hat{\\delta}_D')) +
   ylab("Normalized Density") +
+  scale_color_manual(values=cols) +
   theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
   labs(color="Dataset") +
+  guides(linetype=FALSE) +
   ggtitle("Bilateral Across Modality")
 ```
+
+### CDFs
+
+```{r}
+vline = data.frame(x=0.05, type="sig")
+across.hem.cdf <- ggplot(data=hem.across, aes(x=pval, color=dataset)) +
+  stat_ecdf(size=1, geom="line") +
+  scale_color_manual(values=cols) +
+  scale_x_log10(limits=c(.001, 1), breaks=c(.001, .01, .1, 1), labels=c(.001, .01, .1, 1)) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05$"), TeX)) +
+  xlab(TeX('$p$-value')) +
+  ylab("Cumulative Distribution") +
+  theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
+  labs(color="Modality") +
+  guides(color=FALSE) +
+  ggtitle("Cumulative Distribution of P-values")
+
+across.bil.cdf <- ggplot(data=bil.across, aes(x=pval, color=dataset)) +
+  stat_ecdf(size=1, geom="line") +
+  scale_x_log10(limits=c(.001, 1), breaks=c(.001, .01, .1, 1), labels=c(.001, .01, .1, 1)) +
+  geom_vline(data=vline, aes(xintercept = x, linetype=type)) +
+  scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05$"), TeX)) +
+  xlab(TeX('$p$-value')) +
+  scale_color_manual(values=cols) +
+  ylab("Cumulative Distribution") +
+  theme_bw() +
+  theme(plot.margin = unit(c(.1,.1,.1,.1), "cm")) +
+  labs(color="Modality") +
+  guides(color=FALSE) +
+  ggtitle("Cumulative Distribution of P-values")
+```
+
 
 ```{r}
 saveRDS(list(hem.across=hem.across, bil.across=bil.across, hem.diff=hem.diff, bil.diff=bil.diff), 'data/figure_4.rds')
@@ -267,29 +363,35 @@ saveRDS(list(hem.across=hem.across, bil.across=bil.across, hem.diff=hem.diff, bi
 # Combined
 
 ```{r}
-top_leg <- g_legend(btwn.hem)
-bot_leg <- g_legend(across.hem)
-lefttit <- "Within vs. Across Hemisphere"
-righttit <- "Homotopic vs. Heterotopic"
-toptit <- "Within Modality"
-bottomtit <- "Across Modality"
-left.title <- textGrob(lefttit, gp=gpar(fontsize=18))
-right.title <- textGrob(righttit, gp=gpar(fontsize=18))
-top.title <- textGrob(toptit, gp=gpar(fontsize=18), rot=90)
-bottom.title <- textGrob(bottomtit, gp=gpar(fontsize=18), rot=90)
+c1_leg <- g_legend(within.hem + guides(color = guide_legend(nrow = 1)))
+c2_leg <- g_legend(hem.cdf + guides(linestyle = guide_legend(nrow = 1)))
+c3_leg <- g_legend(across.hem + guides(color = guide_legend(nrow = 1)))
+c4_leg <- g_legend(across.hem.cdf + guides(linestyle = guide_legend(nrow = 1)))
+
+r_titls <- list(r1_titl="Hemispheric", r2_titl="Homotopic")
+c_titls <- list(c1_titl="Magnitude Within-Modality", c2_titl="CDF Within-Modality", c3_titl="Magnitude Inter-Modality", c4_titl="CDF Inter-Modality")
+col.titles <- lapply(c_titls, function(titl) textGrob(titl, gp=gpar(fontsize=26)))
+row.titles <- lapply(r_titls, function(titl) textGrob(titl, gp=gpar(fontsize=15), rot=90))
 empty.title <- textGrob("", gp=gpar(fontsize=18))
 
-top <- arrangeGrob(top.title, btwn.hem + theme(legend.position=NaN) + ggtitle("(A)"),
-                   btwn.bil + theme(legend.position=NaN,
-                                         axis.text.y = element_text(" "), axis.text.x = element_text(" ")) +
-                        ggtitle("(B)"),
-                   top_leg, nrow=1, widths=c(.1, .4, .4, .1))
-bottom <- arrangeGrob(bottom.title, across.hem + theme(legend.position=NaN) + ggtitle("(C)") + ylab(""),
-                      across.bil + theme(legend.position=NaN,
-                                         axis.text.y = element_text(" "), axis.text.x = element_text(" ")) +
-                        ggtitle("(D)"),
-                      bot_leg, nrow=1, widths=c(.1, .4, .4, .1))
-title <- arrangeGrob(empty.title, left.title, right.title, empty.title, widths=c(.1, .4, .4, .1), nrow=1)
-grid.arrange(title, top, bottom, nrow=3, heights=c(.1, .45, .45))
+col1 <- arrangeGrob(within.hem + ggtitle("(A.i)") + xlab("ipsi - contra") + ylab("Normalized Density") + theme(legend.position=NaN),
+                    within.bil + ggtitle("(B.i)") + xlab("homo - hetero") + ylab("") + theme(legend.position=NaN),
+                    c1_leg, nrow=3, heights=c(.45, .45, .15), top=c_titls$c1_titl)
+
+col2 <- arrangeGrob(hem.cdf + ggtitle("(A.ii)") + xlab(TeX("$p$-value")) + ylab("") + theme(legend.position=NaN),
+                    bil.cdf + ggtitle("(B.ii)") + xlab("") + ylab("") + theme(legend.position=NaN),
+                    c2_leg, nrow=3, heights=c(.45, .45, .15), top=c_titls$c2_titl)
+
+col3 <- arrangeGrob(across.hem + ggtitle("(A.iii)") + xlab("dMRI - fMRI") + ylab("") + theme(legend.position=NaN),
+                    across.bil + ggtitle("(B.iii)") + xlab("fMRI - dMRI") + ylab("") + theme(legend.position=NaN),
+                    c3_leg, nrow=3, heights=c(.45, .45, .15), top=c_titls$c3_titl)
+
+col4 <- arrangeGrob(across.hem.cdf + ggtitle("(A.iv)") + xlab(TeX("$p$-value")) + ylab("") + theme(legend.position=NaN),
+                    across.bil.cdf + ggtitle("(B.iv)") + xlab("") + ylab("") + theme(legend.position=NaN),
+                    c4_leg, nrow=3, heights=c(.45, .45, .15), top=c_titls$c4_titl)
+
+col_left <- arrangeGrob(row.titles$r1_titl, row.titles$r2_titl, empty.title, nrow=3, heights=c(.45, .45, .1))
+
+grid.arrange(col_left, col1, col2, col3, col4, widths=c(.02, .2, .2, .2, .2))
 ```
 

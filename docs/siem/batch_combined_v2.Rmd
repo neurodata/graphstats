@@ -160,7 +160,7 @@ for (i in 1:length(names(modal_plots))) {
     ylab(TeX("$p$-value")) +
     geom_hline(data=hline, aes(yintercept=y, linetype=type)) +
     scale_linetype_manual(values=c("dashed"), name="Cutoff", breaks=c("sig"), labels=lapply(c("$\\alpha = 0.05"), TeX)) +
-    ggtitle(sprintf("(%s.%s) Batch Effects of Common Pooling Strategies", letters[i], roman[3])) +
+    ggtitle(sprintf("(%s.%s) Significance of differences within vs. across each pooling strategy", letters[i], roman[3])) +
     theme_bw() +
     theme(legend.position="none", axis.text=element_text(size=12.5), axis.title=element_text(size=14),
           plot.title = element_text(hjust = -.1), axis.text.x = element_text(size=12.5, angle=20, hjust=1))
