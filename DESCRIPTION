@@ -16,6 +16,8 @@ Imports:
   stringr,
   abind,
   plyr
-Suggests: knitr,
-    rmarkdown
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr

@@ -1,46 +1,56 @@
 #' Structured Independent Edge Model, Single Sample
 #'
 #' An independent-edge generalization of the traditional Stochastic Block Model.
-#' @param X [v, v] the binary graph with v vertices.
-#' @param Es [[e]] a numbered list where each element corresponds to a community of edges. Each community should consist of the 1-dimensional indices of an edge.
-#' @param alt='greater' the alternative hypothesis for each edge test.
+#'
+#' @param graph \code{[v, v]} the binary graph with \code{v} vertices.
+#' @param C \code{[[r]]} a list of \code{r} communities where each element corresponds to a community of edges.
+#' Note that \code{union(C[[j]])} over all \code{j} communities should be \code{1:v},
+#' and \code{intersect(C[[j]])} over all \code{j} communities should be empty.
+#' @param alt the alternative hypothesis for each edge-community test. Defaults to \code{'greater'}.
 #' \itemize{
-#' \item{'greater'}{p corresponds to H0: x1 <= x2, HA: x1 > x2. R(x1, x2) = x1 > x2}
-#' \item{'neq'}{p corresponds to H0: x1 = x2, HA: x1 != x2. R(x1, x2) = x1 != x2}
-#' \item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2. R(x1, x2) = x1 < x2}
+#' \item{'greater'}{p corresponds to \code{H0: x1 <= x2}, \code{HA: x1 > x2}. \code{R(x1, x2) = x1 > x2}}
+#' \item{'neq'}{p corresponds to \code{H0: x1 = x2}, \code{HA: x1 != x2}. \code{R(x1, x2) = x1 != x2}}
+#' \item{'less'}{p corresponds to \code{H0: x1 >= x2}, \code{HA: x1 < x2}. \code{R(x1, x2) = x1 < x2}}
 #' }
-#' @return pr [e] a probability array corresponding to the probability of an edge connecting each edge community.
-#' @return var [e] the variance of the probabilities estimated between edge communities.
-#' @return dpr [e, e] an array consisting of the paired differences in probability where dpr_{ij} = pr_i - pr_j.
-#' @return dvar [e, e] an array consisting of the variance of the estimate of the paired differences in probability, where dvar_{ij} = var_i + var_j.
-#' @return pv [e, e] pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).
+#' @param ... trailing args
+#' @return An object of class \code{"SIEM"} containing the following:
+#' \item{\code{pr}}{\code{[r]} a probability vector corresponding to the probability of an edge connecting each edge community.}
+#' \item{\code{var}}{\code{[r]} the variance of the probabilities estimated between edge communities.}
+#' \item{\code{dpr}}{\code{[r, r]} an array consisting of the paired differences in probability where dpr_{ij} = pr_i - pr_j.}
+#' \item{\code{dvar}}{\code{[r, r]} an array consisting of the variance of the estimate of the paired differences in probability, where dvar_{ij} = var_i + var_j.}
+#' \item{\code{pv}}{\code{[r, r]} pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).}
 #' @author Eric Bridgeford
 #' @export
-gs.siem.fit <- function(X, Es, alt='greater') {
-  # compute parameters for each edge-set
-  params <- sapply(Es, function(e1) {
-    gs.siem.model.params(X[e1])
+gs.siem.fit <- function(graph, C, alt='greater', ...) {
+
+  r <- length(C)
+  params <- sapply(1:r, function(i) {
+    com <- C[[i]]
+    if (!all(1:v^2 %in% unique(do.call(c, Clst)))) {
+      stop(sprintf("You have not entered a valid community C[[%d]] does not contain a community for all edges", i))
+    }
+    if (length(do.call(intersect, Clst)) > 0) {
+      stop(sprintf("You have not entered a valid community. C[[%d]] has one or more edges in multiple communities.", i))
+    }
+    return(gs.siem.model.params(graph[com]))
   })
 
-  # reorder for simplicity
-  result <- list()
   pr <- unlist(params[1,])
   vari <- unlist(params[2,])
 
-  nes <- length(Es)
   pv <- array(0, dim=c(nes, nes))
   dpr <- array(0, dim=c(nes, nes))
   dvar <- array(0, dim=c(nes, nes))
 
-  for (i in 1:nes) {
-    for (j in 1:nes) {
+  for (i in 1:r) {
+    for (j in 1:r) {
       pv[i, j] <- gs.siem.sample.test(pr[i], pr[j], vari[i], vari[j], df=1, alt=alt)$p
       dpr[i, j] <- pr[i] - pr[j]
       dvar[i, j] <- vari[i] + vari[j]
     }
   }
 
-  return(list(pr=pr, var=vari, pv=pv, dpr=dpr, dvar=dvar))
+  return(structure(list(pr=pr, var=vari, pv=pv, dpr=dpr, dvar=dvar), class="SIEM"))
 }
 
 #' Estimator Sample Test
@@ -64,7 +74,6 @@ gs.siem.fit <- function(X, Es, alt='greater') {
 #' \item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2. R(x1, x2) = x1 < x2}
 #' }
 #' @return p is the p-value of false rejection of H0 that !R(x1, x2) in favor of HA that R(x1, x2).
-#' @export
 gs.siem.sample.test <- function(x1, x2, var1, var2, df=NULL, n1=NULL, n2=NULL, alt='greater') {
   num <- (x1 - x2)
   if (is.null(df) & (is.null(n1) & is.null(n2))) {

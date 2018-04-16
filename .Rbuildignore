@@ -1,0 +1,5 @@
+^.*\.Rproj$
+^\.proj$
+^\.Rproj\.user$
+^docs$
+^LICENSE$

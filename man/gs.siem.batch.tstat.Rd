@@ -4,7 +4,7 @@
 \alias{gs.siem.batch.tstat}
 \title{Test Statistic for Batch Detection}
 \usage{
-gs.siem.batch.tstat(models, Z, i = 1, j = 2)
+gs.siem.batch.tstat(models, Z, i = 1, j = 2, return = "full")
 }
 \arguments{
 \item{models}{[[n]] a list of the models fit to each of the n samples.}
@@ -14,12 +14,24 @@ gs.siem.batch.tstat(models, Z, i = 1, j = 2)
 \item{i=1}{the first edge set to use in the comparison.}
 
 \item{j=2}{the second edge set to use in the comparison.}
+
+\item{return="full"}{How to return the test statistic.
+\itemize{
+\item{"full"}{return the full distance matrix as the statistic.}
+\item{"max"}{return the max value of the distance matrix.}
+\item{"mean"}{return the mean value of the distance matrix.}
+\item{"min"}{return the min value of the distance matrix.}
+}}
 }
 \value{
-tstat the test statistic.
+stat the test statistic.
 }
 \description{
 A function that computes a test statistic associated with a set of estimators.
+Given a list of SIEM models and an array of labels, computes the mean estimator for
+two pairs of the average edge-set estimators (called p and q). For each pair of unique labels
+in the data set, computes the distance between the pairs of estimators assiciated with the unique labels as
+D_{ij} = |p_i - p_j - (q_i - q_j)|.
 }
 \author{
 Eric Bridgeford

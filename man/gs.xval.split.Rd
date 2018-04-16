@@ -4,23 +4,43 @@
 \alias{gs.xval.split}
 \title{Cross-Validation Data Splitter}
 \usage{
-gs.xval.split(samp, Y, k = "loo")
+gs.xval.split(graphs, Y, k = "loo", ...)
 }
 \arguments{
-\item{samp}{[v, v, s] an array of input data.}
+\item{graphs}{\code{[n, d, d]} or \code{[[n]][v, v]} the data with \code{n} samples of \code{v} vertices.}
 
-\item{Y}{[s] the class labels.}
+\item{Y}{\code{[n]} the labels of the samples with \code{K} unique labels.}
 
-\item{k='loo'}{the cross-validated method to perform.
+\item{k}{the cross-validated method to perform. Defaults to \code{'loo'}.
 \itemize{
-\item{'loo'}{Leave-one-out cross validation}
-\item{isinteger(k)}{perform k-fold cross-validation with k as the number of folds.}
+\item \code{'loo'}  Leave-one-out cross validation
+\item \code{isinteger(k)}  perform \code{k}-fold cross-validation with \code{k} as the number of folds.
 }}
+
+\item{...}{trailing args.}
 }
 \value{
-sets the cross-validation sets.
+sets the cross-validation sets as an object of class \code{"XV"}. Each element of the list contains the following items:
+\item{\code{graphs.train}}{the training data as a \code{[[n - k]][v, v]} list.}
+\item{\code{Y.train}}{the training labels as a \code{[n - k]} vector.}
+\item{\code{graphs.test}}{the testing data as a \code{[[k]][v, v]} list.}
+\item{\code{Y.test}}{the testing labels as a \code{[k]} vector.}
 }
 \description{
-\code{sg.bern.xval_split_data} A function to split a series of graphs into
+\code{gs.xval.split} A function to split a dataset into
 training and testing sets for cross validation.
+}
+\examples{
+# prepare data for 10-fold validation
+library(graphstats)
+data <- gs.sims.er(n=100, v=10, priors=c(1), p=c(0.5))  # 100 examples of 10x10 graphs
+graphs <- data$graphs; Y <- data$Y
+sets.xval.10fold <- lol.xval.split(graphs, Y, k=10)
+
+# prepare data for loo validation
+sets.xval.loo <- lol.xval.split(graphs, Y, k='loo')
+
+}
+\author{
+Eric Bridgeford
 }

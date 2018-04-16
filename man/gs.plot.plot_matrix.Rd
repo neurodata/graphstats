@@ -6,28 +6,31 @@
 \usage{
 gs.plot.plot_matrix(mtx, title = "", xlabel = "", ylabel = "",
   legend.name = "metric", legend.show = TRUE, font.size = 12,
-  limits = NULL, vfactor = FALSE, ffactor = FALSE, vlist = NULL)
+  limits = c(min(mtx), max(mtx)), vfactor = FALSE, ffactor = FALSE,
+  vlist = NULL)
 }
 \arguments{
-\item{mtx}{[n, n] or [n, d]: the input. Can either be a square matrix or a data matrix.}
+\item{title}{the title for the square plot. Defaults to \code{""}.}
 
-\item{title=""}{the title for the square plot.}
+\item{xlabel}{the x label for the square plot. Defaults to \code{""}.}
 
-\item{xlabel=""}{the x label for the square plot.}
+\item{ylabel}{the y label for the square plot. Defaults to \code{""}.}
 
-\item{ylabel=""}{the y label for the square plot.}
+\item{legend.name}{the legend title for the square plot. Defaults to \code{"metric"}.}
 
-\item{legend.name=""}{the legend title for the square plot.}
+\item{legend.show}{whether to show the legend on the plot. Defaults to \code{TRUE}.}
 
-\item{legend.show=TRUE}{whether to show the legend on the plot.}
+\item{font.size}{the default font size for the plot text. Axis/legend text is \code{font.size - 2}. Defaults to \code{12}.}
 
-\item{font.size=12}{the default font size for the plot text. Axis/legend text is font.size - 2.}
+\item{limits}{the limits for fill color. Defaults to \code{c(min(graph), max(graph))}.}
 
-\item{limits=NULL}{if the limits are not specified, limits are c(min(mtx), max(mtx)) for color fill.}
+\item{vfactor}{if TRUE, interpret the vertex labels as a factor. Defaults to \code{FALSE}.}
 
-\item{vfactor=FALSE}{if TRUE, interpret the vertex labels as a factor.}
+\item{ffactor}{if TRUE, interpret the fill colors as a factor. Defaults to \code{FALSE}.}
 
-\item{ffactor=FALSE}{if TRUE, interpret the fill colors as a factor.}
+\item{vlist}{an optional list for the vertex labels ordered according to the adjacency matrix \code{graph}. Defaults to \code{NULL}.}
+
+\item{graph}{\code{[v, v]} the input graph.}
 }
 \value{
 plot the matrix as a plot.

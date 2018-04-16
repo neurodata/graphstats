@@ -1,19 +1,34 @@
 #' Cross-Validation Data Splitter
 #'
-#' \code{sg.bern.xval_split_data} A function to split a series of graphs into
+#' \code{gs.xval.split} A function to split a dataset into
 #' training and testing sets for cross validation.
 #'
-#' @param samp [v, v, s] an array of input data.
-#' @param Y [s] the class labels.
-#' @param k='loo' the cross-validated method to perform.
+#' @param graphs \code{[n, d, d]} or \code{[[n]][v, v]} the data with \code{n} samples of \code{v} vertices.
+#' @param Y \code{[n]} the labels of the samples with \code{K} unique labels.
+#' @param k the cross-validated method to perform. Defaults to \code{'loo'}.
 #' \itemize{
-#' \item{'loo'}{Leave-one-out cross validation}
-#' \item{isinteger(k)}{perform k-fold cross-validation with k as the number of folds.}
+#' \item \code{'loo'}  Leave-one-out cross validation
+#' \item \code{isinteger(k)}  perform \code{k}-fold cross-validation with \code{k} as the number of folds.
 #' }
-#' @return sets the cross-validation sets.
-#' @export
+#' @param ... trailing args.
+#' @return sets the cross-validation sets as an object of class \code{"XV"}. Each element of the list contains the following items:
+#' \item{\code{graphs.train}}{the training data as a \code{[[n - k]][v, v]} list.}
+#' \item{\code{Y.train}}{the training labels as a \code{[n - k]} vector.}
+#' \item{\code{graphs.test}}{the testing data as a \code{[[k]][v, v]} list.}
+#' \item{\code{Y.test}}{the testing labels as a \code{[k]} vector.}
+#' @author Eric Bridgeford
+#' @examples
+#' # prepare data for 10-fold validation
+#' library(graphstats)
+#' data <- gs.sims.er(n=100, v=10, priors=c(1), p=c(0.5))  # 100 examples of 10x10 graphs
+#' graphs <- data$graphs; Y <- data$Y
+#' sets.xval.10fold <- lol.xval.split(graphs, Y, k=10)
 #'
-gs.xval.split <- function(samp, Y, k='loo') {
+#' # prepare data for loo validation
+#' sets.xval.loo <- lol.xval.split(graphs, Y, k='loo')
+#'
+#' @export
+gs.xval.split <- function(graphs, Y, k='loo', ...) {
   Y <- factor(Y)
   n <- length(Y)
   if (k == 'loo') {
@@ -22,13 +37,13 @@ gs.xval.split <- function(samp, Y, k='loo') {
   if (round(k) == k) {  # then xval is an integer
     samp.ids <- as.matrix(sample(1:n, n))  # the sample ids randomly permuted
     k.folds <- split(samp.ids, rep(1:k), drop=TRUE)  # split the sample ids into xval folds
-
-    sets <- sapply(k.folds, function(fold) {
-      list(X.train=X[-fold,,,drop=FALSE], Y.train=Y[-fold,drop=FALSE],
-           X.test=X[fold,,,drop=FALSE], Y.test=Y[fold,drop=FALSE])
-      })
+    # partition X and Y appropriately into training and testing sets
+    sets <- lapply(k.folds, function(fold) {
+      list(graphs.train=graphs[-fold], Y.train=Y[-fold,drop=FALSE],
+           graphs.test=graphs[fold], Y.test=Y[fold,drop=FALSE])
+    })
   } else {
     stop("You have not entered a valid parameter for xval.")
   }
-  return(sets)
+  return(structure(sets), class="XV")
 }

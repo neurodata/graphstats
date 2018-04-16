@@ -4,12 +4,12 @@
 \alias{gs.xfm.rank_graph}
 \title{Rank Graph}
 \usage{
-gs.xfm.rank_graph(X, ties = "average", na.last = TRUE)
+gs.xfm.rank_graph(graph, ties = "average", na.last = TRUE, ...)
 }
 \arguments{
-\item{X}{[v, v] a graph with v vertices.}
+\item{graph}{\code{[v, v]} a graph with \code{v} vertices.}
 
-\item{ties='average'}{the method to break ties.
+\item{ties}{the method to break ties. Defaults to \code{'average'}.
 \itemize{
 \item{'average'}{take the average rank between the tied items.}
 \item{'first'}{choose the lowest index as the tie breaker.}
@@ -19,13 +19,16 @@ gs.xfm.rank_graph(X, ties = "average", na.last = TRUE)
 \item{'min'}{replace all tied values with the minimum rank they could occupy.}
 }}
 
-\item{na.last=TRUE}{\itemize{
+\item{na.last}{How to interpret missing values in the data. Defaults to \code{TRUE}.
+\itemize{
 \item{TRUE}{missing values in the data are put last}
 \item{FALSE}{missing values in the data are put first}
 }}
+
+\item{...}{trailing args.}
 }
 \value{
-R [v, v] the rank of each edge, from lowest (1) to highest (n^2, or otherwise depending on ties).
+R \code{[v, v]} the rank of each edge, from lowest (1) to highest (n^2, or otherwise depending on ties).
 }
 \description{
 A function to rank the edges of a graph.

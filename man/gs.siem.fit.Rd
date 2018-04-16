@@ -4,30 +4,31 @@
 \alias{gs.siem.fit}
 \title{Structured Independent Edge Model, Single Sample}
 \usage{
-gs.siem.fit(X, Es, alt = "greater")
+gs.siem.fit(graph, C, alt = "greater", ...)
 }
 \arguments{
-\item{X}{[v, v] the binary graph with v vertices.}
+\item{graph}{\code{[v, v]} the binary graph with \code{v} vertices.}
 
-\item{Es}{[[e]] a numbered list where each element corresponds to a community of edges. Each community should consist of the 1-dimensional indices of an edge.}
+\item{C}{\code{[[r]]} a list of \code{r} communities where each element corresponds to a community of edges.
+Note that \code{union(C[[j]])} over all \code{j} communities should be \code{1:v},
+and \code{intersect(C[[j]])} over all \code{j} communities should be empty.}
 
-\item{alt='greater'}{the alternative hypothesis for each edge test.
+\item{alt}{the alternative hypothesis for each edge-community test. Defaults to \code{'greater'}.
 \itemize{
-\item{'greater'}{p corresponds to H0: x1 <= x2, HA: x1 > x2. R(x1, x2) = x1 > x2}
-\item{'neq'}{p corresponds to H0: x1 = x2, HA: x1 != x2. R(x1, x2) = x1 != x2}
-\item{'less'}{p corresponds to H0: x1 >= x2, HA: x1 < x2. R(x1, x2) = x1 < x2}
+\item{'greater'}{p corresponds to \code{H0: x1 <= x2}, \code{HA: x1 > x2}. \code{R(x1, x2) = x1 > x2}}
+\item{'neq'}{p corresponds to \code{H0: x1 = x2}, \code{HA: x1 != x2}. \code{R(x1, x2) = x1 != x2}}
+\item{'less'}{p corresponds to \code{H0: x1 >= x2}, \code{HA: x1 < x2}. \code{R(x1, x2) = x1 < x2}}
 }}
+
+\item{...}{trailing args}
 }
 \value{
-pr [e] a probability array corresponding to the probability of an edge connecting each edge community.
-
-var [e] the variance of the probabilities estimated between edge communities.
-
-dpr [e, e] an array consisting of the paired differences in probability where dpr_{ij} = pr_i - pr_j.
-
-dvar [e, e] an array consisting of the variance of the estimate of the paired differences in probability, where dvar_{ij} = var_i + var_j.
-
-pv [e, e] pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).
+An object of class \code{"SIEM"} containing the following:
+\item{\code{pr}}{\code{[r]} a probability vector corresponding to the probability of an edge connecting each edge community.}
+\item{\code{var}}{\code{[r]} the variance of the probabilities estimated between edge communities.}
+\item{\code{dpr}}{\code{[r, r]} an array consisting of the paired differences in probability where dpr_{ij} = pr_i - pr_j.}
+\item{\code{dvar}}{\code{[r, r]} an array consisting of the variance of the estimate of the paired differences in probability, where dvar_{ij} = var_i + var_j.}
+\item{\code{pv}}{\code{[r, r]} pv_{ij} is the p-value of false rejection of H0 that !R(pr_i, pr_j) in favor of HA that R(pr_j, pr_i).}
 }
 \description{
 An independent-edge generalization of the traditional Stochastic Block Model.

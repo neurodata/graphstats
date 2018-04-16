@@ -25,7 +25,7 @@ tstat.alt the test statistic given the current Z orderings.
 
 tstat.null the test statistics of each permutation of the Z orderings.
 
-p the expectation of tstat.null > tstat.alt.
+P the estimator of E[tstat.null >= tstat.alt.]
 }
 \description{
 A function that computes a test statistic associated with a particular arrangement of graphs

@@ -4,21 +4,23 @@
 \alias{gs.xfm.thresh_graph}
 \title{Threshold Graph}
 \usage{
-gs.xfm.thresh_graph(matrix, thresh = 0.5, method = "quantile")
+gs.xfm.thresh_graph(graph, thresh = 0.5, method = "quantile", ...)
 }
 \arguments{
+\item{graph}{\code{[v, v]} a graph with v vertices.}
+
 \item{thresh}{the threshold to use for binarization.}
 
-\item{X}{[v, v] a graph with v vertices.}
-
-\item{method='quantile'}{the method to threshold.
+\item{method}{the method to threshold. Defaults to \code{'quantile'}.
 \itemize{
-\item{'quantile'}{use the thresh*100 percentile of edge values to threshold, setting values under this to 0 and over to 1.}
+\item{'quantile'}{use the \code{thresh*100} percentile of edge values to threshold, setting values under this to 0 and over to 1.}
 \item{'abs'}{use the threshold value provided explicitly to binarize, setting values under thresh to 0 and over to 1.}
 }}
+
+\item{...}{trailing args.}
 }
 \value{
-R [v, v] the rank of each edge, from lowest (1) to highest (n^2, or otherwise depending on ties).
+R \code{[v, v]} the rank of each edge, from lowest (\code{1}) to highest (\code{v^2}, or otherwise depending on ties).
 }
 \description{
 A function to threshold and binarize the edges of a graph.
