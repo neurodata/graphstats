@@ -4,14 +4,13 @@ author: "Eric Bridgeford"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteIndexEntry{SIEM}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, warning=FALSE, echo=FALSE}
 require(graphstats)
-require(mgc)
 require(ggplot2)
 require(latex2exp)
 ```
@@ -47,9 +46,9 @@ pedge$community <- factor(pedge$community)
 ggplot(pedge, aes(x=community, y=p, fill=result)) +
   geom_bar(stat="identity", width=.5, position = "dodge") +
   ggtitle("Comparing True vs. Sim Edge Community, Sample 1")
-mgc.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
+gs.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
                      ylabel = "vertex", title = "Community Each Edge is from, Sample 1", ffactor=TRUE)
-mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
+gs.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
                      ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 1")
 ```
 
@@ -67,7 +66,7 @@ for (i in 1:length(Es)) {
   }
 }
 
-mgc.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i$"),
+gs.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i$"),
                      ylabel = TeX("$c_j$"), title = TeX("$p$-value that $p_{c_i} > p_{c_j}$, Sample 1"),
                      limits=c(0, 1), vfactor=TRUE)
 ```
@@ -98,9 +97,9 @@ pedge$community <- factor(pedge$community)
 ggplot(pedge, aes(x=community, y=p, fill=result)) +
   geom_bar(stat="identity", width=.5, position = "dodge") +
   ggtitle("Comparing True vs. Sim Edge Community, Sample 2")
-mgc.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
+gs.plot.plot_matrix(com, legend.name = "community", xlabel = "vertex",
                      ylabel = "vertex", title = "Community Each Edge is from, Sample 2", ffactor=TRUE)
-mgc.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
+gs.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
                      ylabel = "vertex", title = "Graph Simulated from SIEM, Sample 2")
 ```
 
