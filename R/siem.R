@@ -22,25 +22,27 @@
 #' @author Eric Bridgeford
 #' @export
 gs.siem.fit <- function(graph, C, alt='greater', ...) {
-
+  v <- dim(graph)[1]
   r <- length(C)
+
+  if (!all(1:v^2 %in% unique(do.call(c, C)))) {
+    stop("You have not entered a valid community C does not contain a community for all edges")
+  }
+  if (length(do.call(intersect, C)) > 0) {
+    stop("You have not entered a valid community. C has one or more edges in multiple communities.")
+  }
+
   params <- sapply(1:r, function(i) {
     com <- C[[i]]
-    if (!all(1:v^2 %in% unique(do.call(c, Clst)))) {
-      stop(sprintf("You have not entered a valid community C[[%d]] does not contain a community for all edges", i))
-    }
-    if (length(do.call(intersect, Clst)) > 0) {
-      stop(sprintf("You have not entered a valid community. C[[%d]] has one or more edges in multiple communities.", i))
-    }
     return(gs.siem.model.params(graph[com]))
   })
 
   pr <- unlist(params[1,])
   vari <- unlist(params[2,])
 
-  pv <- array(0, dim=c(nes, nes))
-  dpr <- array(0, dim=c(nes, nes))
-  dvar <- array(0, dim=c(nes, nes))
+  pv <- array(0, dim=c(r, r))
+  dpr <- array(0, dim=c(r, r))
+  dvar <- array(0, dim=c(r, r))
 
   for (i in 1:r) {
     for (j in 1:r) {

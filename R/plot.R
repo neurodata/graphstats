@@ -36,7 +36,7 @@ gs.plot.plot_matrix <- function(mtx, title="",xlabel="", ylabel="", legend.name=
   if (ffactor) {
     dm$value <- factor(dm$value)
   }
-  jet.colors <- colorRampPalette(c("#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3",  "4a1486"))
+  jet.colors <- colorRampPalette(c("#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3",  "#4a1486"))
   sqplot <- ggplot2::ggplot(dm, aes(x=x, y=y, fill=value)) +
     ggplot2::geom_tile() +
     ggplot2::xlab(xlabel) +
