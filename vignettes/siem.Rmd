@@ -61,8 +61,8 @@ model <- gs.siem.fit(X, Es)  # fit siem model
 os_pval <- array(0, dim=c(2, 2))
 for (i in 1:length(Es)) {
   for (j in 1:length(Es)) {
-    os_pval[i, j] <- gs.siem.sample.test(model$pr[i], model$pr[j], model$var[i],
-                                         model$var[j], 1, alt='greater')$p
+    os_pval[i, j] <- graphstats:::gs.siem.sample.test(model$pr[i], model$pr[j], model$var[i],
+                                                      model$var[j], 1, alt='greater')$p
   }
 }
 
@@ -105,8 +105,8 @@ gs.plot.plot_matrix(X, legend.name = "connection", xlabel = "vertex",
 
 ```{r}
 model2 <- gs.siem.fit(X2, Es)  # fit siem model
-gs.siem.sample.test(model$dpr[2, 1], model2$dpr[2, 1], model2$dvar[2, 1],
-                    model2$dvar[2, 1], 2, alt='greater')$p
+graphstats:::gs.siem.sample.test(model$dpr[2, 1], model2$dpr[2, 1], model2$dvar[2, 1],
+                                 model2$dvar[2, 1], 2, alt='greater')$p
 ```
 
 and we can see that at a=0.05 we detect a significant difference between the two.
