@@ -1,0 +1,111 @@
+---
+title: "Nonparametric two-sample testing"
+author: "Kemeng Zhang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  code_folding: hide
+---
+```{r, include=FALSE, echo=FALSE}
+require(igraph)
+require(graphstats)
+require(mclust)
+require(smacof)
+```
+## Introduction
+The nonparametric two-sample hypothesis testing problem involves:
+given X_1, X_2, …, X_n i.i.d. F and Y_1, Y_2, …, Y_m i.i.d. G, test the null hypothesis of F = G against the alternative hypothesis of F is not equal to G. The test statistic is based on embedding F and G into a reproducing kernel Hilbert space and then compute a distance between the resulting embeddings. For this primitive, the Hilbert space is associated with the Gaussian kernel.
+
+## Testing/Simulation
+### Stochastic Blockmodel Example
+We illustrate the hypothesis tests through simulated examples. Let F_epsilon for a given epsilon > 0 be mixture of point masses corresponding to a two-block stochastic block model with block membership probabilities (0.4,0.6) and block probabilities 0.5+epsilon if in the same block, 0.2 otherwise. 
+
+Suppose we are given two graphs G ~ F_0 (known) and G_epsilon ~ F_epsilon (unknown).
+We then test, for a given epsilon > 0, the hypothesis whether F_0 and F_epsilon are the same distribution.
+We will use bootstrapping to conduct hypothesis testing. First, we need to construct a sampling distribution of our test statistic. Under null, we sample two graphs on 100 vertices from RDPG(F_0), then compute our test statistic using nonpar() 200 times. Then we can construct a rejection region and test whether the test statistic of G and G_epsilon lies inside that region (therefore we reject the null; otherwise, we fail to reject the null).
+
+```{r, fig.height=3.5, fig.width=5}
+# Generate Adjacency Matrix
+sbm <- function(epsilon) {
+  n <- 100
+  blocks <- c(rep(0, n*0.4), rep(1, n*0.6))
+  A <- matrix(rep(0, n*n), nrow = n)
+  for (i in 2:n) {
+    for (j in 1:(i-1)) {
+      if (blocks[i] == blocks[j]) {
+        A[i, j] <- rbinom(1, 1, 0.5 + epsilon)
+      } else {
+        A[i, j] <- rbinom(1, 1, 0.2)
+      }
+      A[j, i] <- A[i, j]
+    }
+  }
+  g <- igraph::graph_from_adjacency_matrix(A)
+  g
+}
+```
+
+Now, we are given two graphs to perform hypothesis testing:
+G ~ F_0, G_epsilon ~ F_epsilon;
+
+where we set epsilon to be 0.01.
+```{r, fig.height=3.5, fig.width=5}
+g = sbm(0)
+g_epsilon = sbm(0.01)
+```
+
+
+
+Now, we can embed two graphs to R^2 and compare their latent positions:
+
+```{r, fig.height=3.5, fig.width=5}
+
+Xhat = graphstats::ase(g, 2)
+Xhat_epsilon = graphstats::ase(g_epsilon, 2)
+p = Procrustes(Xhat,Xhat_epsilon)
+Yhat = p$Yhat
+plot(Xhat[,1],Xhat[,2],main = "Latent Positions of Two Graphs")
+points(p$Yhat[,1],p$Yhat[,2],col = "red")
+```
+
+Now, the significance level is set to alpha = 0.05 and the rejection regions are specified via B = 200 bootstrap permutation using the estimated latent positions.
+```{r, fig.height=4, fig.width=6}
+test_stat <- function(g,g1,d) {
+  Xhat = graphstats::ase(g, d)
+  Xhat_epsilon = graphstats::ase(g1, d)
+  # Issue: latent positions are the same up to sign.
+  p = Procrustes(Xhat,Xhat_epsilon)
+  Y = p$Yhat
+  test_stats = graphstats::nonpar(Xhat,Y,sigma = 0.5)
+  test_stats
+}
+test_distribution = c()
+for (i in 1:200) {
+  g = sbm(0)
+  g1 = sbm(0)
+  test_distribution[i] = test_stat(g,g1,2)
+  
+}
+hist(test_distribution)
+```
+
+
+Here we construct rejection region:
+```{r, fig.height=4, fig.width=6}
+o = order(test_distribution,decreasing = TRUE)
+u = test_distribution[o][5]
+test_stat_ep = test_stat(g,g_epsilon,2)
+if (test_stat_ep > u) {
+  print("Reject null")
+} else {
+  print("Fail to reject null")
+}
+hist(test_distribution)
+abline(v=test_stat_ep,col="blue")
+abline(v=u,col = 'red')
+```
+
+We reject the null hypothesis if test statistic yielded by G and G_epsilon are in the top 5% of test_distribution (to the right of the red vertical line). Here we failed to reject our null because our test statistic is inside the acceptance region.
