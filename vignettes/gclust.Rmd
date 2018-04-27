@@ -1,0 +1,73 @@
+---
+title: "Model-Based Clustering"
+author: "Ronak Mehta"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, warning=FALSE, echo=FALSE}
+require(graphstats)
+require(mclust)
+require(MASS)
+
+```
+
+Here, we select the optimal number of clusters for a Gaussian Mixture Model. In other words, we use the Bayesian Information Criterion for data-based model selection.
+
+## One-Dimensional Case
+
+We generate a mixture of 2 Gaussians, and try to estimate the number of components from the data.
+
+```{r, fig.height=3.5, fig.width=5}
+
+# Mixture parameters
+mu0 <- -0.5
+mu1 <- 2
+sigma0 <- 1
+sigma1 <- 0.5
+pi0 <- 0.5
+curve(pi0*dnorm(x, mu0, sigma0) + (1-pi0)*dnorm(x, mu1, sigma1), 
+      xlim = c(-3, 4),
+      xlab = "X",
+      ylab = "PDF",
+      main = "Mixture of Two Gaussians",
+      family = "serif")
+curve(pi0*dnorm(x, mu0, sigma0), add = TRUE, col = "red")
+curve((1-pi0)*dnorm(x, mu1, sigma1), add = TRUE, col = "blue")
+```
+
+We expect `gclust` to return 2 as the optimal number of components, when considering component numbers from 1 to 5.
+
+```{r, fig.height=3.5, fig.width=5}
+# Condition on class sizes of pi0*n.
+n <- 100
+X0 <- rnorm(50, mu0, sigma0)
+X1 <- rnorm(50, mu1, sigma1)
+X <- as.matrix(c(X0, X1), nrow = n)
+G <- gclust(X, K = 5)
+cat("The BIC-optimal number of components for the data is:", G, "\n")
+```
+
+## d-Dimensional Case
+
+We follow the same procedure with 3 Gaussians in 3 dimensions.
+
+```{r, fig.height=3.5, fig.width=5}
+# Mixture parameters and data generation.
+mu0 <- c(0, 0, 0) 
+mu1 <- c(3, 3, 3) 
+mu2 <- c(0, 2, 5)
+Sigma <- diag(c(1, 1, 1))
+X0 <- mvrnorm(n = 50, mu0, Sigma)
+X1 <- mvrnorm(n = 50, mu1, Sigma)
+X2 <- mvrnorm(n = 50, mu2, Sigma)
+X <- rbind(X0, X1, X2)
+
+K <- 5
+G <- gclust(X, K = 5)
+cat("The BIC-optimal number of components for the data is:", G, "\n")
+```
