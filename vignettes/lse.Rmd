@@ -1,0 +1,115 @@
+---
+title: "Laplacian Spectral Embedding"
+author: "Ronak Mehta"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, warning=FALSE, echo=FALSE}
+require(graphstats)
+require(mclust)
+```
+
+Here, we present the `lse` function, used for representing graphs in lower-dimensions. We demonstrate its effectiveness in recovering the block assignements of nodes in a 2-SBM, specifically a core-perphery graph.
+
+## Random Dot-Product Graph
+
+We base this technique on the theory of random dot-product graphs. Each node has a latent position vector in R^d associated with it, where the dot-product of these vector i and j indicates the edge probability of node i and j. By embedding the Laplacian matrix down to R^d, we can estimate these latent vectors. Finally, by clustering the vectors, we can estimate the block assignments of the nodes associated with those vectors.
+
+## Generating the Stochastic Blockmodel
+
+We start with latent vectors [0.85, 0] and [0.3, 0.4]. These make edge probability within block 0 approximately 0.75 (the core), between blocks and within block 1 approximately 0.25.
+
+```{r, fig.height=3.5, fig.width=5}
+
+# Create latent vectors, and edge probability matrix.
+block0 <- as.matrix(c(0.85, 0), nrow = 2)
+block1 <- as.matrix(c(0.3, 0.4), nrow = 2)
+block_probs <- matrix(c(t(block0) %*% block0,
+                        t(block0) %*% block1,
+                        t(block1) %*% block0,
+                        t(block1) %*% block1), ncol = 2)
+
+# Create Adjacency matrix. Use higher edge probability if nodes are from core.
+n <- 200
+blocks <- c(rep(0, n/2), rep(1, n/2))
+A <- matrix(rep(0, n*n), nrow = n)
+for (i in 2:n) {
+  for (j in 1:(i-1)) {
+    if (blocks[i] == 0 && blocks[j] == 0) {
+      A[i, j] <- rbinom(1, 1, block_probs[1, 1])
+    } else if (blocks[i] == 1 && blocks[j] == 1) {
+      A[i, j] <- rbinom(1, 1, block_probs[2, 2])
+    } else {
+      A[i, j] <- rbinom(1, 1, block_probs[1, 2])
+    }
+    A[j, i] <- A[i, j]
+  }
+}
+
+# Define inverse root degree matrix.
+D12 <- diag(rowSums(A)^(-0.5))
+
+# Define graph.
+g <- igraph::graph_from_adjacency_matrix(A)
+plot(g)
+```
+
+## Embedding the Graph
+
+Now, we call the function to embed the Laplacian matrix in R^2. Ideally, we observe two clear clusters in the plotted data. Applying the EM algorithm or K-means should recover these cluster assignments, which would coincide with our initial block assignments. The points are clearly colored correctly, according to their original block.
+
+```{r, fig.height=3.5, fig.width=5}
+# Embed graph into R^2.
+dim <- 2
+X <- lse(g, dim)
+plot(X, 
+     main = "Latent Vector Estimates of Graph", 
+     family = "serif",
+     xlab = "PC1 Score",
+     ylab = "PC2 Score",
+     pch = 19,
+     col = blocks + 1)
+
+
+```
+
+
+## Estimating the Block Assignments
+
+Finally, we cluster the data and check the assignments of a standard algorithm. We recover all of the block assignments.
+
+```{r, fig.height=3.5, fig.width=5}
+# Cluster using EM algorithm.
+model <- Mclust(X)
+cat("The estimate number of classes (blocks) is:", model$G, "\n")
+predictions <- round(model$z[,2])
+```
+
+We also check whether the clusters correspond to the block vectors.
+```{r, fig.height=3.5, fig.width=5}
+# Find cluster means. Rotate the data to the position of the latent vectors, and plot.
+means <- model$parameters$mean
+latent_vecs <- cbind(block0, block1)
+true_matrix <- latent_vecs
+M <- svd(means %*% t(true_matrix))
+R <- M$u %*% t(M$v)
+X_R <- X %*% R
+plot(X_R, 
+     main = "Latent Vector Estimates of Graph (rotated)", 
+     family = "serif",
+     xlab = "PC1 Score",
+     ylab = "PC2 Score",
+     pch = 19,
+     col = blocks + 1)
+points(t(latent_vecs), pch = 4, cex = 3)
+
+# Calculate accuracy.
+rate <- sum(as.numeric(predictions == blocks))/n
+cat("The classification accuracy is:", rate, "\n")
+```
+The rotated data clearly surrounds the latent vectors, and the blocks are consistent within the clusters.
