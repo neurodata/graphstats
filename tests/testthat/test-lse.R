@@ -47,33 +47,67 @@ test_that("Incorrect input graph 'g'.", {
   expect_error(lse(A, dim), "Non-square matrix, Non-square matrix")
 })
 
-# General Functionality.
-test_that("Correct output for various matrices.", {
+# Simulation function for SBM. Returns adjacency matrix.
+simulate_sbm2 <- function(n, B, assignments) {
 
-  # Produce random matrix, and embed to 2 dims.
-  n <- 7
-  dim <- 3
   A <- matrix(rep(0, n*n), nrow = n)
-  for (i in 1:n) {
+  for (i in 2:n) {
     for (j in 1:(i-1)) {
-      A[i, j] <- rbinom(1, 1, 0.5)
+      A[i, j] <- rbinom(1, 1, B[assignments[i], assignments[j]] )
       A[j, i] <- A[i, j]
     }
   }
-  #print(A)
+  A
+}
 
-  # Compute SVD
-  SVD <- svd(A)
-  U <- SVD$u
-  D <- SVD$d
-  V <- SVD$v
+# General Functionality.
+test_that("End-to-end testing.", {
 
-  W_test <- U[,1:dim] %*% diag(sqrt(D[1:dim]))
-  W <- lse(A, dim)
-  #print(D)
-  #print(U_test)
-  #print(W)
-  #print(W - U_test)
+  # Number of simulations. Count how many times latent block assignments are recovered
+  # via kmeans clustering of ASE from a core-periphery 2-SBM and simple random graph.
+  num_sims <- 10
+  cp_is_better <- 0
+  er_is_better <- 0
+
+  for (s in 1:num_sims) {
+
+    ## Simulate  core-periphery SBM, and simple ER graph.
+    set.seed(123)
+    n <- 100
+    assignments <- c(rep(1, n/2), rep(2, n/2))
+
+    # Block to block edge probabilities.
+    B_cp <- matrix(c(0.8, 0.3,
+                      0.3, 0.3), nrow = 2)
+    B_er <-  matrix(c(0.5, 0.5,
+                      0.5, 0.5), nrow = 2)
+
+    # Core-periphery simulation.
+    A_cp <- simulate_sbm2(n, B_cp, assignments)
+    g_cp <- igraph::graph_from_adjacency_matrix(A_cp)
+    # Simple random graph.
+    A_er <- simulate_sbm2(n, B_er, assignments)
+    g_er <- igraph::graph_from_adjacency_matrix(A_er)
+
+    ## Embed both with ASE.
+    dim <- 2
+    X_cp <- lse(g_cp, dim)
+    X_er <- lse(g_er, dim)
+
+    ## Perform k-means clustering on embedded data.
+    kmeans_cp <- kmeans(X_cp, 2)$cluster
+    kmeans_er <- kmeans(X_er, 2)$cluster
+
+    ## Check ARI of both clustering assignments.
+    ari_cp <- mclust::adjustedRandIndex(kmeans_cp, assignments)
+    ari_er <- mclust::adjustedRandIndex(kmeans_er, assignments)
+    if (ari_cp > ari_er) { cp_is_better <- cp_is_better + 1 }
+    else { er_is_better <- er_is_better + 1 }
+
+  }
+
+  ## We expect 2-Block SBM to have a higher value.
+  expect_true( cp_is_better > er_is_better)
 
 })
 

@@ -105,7 +105,9 @@ plot(X_R,
      xlab = "PC1 Score",
      ylab = "PC2 Score",
      pch = 19,
-     col = blocks + 1)
+     col = blocks + 1,
+     xlim = c(-0.1, 0.1),
+     ylim = c(-0.1, 0.1))
 points(t(latent_vecs), pch = 4, cex = 3)
 
 # Calculate accuracy.

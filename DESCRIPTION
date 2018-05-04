@@ -15,7 +15,9 @@ Imports:
   reshape2,
   stringr,
   abind,
-  plyr
+  plyr,
+  igraph,
+  mclust
 Suggests: 
     knitr,
     rmarkdown,
