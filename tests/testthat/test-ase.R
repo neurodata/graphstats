@@ -48,15 +48,12 @@ test_that("Incorrect input graph 'g'.", {
 })
 
 # Simulation function for 2-SBM. Returns adjacency matrix.
-simulate_sbm2 <- function(n, within_block_edge_prob, between_block_edge_prob, blocks) {
+simulate_sbm2 <- function(n, B, assignments) {
+
   A <- matrix(rep(0, n*n), nrow = n)
   for (i in 2:n) {
     for (j in 1:(i-1)) {
-      if (blocks[i] == blocks[j]) {
-        A[i, j] <- rbinom(1, 1, within_block_edge_prob)
-      } else {
-        A[i, j] <- rbinom(1, 1, between_block_edge_prob)
-      }
+      A[i, j] <- rbinom(1, 1, B[assignments[i], assignments[j]] )
       A[j, i] <- A[i, j]
     }
   }
@@ -77,16 +74,19 @@ test_that("End-to-end testing.", {
     ## Simulate strong 2-block SBM, and simple ER graph.
     set.seed(123)
     n <- 100
-    p <- 0.5 # ER edge probability.
-    within_block_edge_prob <- 0.8
-    between_block_edge_prob <- 0.2
-    blocks <- c(rep(1, n/2), rep(2, n/2))
+    assignments <- c(rep(1, n/2), rep(2, n/2))
+
+    # Block to block edge probabilities.
+    B_sbm <- matrix(c(0.8, 0.2,
+                      0.2, 0.8), nrow = 2)
+    B_er <-  matrix(c(0.5, 0.5,
+                      0.5, 0.5), nrow = 2)
 
     # 2-block simulation.
-    A_sbm <- simulate_sbm2(n, within_block_edge_prob, between_block_edge_prob, blocks)
+    A_sbm <- simulate_sbm2(n, B_sbm, assignments)
     g_sbm <- igraph::graph_from_adjacency_matrix(A_sbm)
     # Simple random graph.
-    A_er <- simulate_sbm2(n, p, p, blocks)
+    A_er <- simulate_sbm2(n, B_er, assignments)
     g_er <- igraph::graph_from_adjacency_matrix(A_er)
 
     ## Embed both with ASE.
@@ -99,8 +99,8 @@ test_that("End-to-end testing.", {
     kmeans_er <- kmeans(X_er, 2)$cluster
 
     ## Check ARI of both clustering assignments.
-    ari_sbm <- mclust::adjustedRandIndex(kmeans_sbm, blocks)
-    ari_er <- mclust::adjustedRandIndex(kmeans_er, blocks)
+    ari_sbm <- mclust::adjustedRandIndex(kmeans_sbm, assignments)
+    ari_er <- mclust::adjustedRandIndex(kmeans_er, assignments)
     if (ari_sbm > ari_er) { sbm_is_better <- sbm_is_better + 1 }
     else { er_is_better <- er_is_better + 1 }
 
