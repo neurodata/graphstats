@@ -13,7 +13,6 @@ vignette: >
 require(igraph)
 require(graphstats)
 require(mclust)
-require(smacof)
 ```
 ## Introduction
 The nonparametric two-sample hypothesis testing problem involves:
@@ -36,9 +35,9 @@ sbm <- function(epsilon) {
   for (i in 2:n) {
     for (j in 1:(i-1)) {
       if (blocks[i] == blocks[j]) {
-        A[i, j] <- rbinom(1, 1, 0.5 + epsilon)
+        A[i, j] <- rbinom(1, 1, 0.23 + epsilon)
       } else {
-        A[i, j] <- rbinom(1, 1, 0.2)
+        A[i, j] <- rbinom(1, 1, 0.76)
       }
       A[j, i] <- A[i, j]
     }
@@ -62,50 +61,33 @@ g_epsilon = sbm(0.01)
 Now, we can embed two graphs to R^2 and compare their latent positions:
 
 ```{r, fig.height=3.5, fig.width=5}
-
-Xhat = graphstats::ase(g, 2)
-Xhat_epsilon = graphstats::ase(g_epsilon, 2)
-p = Procrustes(Xhat,Xhat_epsilon)
-Yhat = p$Yhat
+embed.graph <- function(g, dim) {
+  # Call ase to get latent position
+  lpv = graphstats::ase(g, dim)
+  for (i in 1:dim) {
+    if (sign(lpv[1, i]) != 1) {
+      lpv[, i] = -lpv[, i]
+    }
+  }
+  return(lpv)
+}
+Xhat = embed.graph(g, 2)
+Xhat_epsilon = embed.graph(g_epsilon, 2)
 plot(Xhat[,1],Xhat[,2],main = "Latent Positions of Two Graphs")
-points(p$Yhat[,1],p$Yhat[,2],col = "red")
+points(Xhat_epsilon[,1],Xhat_epsilon[,2],col = "red")
 ```
 
 Now, the significance level is set to alpha = 0.05 and the rejection regions are specified via B = 200 bootstrap permutation using the estimated latent positions.
 ```{r, fig.height=4, fig.width=6}
-test_stat <- function(g,g1,d) {
-  Xhat = graphstats::ase(g, d)
-  Xhat_epsilon = graphstats::ase(g1, d)
-  # Issue: latent positions are the same up to sign.
-  p = Procrustes(Xhat,Xhat_epsilon)
-  Y = p$Yhat
-  test_stats = graphstats::nonpar(Xhat,Y,sigma = 0.5)
-  test_stats
-}
-test_distribution = c()
-for (i in 1:200) {
-  g = sbm(0)
-  g1 = sbm(0)
-  test_distribution[i] = test_stat(g,g1,2)
-  
-}
-hist(test_distribution)
-```
-
-
-Here we construct rejection region:
-```{r, fig.height=4, fig.width=6}
-o = order(test_distribution,decreasing = TRUE)
-u = test_distribution[o][5]
-test_stat_ep = test_stat(g,g_epsilon,2)
-if (test_stat_ep > u) {
-  print("Reject null")
-} else {
-  print("Fail to reject null")
-}
-hist(test_distribution)
-abline(v=test_stat_ep,col="blue")
-abline(v=u,col = 'red')
+np = nonpar(g, g_epsilon,2,plot = TRUE)
 ```
 
 We reject the null hypothesis if test statistic yielded by G and G_epsilon are in the top 5% of test_distribution (to the right of the red vertical line). Here we failed to reject our null because our test statistic is inside the acceptance region.
+
+## Bug
+
+When embedding to dimensions higher than 2, the ARPACK eigensolver for igraph ASE will fail to converge when performing 200 bootstraping experiment.
+
+```{r, fig.height=4, fig.width=6}
+np = nonpar(g, g_epsilon,4,plot = TRUE)
+```
