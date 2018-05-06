@@ -47,19 +47,6 @@ test_that("Incorrect input graph 'g'.", {
   expect_error(lse(A, dim), "Non-square matrix, Non-square matrix")
 })
 
-# Simulation function for SBM. Returns adjacency matrix.
-simulate_sbm2 <- function(n, B, assignments) {
-
-  A <- matrix(rep(0, n*n), nrow = n)
-  for (i in 2:n) {
-    for (j in 1:(i-1)) {
-      A[i, j] <- rbinom(1, 1, B[assignments[i], assignments[j]] )
-      A[j, i] <- A[i, j]
-    }
-  }
-  A
-}
-
 # General Functionality.
 test_that("End-to-end testing.", {
 
@@ -74,20 +61,21 @@ test_that("End-to-end testing.", {
     ## Simulate  core-periphery SBM, and simple ER graph.
     set.seed(123)
     n <- 100
-    assignments <- c(rep(1, n/2), rep(2, n/2))
+    num_class1 <- n/2
 
-    # Block to block edge probabilities.
+    # SBM Params
+    num_class2 <- n - num_class1
+    assignments <- c(rep(1, num_class1), rep(2, num_class2))
     B_cp <- matrix(c(0.8, 0.3,
-                      0.3, 0.3), nrow = 2)
-    B_er <-  matrix(c(0.5, 0.5,
-                      0.5, 0.5), nrow = 2)
+                     0.3, 0.3), nrow = 2)
+    p <- 0.5
+    B_er <- matrix(c(p, p,
+                     p, p), nrow = 2)
 
     # Core-periphery simulation.
-    A_cp <- simulate_sbm2(n, B_cp, assignments)
-    g_cp <- igraph::graph_from_adjacency_matrix(A_cp)
+    g_cp <- igraph::sample_sbm(n, pref.matrix=B_cp, block.sizes=c(num_class1, num_class2))
     # Simple random graph.
-    A_er <- simulate_sbm2(n, B_er, assignments)
-    g_er <- igraph::graph_from_adjacency_matrix(A_er)
+    g_er <- igraph::sample_sbm(n, pref.matrix=B_er, block.sizes=c(num_class1, num_class2))
 
     ## Embed both with ASE.
     dim <- 2
@@ -101,8 +89,11 @@ test_that("End-to-end testing.", {
     ## Check ARI of both clustering assignments.
     ari_cp <- mclust::adjustedRandIndex(kmeans_cp, assignments)
     ari_er <- mclust::adjustedRandIndex(kmeans_er, assignments)
-    if (ari_cp > ari_er) { cp_is_better <- cp_is_better + 1 }
-    else { er_is_better <- er_is_better + 1 }
+    if (ari_cp > ari_er) {
+      cp_is_better <- cp_is_better + 1
+    } else {
+      er_is_better <- er_is_better + 1
+    }
 
   }
 
