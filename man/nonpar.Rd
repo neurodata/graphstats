@@ -4,15 +4,23 @@
 \alias{nonpar}
 \title{Nonparametric two-sample testing using kernel-based test statistic}
 \usage{
-nonpar(G1, G2, dim, sigma = NULL, alpha = 0.05, bootstrap_sample = 200,
-  plot = FALSE)
+nonpar(G1, G2, dim = 6, sigma = NULL, alpha = 0.05,
+  bootstrap_sample = 200, plot = FALSE)
 }
 \arguments{
 \item{G1}{an igraph object}
 
 \item{G2}{an igraph object}
 
-\item{dim}{dimension of the latent position that graphs are embeded into}
+\item{dim}{dimension of the latent position that graphs are embeded into, defaulted to 6}
+
+\item{sigma}{bandwidth of the rbf kernel for computing test statistic}
+
+\item{alpha}{Significance level of hypothesis testing}
+
+\item{bootstrap_sample}{Number of bootstrap samples when performing hypothesis tesing}
+
+\item{plot}{Show a histogram of the distribution of test statistic}
 }
 \value{
 \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
@@ -28,6 +36,10 @@ the alternative hypothesis of \eqn{F \not = G}. The test statistic is based on e
 the resulting embeddings. For this primitive, the Hilbert space is associated with the
 Gaussian kernel.
 }
+\references{
+Tang, M., Athreya, A., Sussman, D.L., Lyzinski, V., Priebe, C.E.
+A nonparametric two-sample hypothesis testing problem for random graphs
+}
 \author{
-Youngser Park <youngser@jhu.edu>
+Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
 }

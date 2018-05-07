@@ -1,5 +1,5 @@
 ---
-title: "Nonparametric two-sample testing"
+title: "Nonparametric Two-Sample Testing for Random Graphs"
 author: "Kemeng Zhang"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -79,15 +79,7 @@ points(Xhat_epsilon[,1],Xhat_epsilon[,2],col = "red")
 
 Now, the significance level is set to alpha = 0.05 and the rejection regions are specified via B = 200 bootstrap permutation using the estimated latent positions.
 ```{r, fig.height=4, fig.width=6}
-np = nonpar(g, g_epsilon,2,plot = TRUE)
+np = nonpar(g, g_epsilon, plot = TRUE)
 ```
 
 We reject the null hypothesis if test statistic yielded by G and G_epsilon are in the top 5% of test_distribution (to the right of the red vertical line). Here we failed to reject our null because our test statistic is inside the acceptance region.
-
-## Bug
-
-When embedding to dimensions higher than 2, the ARPACK eigensolver for igraph ASE will fail to converge when performing 200 bootstraping experiment.
-
-```{r, fig.height=4, fig.width=6}
-np = nonpar(g, g_epsilon,4,plot = TRUE)
-```

@@ -11,29 +11,35 @@
 #'
 #' @param G1 an igraph object
 #' @param G2 an igraph object
-#' @param dim dimension of the latent position that graphs are embeded into
+#' @param dim dimension of the latent position that graphs are embeded into, defaulted to 6
+#' @param sigma bandwidth of the rbf kernel for computing test statistic
+#' @param alpha Significance level of hypothesis testing
+#' @param bootstrap_sample Number of bootstrap samples when performing hypothesis tesing
+#' @param plot Show a histogram of the distribution of test statistic
 #'
 #' @return \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from the same distribution and \eqn{T} far from 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from different distribution.
-#'
-#' @author Youngser Park <youngser@jhu.edu>
+#' @references Tang, M., Athreya, A., Sussman, D.L., Lyzinski, V., Priebe, C.E.
+#' A nonparametric two-sample hypothesis testing problem for random graphs
+#' @author Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
 #' @export
 
-nonpar <- function(G1, G2, dim, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, plot = FALSE)
+nonpar <- function(G1, G2, dim = 6, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, plot = FALSE)
 {
   # Check input format
+  if (class(G1) == "dgCMatrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
+  if (class(G1) == "matrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
   if (class(G1) != 'igraph') { stop("Input object 'G1' is not an igraph object.") }
+  if (class(G2) == "dgCMatrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
+  if (class(G2) == "matrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
   if (class(G2) != 'igraph') { stop("Input object 'G2' is not an igraph object.") }
-  if (class(dim) != "numeric") {
-    stop("Input object 'dim' is not a numeric value.")
-  } else if (length(dim) != 1) {
-    stop("Input object 'dim' is not a numeric value.")
-  } else {
-    if (dim <= 0) {
-      stop("Input object 'dim' must be positive.")
-    }
-  }
+  if (length(dim) > 1) { stop("Input 'dim' has length > 1.") }
+  if (class(dim) != "numeric" && !is.integer(dim)) { stop("Input 'dim' is not a number.") }
+  if (dim%%1 != 0) { stop("Input 'dim' must be an integer.") }
+  if (dim < 1) { stop("Number of dimensions 'dim' is less than 1.") }
+  if (dim > igraph::gorder(G1) || dim > igraph::gorder(G2)) { stop("Num. Embedded dimensions 'dim' is greater than number of vertices.") }
+
   if (!is.null(sigma)) {
     if (class(sigma) != "numeric") {
       stop("Input object 'sigma' is not a numeric value.")
@@ -80,9 +86,15 @@ nonpar <- function(G1, G2, dim, sigma = NULL, alpha = 0.05, bootstrap_sample = 2
     print("Fail to reject null")
   }
   if (plot == TRUE) {
-    hist(test_distribution)
+    hist(test_distribution, probability = TRUE,
+         main="Distribution of Bootstrapping Test Statistic",
+         xlab="Test Statistic", ylab="Frequency")
+    lines(density(test_distribution))
     abline(v=test_stat,col="blue")
     abline(v=reject_threshold,col = 'red')
+
+    legend("topright", legend=c("test_stat", "alpha"),
+           col=c("blue", "red"), cex=0.8)
   }
   out = list(X1 = Xhat1, X2 = Xhat2, bandwidth = sigma, test_stats = test_stat,
              p_value = p_val, t_d = test_distribution)
@@ -105,6 +117,7 @@ rect.dist <- function(X,Y) {
 embed.graph <- function(g, dim) {
   # Call ase to get latent position
   lpv = graphstats::ase(g, dim)
+  # Fix signs of eigenvectors issue
   for (i in 1:dim) {
     if (sign(lpv[1, i]) != 1) {
       lpv[, i] = -lpv[, i]
@@ -180,20 +193,23 @@ sampling.distribution <- function(G1, G2, dim, bootstrap_sample_size) {
   Xhat1 = embed.graph(G1,dim)
   Xhat2 = embed.graph(G2,dim)
 
-  model = mclust::Mclust(Xhat1)
+  model = mclust::Mclust(Xhat1,verbose = FALSE)
   n = model$n
   rho = estimate.param(G1, model)$rho
   P = estimate.param(G1, model)$P
   test_distribution = c()
-
-  for (i in 1:bootstrap_sample_size) {
-    G_a = igraph::sample_sbm(n,P, n * rho)
-    G_b = igraph::sample_sbm(n,P, n * rho)
-    Xhat_a = embed.graph(G_a,dim)
-    Xhat_b = embed.graph(G_b,dim)
-    sigma = get.sigma(Xhat_a, Xhat_b)
-    ts = test.stat(Xhat_a, Xhat_b, sigma)
-    test_distribution[i] = ts
+  i = 1
+  while (i <= bootstrap_sample_size ) {
+    tryCatch({
+      G_a = igraph::sample_sbm(n,P, n * rho)
+      G_b = igraph::sample_sbm(n,P, n * rho)
+      Xhat_a = suppressWarnings(embed.graph(G_a,6))
+      Xhat_b = suppressWarnings(embed.graph(G_b,6))
+      sigma = get.sigma(Xhat_a, Xhat_b)
+      ts = test.stat(Xhat_a, Xhat_b, sigma)
+      test_distribution[i] = ts
+      i = i + 1
+    }, error=function(e) {NULL})
   }
   ordered = order(test_distribution,decreasing = TRUE)
   ts = test_distribution[ordered]
@@ -204,9 +220,4 @@ p_value <- function(ts, test_distribution) {
   area = sum(test_distribution > ts) / length(test_distribution)
   return(area)
 }
-
-
-
-
-
 
