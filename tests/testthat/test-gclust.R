@@ -36,6 +36,10 @@ test_that("'X' is not a proper matrix.", {
 
 test_that("Small K, separable cases.", {
 
+  # Test that gclust regonizes the true number of clusters
+  # when they are highly separated.
+
+  set.seed(123)
   num_sims <- 10
   num_right <- 0
   num_wrong <- 0
@@ -82,26 +86,25 @@ test_that("Small K, separable cases.", {
 
 test_that("BIC higher for correct model than misspecified model.", {
 
-  num_sims <- 15
-  num_right <- 0
-  num_wrong <- 0
   set.seed(123)
+  num_sims <- 30
+  BICs_Khat <- rep(NA, num_sims)
+  BICs_2 <- rep(NA, num_sims)
 
   for (s in 1:num_sims) {
     # Generate 3-Block SBM
-    ## Simulate  core-periphery SBM, and simple ER graph.
     n <- 120
     num_class1 <- n/3
     num_class2 <- n/3
 
-    # SBM Params
+    # Params
     num_class3 <- n - num_class1 - num_class2
     assignments <- c(rep(1, num_class1), rep(2, num_class2), rep(3, num_class3))
     B <- matrix(c(0.8, 0.3, 0.2,
                   0.3, 0.8, 0.3,
                   0.2, 0.3, 0.8), nrow = 3)
 
-    # 3-block simulation.
+    # Simulation.
     g <- igraph::sample_sbm(n,
                             pref.matrix=B,
                             block.sizes=c(num_class1, num_class2, num_class3))
@@ -114,14 +117,16 @@ test_that("BIC higher for correct model than misspecified model.", {
     Khat <- gclust(X, Kmax)
 
     # Cluster. In one we choose BIC-optimal K (likely to be 3).
-    # In the other, we force a clustering with K = 2.
-    BIC_Khat <- mclust::Mclust(X, Khat)$bic
-    BIC_2 <- mclust::Mclust(X, 2)$bic
-    if (BIC_Khat > BIC_2) {
-      num_right <- num_right + 1
-    } else {
-      num_wrong <- num_wrong + 1
-    }
+    # In the other, we force a clustering with K = 2. gclust should select a K
+    # with the higher BIC.
+    BICs_Khat[s] <- mclust::Mclust(X, Khat)$bic
+    BICs_2[s] <- mclust::Mclust(X, 2)$bic
   }
-  expect_true(num_right > num_wrong)
+
+
+  # Test if BIC from correct and misspecified models are significantly different
+  # via Wilcoxon Signed-Rank Test.
+  alpha <- 0.05
+  expect_true(wilcox.test(BICs_Khat, BICs_2, paired=TRUE)$p.value < alpha)
+
 })
