@@ -88,10 +88,8 @@ test_that("BIC higher for correct model than misspecified model.", {
 
   set.seed(123)
   num_sims <- 30
-  BICs_Khat <- rep(NA, num_sims)
-  BICs_2 <- rep(NA, num_sims)
 
-  for (s in 1:num_sims) {
+  result <- lapply(1:num_sims, function(i) {
     # Generate 3-Block SBM
     n <- 120
     num_class1 <- n/3
@@ -119,14 +117,18 @@ test_that("BIC higher for correct model than misspecified model.", {
     # Cluster. In one we choose BIC-optimal K (likely to be 3).
     # In the other, we force a clustering with K = 2. gclust should select a K
     # with the higher BIC.
-    BICs_Khat[s] <- mclust::Mclust(X, Khat)$bic
-    BICs_2[s] <- mclust::Mclust(X, 2)$bic
-  }
+    bic_gclust <- mclust::Mclust(X, Khat)$bic
+    bic_k2gmm <- mclust::Mclust(X, 2)$bic
+    return(list(bic_gclust = bic_gclust, bic_k2gmm = bic_k2gmm))
+  })
 
+  # Split results into separate vectors.
+  result_bic_gclust <- sapply(result, function(res){res$bic_gclust})
+  result_bic_k2gmm <- sapply(result, function(res) {res$bic_k2gmm})
 
-  # Test if BIC from correct and misspecified models are significantly different
-  # via Wilcoxon Signed-Rank Test.
+  # Test difference in BIC via Wilcoxon Test.
   alpha <- 0.05
-  expect_true(wilcox.test(BICs_Khat, BICs_2, paired=TRUE)$p.value < alpha)
+  pval <- wilcox.test(result_bic_gclust, result_bic_k2gmm, alt='greater', exact=FALSE)$p.value
+  expect_lt(pval, alpha)
 
 })
