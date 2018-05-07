@@ -34,24 +34,94 @@ test_that("'X' is not a proper matrix.", {
 
 })
 
-test_that("General functionality.", {
+test_that("Small K, separable cases.", {
 
-  # Selects two clusters for mixture of two highly centered components.
+  num_sims <- 10
+  num_right <- 0
+  num_wrong <- 0
   g <- 2
   n <- 50*g
-  X1 <- rnorm(n/g, 0, 0.5)
-  X2 <- rnorm(n/g, 5, 0.5)
-  X <- as.matrix(c(X1, X2), nrow = n)
-  K <- 5
-  expect_equal(gclust(X), g)
+
+  for (s in 1:num_sims) {
+    # Selects two clusters for mixture of two highly centered components.
+    X1 <- rnorm(n/g, 0, 0.5)
+    X2 <- rnorm(n/g, 5, 0.5)
+    X <- as.matrix(c(X1, X2), nrow = n)
+    K <- 5
+    ghat <- gclust(X, K)
+    if (ghat == g) {
+      num_right <- num_right + 1
+    } else {
+      num_wrong <- num_wrong + 1
+    }
+  }
+  expect_true(num_right > num_wrong)
 
   # Same test for 3 components.
+  g <- 3
+  num_right <- 0
+  num_wrong <- 0
   n <- 50*g
-  X1 <- rnorm(n/g, 0, 0.5)
-  X2 <- rnorm(n/g, 3, 0.5)
-  X3 <- rnorm(n/g, 6, 0.5)
-  X <- as.matrix(c(X1, X2, X3), nrow = n)
-  K <- 5
-  expect_equal(gclust(X), g)
 
+  for (s in 1:num_sims) {
+    X1 <- rnorm(n/g, 0, 0.5)
+    X2 <- rnorm(n/g, 4, 0.5)
+    X3 <- rnorm(n/g, 8, 0.5)
+    X <- as.matrix(c(X1, X2, X3), nrow = n)
+    K <- 5
+    ghat <- gclust(X, K)
+    if (ghat == g) {
+      num_right <- num_right + 1
+    } else {
+      num_wrong <- num_wrong + 1
+    }
+  }
+  expect_true(num_right > num_wrong)
+
+})
+
+test_that("BIC higher for correct model than misspecified model.", {
+
+  num_sims <- 15
+  num_right <- 0
+  num_wrong <- 0
+  set.seed(123)
+
+  for (s in 1:num_sims) {
+    # Generate 3-Block SBM
+    ## Simulate  core-periphery SBM, and simple ER graph.
+    n <- 120
+    num_class1 <- n/3
+    num_class2 <- n/3
+
+    # SBM Params
+    num_class3 <- n - num_class1 - num_class2
+    assignments <- c(rep(1, num_class1), rep(2, num_class2), rep(3, num_class3))
+    B <- matrix(c(0.8, 0.3, 0.2,
+                  0.3, 0.8, 0.3,
+                  0.2, 0.3, 0.8), nrow = 3)
+
+    # 3-block simulation.
+    g <- igraph::sample_sbm(n,
+                            pref.matrix=B,
+                            block.sizes=c(num_class1, num_class2, num_class3))
+
+    # Embed.
+    X <- igraph::embed_adjacency_matrix(g, 3)$X
+
+    # Model selection.
+    Kmax <- 5
+    Khat <- gclust(X, Kmax)
+
+    # Cluster. In one we choose BIC-optimal K (likely to be 3).
+    # In the other, we force a clustering with K = 2.
+    BIC_Khat <- mclust::Mclust(X, Khat)$bic
+    BIC_2 <- mclust::Mclust(X, 2)$bic
+    if (BIC_Khat > BIC_2) {
+      num_right <- num_right + 1
+    } else {
+      num_wrong <- num_wrong + 1
+    }
+  }
+  expect_true(num_right > num_wrong)
 })
