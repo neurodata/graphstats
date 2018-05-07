@@ -90,10 +90,8 @@ test_that("End-to-end testing.", {
     er_dimselected <- append(er_dimselected, dim_er)
   }
 
-  p_val_sbm = suppressWarnings(wilcox.test(sbm_dimselected, test_vector, correct=FALSE, paired = TRUE)$p.value)
-  p_val_er = suppressWarnings(wilcox.test(er_dimselected, test_vector, correct=FALSE, paired = TRUE)$p.value)
-
+  p_val = wilcox.test(er_dimselected,sbm_dimselected, alt = 'less', exact = FALSE)$p.value
   ## We expect 2-Block SBM to have a higher p-value.
-  expect_true( is.na(p_val_sbm) || p_val_sbm < p_val_er )
+  expect_true(p_val < 0.05 )
 })
 
