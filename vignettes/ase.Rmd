@@ -36,6 +36,7 @@ n <- 60
 block.sizes <- c(n/2, n/2)
 blocks <- rep(c(1, 2), block.sizes)
 g <- igraph::sample_sbm(n, block_probs, block.sizes)
+gs.plot.plot_matrix(igraph::as_adjacency_matrix(g, sparse = FALSE))
 ```
 
 ## Embedding the Graph
