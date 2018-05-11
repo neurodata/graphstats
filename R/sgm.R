@@ -1,13 +1,13 @@
-#' Matches Graphs given a seeding of vertex correspondences
+#' Matches Graphs given a seeding of vertex correspondences.
 #'
 #' Given two adjacency matrices \code{A} and \code{B} of the same size, match
 #' the two graphs with the help of \code{m} seed vertex pairs which correspond
 #' to \code{m} rows (and columns) of the adjacency matrices.
 #'
 #' The approximate graph matching problem is to find a bijection between the
-#' vertices of two graphs , such that the number of edge disagreements between
+#' vertices of two graphs, such that the number of edge disagreements between
 #' the corresponding vertex pairs is minimized. For seeded graph matching, part
-#' of the bijection that consist of known correspondences (the seeds) is known
+#' of the bijection that consists of known correspondences (the seeds) is known
 #' and the problem task is to complete the bijection by estimating the
 #' permutation matrix that permutes the rows and columns of the adjacency
 #' matrix of the second graph.
@@ -25,13 +25,14 @@
 #' See references for further details.
 #'
 # @aliases match_vertices seeded.graph.match
-#' @param A a numeric matrix, the adjacency matrix of the first graph
-#' @param B a numeric matrix, the adjacency matrix of the second graph
-#' @param seeds a numeric matrix, the number of seeds x 2 matching vertex table.
+#' @param A a numeric matrix, the \eqn{n \times n}{n*n} adjacency matrix of the first graph
+#' @param B a numeric matrix, the \eqn{n \times n}{n*n} adjacency matrix of the second graph
+#' @param seeds a numeric matrix, the \eqn{m \times 2}{m*2} matching vertex table.
 #' If \code{S} is \code{NULL}, then it is using a \eqn{soft} seeding algorithm.
 #' @param hard a bloolean, TRUE for hard seeding, FALSE for soft seeding.
-#' @param pad a scalar value for padding
-#' @param maxiter The number of maxiters for the Frank-Wolfe algorithm
+#' @param pad a scalar value for padding.
+#' @param start ?
+#' @param maxiter The number of maxiters for the Frank-Wolfe algorithm.
 #' @return A numeric matrix which is the permutation matrix that determines the
 #' bijection between the graphs of \code{A} and \code{B}
 #' @author Vince Lyzinski \url{http://www.ams.jhu.edu/~lyzinski/}
@@ -116,6 +117,28 @@ sgm <- function (A,B,seeds,hard=TRUE,pad=0,start="barycenter",maxiter=20){
 #' (n-m)}{(n-m)*(n-m)} permutation matrix \eqn{P} and \eqn{m} times \eqn{m}
 #' identity matrix \eqn{I_{m}}. The function \code{match_vertices} estimates
 #' the permutation matrix \eqn{P} via an optimization algorithm based on the
+#' Frank-Wolfe algorithm.#' Matches Graphs given a seeding of vertex correspondences.
+#'
+#' Given two adjacency matrices \code{A} and \code{B} of the same size, match
+#' the two graphs with the help of \code{m} seed vertex pairs which correspond
+#' to \code{m} rows (and columns) of the adjacency matrices.
+#'
+#' The approximate graph matching problem is to find a bijection between the
+#' vertices of two graphs, such that the number of edge disagreements between
+#' the corresponding vertex pairs is minimized. For seeded graph matching, part
+#' of the bijection that consists of known correspondences (the seeds) is known
+#' and the problem task is to complete the bijection by estimating the
+#' permutation matrix that permutes the rows and columns of the adjacency
+#' matrix of the second graph.
+#'
+#' It is assumed that for the two supplied adjacency matrices \code{A} and
+#' \code{B}, both of size \eqn{n\times n}{n*n}, the first \eqn{m} rows(and
+#' columns) of \code{A} and \code{B} correspond to the same vertices in both
+#' graphs. That is, the \eqn{n \times n}{n*n} permutation matrix that defines
+#' the bijection is \eqn{I_{m} \bigoplus P} for a \eqn{(n-m)\times
+#' (n-m)}{(n-m)*(n-m)} permutation matrix \eqn{P} and \eqn{m} times \eqn{m}
+#' identity matrix \eqn{I_{m}}. The function \code{match_vertices} estimates
+#' the permutation matrix \eqn{P} via an optimization algorithm based on the
 #' Frank-Wolfe algorithm.
 #'
 #' See references for further details.
@@ -126,7 +149,7 @@ sgm <- function (A,B,seeds,hard=TRUE,pad=0,start="barycenter",maxiter=20){
 #' @param m The number of seeds. The first \code{m} vertices of both graphs are
 #' matched.
 #' @param start a numeric matrix, the permutation matrix estimate is
-#' initialized with \code{start}
+#' initialized with \code{start}.
 #' @param pad a scalar value for padding
 #' @param maxiter The number of maxiters for the Frank-Wolfe algorithm
 #' @param LAP a character either "exact" or "approx"
