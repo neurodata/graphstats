@@ -413,11 +413,11 @@ validateInput.ordered <- function(A,B,m,start,pad,maxiter,LAP,verbose) {
   # Matrices
   if (class(A) != "matrix" && class(A) != "dgCMatrix") { stop("Error: Input 'A' must be a matrix.") }
   if (class(B) != "matrix" && class(B) != "dgCMatrix") { stop("Error: Input 'B' must be a matrix.") }
-  if (nrow(A) != ncol(A)) { stop("Error: 'A' is not a square matrix.")}
-  if (nrow(B) != ncol(B)) { stop("Error: 'B' is not a square matrix.")}
+  if (nrow(A) != ncol(A)) { stop("Error: 'A' is not a square matrix.") }
+  if (nrow(B) != ncol(B)) { stop("Error: 'B' is not a square matrix.") }
 
   # Number of Seeds
-  if (m%%1 != 0 || m < 0) { stop("Error: Input 'm' (number of seeds) must be an integer and >=0.")}
+  if (!is.numeric(m) || m%%1 != 0 || m < 0) { stop("Error: Input 'm', number of seeds, must be an integer and >=0.")}
 
   # Start
   totv <- max(ncol(A),ncol(B))
