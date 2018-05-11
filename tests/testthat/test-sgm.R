@@ -131,6 +131,7 @@ test_that("Input Validation for sgm.ordered", {
 })
 
 # Test that we are correctly optimizing on edge disagreements.
+# SGM should perform better on a identical graphs than a correlated SBM.
 test_that("End-to-end: Identical graph vs r-SBM.", {
 
   # Number of simulations.
@@ -181,6 +182,7 @@ test_that("End-to-end: Identical graph vs r-SBM.", {
 })
 
 # Test that we are correctly optimizing on edge disagreements.
+# SGM should perform better on a correlated SBM than two separately sampeld graphs.
 test_that("End-to-end: rho-SBM vs ER graph.", {
 
   # Number of simulations.

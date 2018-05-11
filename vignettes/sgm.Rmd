@@ -24,7 +24,7 @@ Given two networks that we believe to have some correspondence, we may want to m
 
 # Example 1: A Known Correspondence
 
-Here, we produce a a simple random graph (adjacency matrix) A with n = 25 and p = 0.5. We then produce B by maintaining the first m = 5 rows (the seeds), and permuting the remaining n - m rows. The `sgm` function can be called in two ways.
+Here, we produce a a simple random graph (adjacency matrix) A with n = 10 and p = 0.5. We then produce B by maintaining the first m = 3 rows (the seeds), and permuting the remaining n - m rows. The `sgm` function can be called in two ways.
 
 * Unordered: Call `sgm` and supply `seeds` - an m by 2 matrix that contains the indices of the seeds in A and the indices of their corresponding nodes in B.
 * Ordered: Call `sgm.ordered` and supply `m` - the number of seeds. It is assumed that the first m nodes in each adjacency matrix are the matched seeds, in order. We also supply `start` - a square n-m by n-m matrix that is the initial value of the permutation matrix for the non-seeds.
@@ -32,8 +32,8 @@ Here, we produce a a simple random graph (adjacency matrix) A with n = 25 and p 
 ```{r, fig.width=4.5, fig.height=4}
 
 # Number of seeds, total nubmer of vertices, and edge probability.
-m <- 10
-n <- 30
+m <- 3
+n <- 10
 p <- 0.5
 set.seed(12345)
 
@@ -55,7 +55,7 @@ P <- sgm.ordered(A, B, m, start)
 gs.plot.plot_matrix(P, title="Permutation Matrix", legend.name="Entries", ffactor = TRUE)
 ```
 
-By applying the returned matrix to B, we can assess the quality of the matching.
+Here, we have the first m nodes along the diagonal, unpermuted. (NOTE: The matrix heatmaps in this demo have the diagonal ranging from the bottom left to the rop right.) By applying the returned matrix to B, we can assess the quality of the matching.
 
 ```{r, fig.width=4.5, fig.height=4}
 
@@ -64,7 +64,14 @@ B_matched <- P %*% B %*% t(P)
 
 # Visualize matched graphs.
 gs.plot.plot_matrix(A, title="Original A Matrix", legend.name="Entries", ffactor = TRUE)
-gs.plot.plot_matrix(B_matched, title="Permuted, Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B_matched, title="Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B, title="Original B Matrix", legend.name="Entries", ffactor = TRUE)
+```
+
+We can see the similarity between A and the matched B, and the dissimilarity between the original and matched B. Below, we mark the edge disagreements of our approximate solution.
+
+```{r, fig.width=5, fig.height=4}
+gs.plot.plot_matrix(abs(A-B_matched), title="Disagreements", legend.name="Disagreement = 1", ffactor = TRUE)
 ```
 
 The overall connectivity of A is very closely recovered.
@@ -76,7 +83,7 @@ Here, we sample (A, B) from an r-Correlated SBM via a random dot-product graph, 
 ```{r, fig.width=4.5, fig.height=4}
 
 # Define latent vectors for 2-SBM RDPG in X.
-n <- 40
+n <- 10
 X1 <- matrix(rep(c(0.85, 0), n/2), nrow = n/2, byrow = TRUE)
 X2 <- matrix(rep(c(0.3,0.8), n/2), nrow = n/2, byrow = TRUE)
 X <- rbind(X1, X2)
@@ -95,12 +102,12 @@ gs.plot.plot_matrix(A + B, title="A + B (Overlap)", legend.name="A_ij + B_ij")
 
 ```
 
-These graphs are not exactly equal, but have high correlation. Their matrix addition, pictured above, has many 2 and 0 entries, and few 1 entries. We now choose the first m/2 = 5 nodes from each block of each graph to be the seeds.
+These graphs are not exactly equal, but have high correlation. Their matrix addition, pictured above, has many 2 and 0 entries, and few 1 entries. We now choose the first m/2 = 1 nodes from each block of each graph to be the seeds.
 
 ```{r, fig.width=4.5, fig.height=4}
 
 # Identify seeds.
-m <- 10
+m <- 2
 seed_indices <- c(1:(m/2), 1:(m/2)+n/2)
 seeds <- matrix(c(seed_indices, seed_indices), nrow = m)
 
@@ -118,8 +125,14 @@ B_matched <- P %*% B_p %*% t(P)
 
 # Display.
 gs.plot.plot_matrix(A, title="Original A Matrix", legend.name="Entries", ffactor = TRUE)
-gs.plot.plot_matrix(B_matched, title="Permuted, Matched B Matrix", legend.name="Entries", ffactor = TRUE)
-gs.plot.plot_matrix(B, title="Original B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B_matched, title="Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B_p, title="Original B Matrix", legend.name="Entries", ffactor = TRUE)
 ```
 
-The within and between block structure of A is mirrored in our permuted and then rematched B matrix.
+As before, we mark the edge disagreements below.
+
+```{r, fig.width=5, fig.height=4}
+gs.plot.plot_matrix(abs(A-B_matched), title="Disagreements", legend.name="Disagreement = 1", ffactor = TRUE)
+```
+
+While we allow more disagreements between A and matched B due to the random nature of the SBM, the within and between block structure of A is mirrored in B after seeded graph matching.
