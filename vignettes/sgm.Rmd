@@ -1,5 +1,5 @@
 ---
-title: "Structured Independent Edge Model"
+title: "Seeded Graph Matching"
 author: "Ronak Mehta"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
