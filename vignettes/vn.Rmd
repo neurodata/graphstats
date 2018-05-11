@@ -1,0 +1,126 @@
+---
+title: "Vertex Nomination via Seeded Graph Matching"
+author: "Kemeng Zhang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{vn}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, warning=FALSE}
+# Dependencies.
+suppressMessages(require(graphstats))
+suppressMessages(require(igraph))
+suppressMessages(require(ggplot2))
+```
+
+
+# Background
+
+Given two networks that we believe to have some correspondence, we may want to match the nodes of one network to those of the other; that is, we want to find the bijection between the vertex sets that minimizes the number of edge disagreements across the graph. An edge disagreement occurs when two vertices are adjacent on in one graph but their corresponding vertices in the other are not.
+
+Herein we present a principled methodology appropriate for situations in
+which the networks are too large for brute-force graph matching. Our methodology identifies vertices in a local neighborhood of the vertices of interest in the first network that have verifiable corresponding vertices in the second network. 
+
+
+# Example 1: A Known Correspondence
+
+Here, we produce a simple random graph (adjacency matrix) A with n = 100 and p = 0.5. We then produce B by maintaining the first m = 10 rows (the seeds), and permuting the remaining n - m rows.
+
+```{r, fig.width=4.5, fig.height=4}
+
+# Number of seeds, total nubmer of vertices, and edge probability.
+m <- 20
+n <- 100
+p <- 0.5
+set.seed(123)
+# Sample matrix A, and permute to .
+A <- matrix(as_adj(sample_sbm(n, as.matrix(p), n)), nrow = n)
+permutation = sample(n-m) + m
+B <- A[c(1:m, permutation),]
+
+# P is the permutation matrix that will turn match B to A.
+
+# Unordered call.
+seeds <- matrix(cbind(1:m, 1:m), nrow = m)
+P <- sgm(A, B, seeds)
+
+# Display.
+gs.plot.plot_matrix(P, title="Permutation Matrix", legend.name="Entries", ffactor = TRUE)
+```
+
+By applying the returned matrix to B, we can assess the quality of the matching.
+
+```{r, fig.width=4.5, fig.height=4}
+
+# Apply permutation matrix.
+B_matched <- P %*% B %*% t(P)
+
+# Visualize matched graphs.
+gs.plot.plot_matrix(A, title="Original A Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B_matched, title="Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+```
+
+The overall connectivity of A is very closely recovered.
+
+# Example 2: r-Correlated SBM
+
+Here, we sample (A, B) from an r-Correlated SBM via a random dot-product graph, permute the matrix like before, and observe the results of Seeded Graph Matching.
+
+```{r, fig.width=4.5, fig.height=4}
+for (i in 1:2) {
+  s <- 4 # number of seeds to be used for SGM
+  h <- ell <- 1 # max walk for finding neighborhoods
+  
+  # parameters for SGM
+  R <- 100     # repeat SGM R times to get averaged P matrix
+  gamma <- 0.1 # number of iterations for the Frank-Wolfe algorithm
+  
+  m <- 5  # |J| = junk on G1
+  n <- 20 # |W| = shared vertices on G1, not including x and S
+  mp <- 0 # |J'| = junk on G2 
+  d <- 5  # for RDPG, dimension of the random vectors
+  corr <- 0.5 # for correlated graphs
+  nV1 <- 1+s+n+m # number of vertices in graph 1
+  nV2 <- 1+s+n+mp # number of vertices in graph 2
+  lpvs <- sample_sphere_surface(dim=d, n=nV1) / 1.5 # random vectors for RDPG
+  gg <- rdpg.sample.correlated(t(lpvs),corr)
+  g1 <- gg[[1]]; 
+  g2 <- gg[[2]]; 
+  g2 <- delete_vertices(g2,v=(nV2+1):nV1); # remove m vertices from G' to make |V(G)| != |V(G')|
+  W <- intersect(V(g1),V(g2)) # shared vertices
+  # Randomly select x and S from W, the shared vertices
+  x <- sample(W,1)
+  W <- setdiff(W,x) # exclude x from W
+  maxseed <- min(length(W),s)
+  S <- sort(sample(W,maxseed))
+  seeds <- matrix(cbind(1:maxseed, S), nrow = maxseed)
+  # Determine Sx and C'x, then do SGM
+  NBDS <- vnsgm(x,seeds,g1,g2,h,ell,R,gamma,plotF = TRUE)
+}
+```
+
+These graphs are not exactly equal, but have high correlation. Their matrix addition, pictured above, has many 2 and 0 entries, and few 1 entries. We now choose the first m/2 = 5 nodes from each block of each graph to be the seeds.
+
+```{r, fig.width=4.5, fig.height=4}
+
+# Determine x' amongst the candidates based on the matching probability from SGM
+Sx <- NBDS$Sx
+x <- NBDS$labelsGxp[length(Sx)+1]
+x.ind <- which(NBDS$labelsGx==x)
+Cxp <- match(NBDS$Cxp,NBDS$labelsGxp) 
+
+if (NBDS$case=="possible") {
+    prob <- NBDS$P[x.ind,Cxp]
+    names(prob) <- NBDS$labelsGxp[Cxp]
+    x.prob <- prob[which.max(prob)]
+    vhatstar <- as.integer(names(x.prob))
+    rank.prob <- rank(-prob,ties.method = "average")
+    plot(as.integer(names(prob)), prob, type="h",col=2, lwd=2)
+    rank.prob <- matrix(rank.prob,nrow=1); colnames(rank.prob) <- paste0("V",names(prob))
+    knitr::kable(rank.prob,caption="Rank of matching probability for candidates")
+}
+```
+
