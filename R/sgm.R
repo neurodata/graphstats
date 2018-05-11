@@ -166,27 +166,35 @@ sgm <- function (A,B,seeds,hard=TRUE,pad=0,start="barycenter",maxiter=20){
 #'
 #' @export
 sgm.ordered <- function(A,B,m,start,pad=0,maxiter=20,LAP="exact",verbose=FALSE){
-  #seeds are assumed to be vertices 1:m in both graphs
-  #    suppressMessages(library(clue))
+
+  # In this function, seeds are assumed to be vertices 1:m in both graphs.
+
+  # Collect the number of vetices in each graph.
   totv1<-ncol(A)
   totv2<-ncol(B)
-  if(totv1>totv2){
+
+  # In the case that the number of vertices differ,
+  # we must pad the smaller graph with the value given by parameter pad.
+  if (totv1>totv2) {
     A[A==0]<- -1
     B[B==0]<- -1
     diff<-totv1-totv2
-    #        for (j in 1:diff){B<-cbind(rbind(B,pad),pad)}
     B <- cbind(B, matrix(pad, nrow(B), diff))
     B <- rbind(B, matrix(pad, diff, ncol(B)))
-  }else if(totv1<totv2){
+  } else if (totv1<totv2) {
     A[A==0]<- -1
     B[B==0]<- -1
     diff<-totv2-totv1
-    #        for (j in 1:diff){A<-cbind(rbind(A,pad),pad)}
     A <- cbind(A, matrix(pad, nrow(A), diff))
     A <- rbind(A, matrix(pad, diff, ncol(A)))
   }
-  totv<-max(totv1,totv2)
-  n<-totv-m
+  # Here, n represents the number of non-seeded vertices.
+  totv <- max(totv1,totv2)
+  n <- totv-m
+
+  # Partition the given matrices into their seeded and non-seeded quadrants.
+  # This is described on page 5 of Fishkind et al. (2018)
+  # <https://arxiv.org/pdf/1209.0367.pdf>.
   if (m==0){
     A12 <- A21 <- B12 <- B21 <- matrix(0,n,n)
   } else {
@@ -198,11 +206,12 @@ sgm.ordered <- function(A,B,m,start,pad=0,maxiter=20,LAP="exact",verbose=FALSE){
   if (n==1) {
     A12 <- A21 <- B12 <- B21 <- t(A12)
   }
-
   A22<-A[(m+1):(m+n),(m+1):(m+n)]
   tA22 <- t(A22)
   B22<-B[(m+1):(m+n),(m+1):(m+n)]
   tB22 <- t(B22)
+
+  # Solve the QAP using the Frank-Wolfe algorithm.
   tol<-1
   P<-start
   toggle<-1
@@ -210,17 +219,19 @@ sgm.ordered <- function(A,B,m,start,pad=0,maxiter=20,LAP="exact",verbose=FALSE){
   x<- A21 %*% t(B21)
   y<- t(A12) %*% B12
   xy <- x + y
-  while (toggle==1 & iter<maxiter)
-  {
+  while (toggle==1 & iter<maxiter) {
+
     iter<-iter+1
     z <- A22 %*% P %*% tB22
     w <- tA22 %*% P %*% B22
     Grad <- xy+z+w;
 
     if (LAP=="exact") {
+      # Solve exactly.
       mm <- max(abs(Grad))
       ind<-matrix(clue::solve_LSAP(Grad+matrix(mm,totv-m,totv-m), maximum =TRUE))
-    } else { # approx
+    } else {
+      # Solve approximately.
       temp <- matrix(0, n, n)
       Grad1 <- rbind(cbind(temp, t(Grad)),cbind(Grad, temp))
       ind <- parallelMatch(Grad1)
@@ -243,11 +254,11 @@ sgm.ordered <- function(A,B,m,start,pad=0,maxiter=20,LAP="exact",verbose=FALSE){
     f0 <- 0
     f1 <- c-e+u-v
     falpha <- (c-d+e)*alpha^2+(d-2*e+u-v)*alpha
-    if(alpha < tol && alpha > 0 && falpha > f0 && falpha > f1){
+    if (alpha < tol && alpha > 0 && falpha > f0 && falpha > f1) {
       P <- alpha*P+(1-alpha)*Pdir
-    }else if(f0 > f1){
+    } else if (f0 > f1) {
       P <- Pdir
-    }else{
+    } else {
       toggle<-0}
     if (verbose) cat("iter = ", iter, "\n")
   }
@@ -262,6 +273,104 @@ sgm.ordered <- function(A,B,m,start,pad=0,maxiter=20,LAP="exact",verbose=FALSE){
   P=diag(n)
   P=rbind(cbind(diag(m),matrix(0,m,n)),cbind(matrix(0,n,m),P[corr,]))
   corr<-cbind(matrix((m+1):totv, n),matrix(m+corr,n))
-  return(list(corr=corr[,2], P=P, D=D, iter=iter))
+
+  #return(list(corr=corr[,2], P=P, D=D, iter=iter))
+  return(P)
 }
 
+# HELPER METHODS
+
+# Function to solve Linear Assignment Problem
+# Using algorithm in A multithreaded algorithm for network alignment
+# via approximate matching
+# graph has the form: [0 C; C' 0] where C is the cost function
+# Output mate is a permutation
+# Written by Ao Sun and Lingyao Meng
+#' @export
+parallelMatch <- function(graph) {
+
+  ## adjacency matrix corresponding to graph G
+  numVertices <- nrow(graph)
+
+  ## Initialize the matching vector with NaN
+  mate <- rep(NaN, numVertices)
+
+  ## Initialize the other parameters
+  candidate <- rep(0, numVertices);
+  qC <- vector(); qN <- vector();
+
+  #--------------------------------- Phase 1 ------------------------------------------
+  candidate <- sapply(seq_len(numVertices), function(x) findMate(x,graph,mate))
+
+  for (j in 1 : numVertices) {
+    temp <- matchVertex(j, candidate, mate, qC);
+    qC <- temp[[1]]; mate <- temp[[2]];
+  }
+  #--------------------------------- Phase 2 ------------------------------------------
+  repeat {
+    for (k in 1 : length(qC)) {
+      ## Return to the index of adjacent Vertex
+      if (qC[k] <= (numVertices / 2)) {
+
+        for (h in (numVertices / 2 + 1) : numVertices) {
+          if ((candidate[h] == qC[k]) && (h != mate[qC[k]])) {
+            candidate[h] <- findMate(h, graph, mate);
+            temp2 <- matchVertex(h, candidate, mate, qN);
+            qN <- unlist(temp2[1]); mate <- unlist(temp2[2]);
+          }
+        }
+      } else {
+        for (h in 1 : (numVertices / 2)) {
+          if ((candidate[h] == qC[k]) && h != mate[qC[k]]) {
+            candidate[h] <- findMate(h, graph, mate);
+            temp3 <- matchVertex(h, candidate, mate, qN);
+            qN <- unlist(temp3[1]); mate <- unlist(temp3[2]);
+          }
+        }
+      }
+    }
+
+    qC <- qN;
+    qN <- vector();
+    if (length(qC) == 0) {
+      break;
+    }
+  }
+  mate <- mate[(numVertices / 2 + 1) : length(mate)];
+  return(mate)
+}
+
+## for aLAP
+# Help method of parrallelMatch
+matchVertex <- function(s, candidate, mate, Q) {
+  if (candidate[candidate[s]] == s) {
+    mate[s] <- candidate[s];
+    mate[candidate[s]] <- s;
+    Q <- c(Q, s, candidate[s]);
+  }
+  return(list(Q, mate));
+}
+
+findMate <- function(s, graph, mate) {
+  # Initialization
+  max_wt <- -Inf;
+  max_wt_id <- NaN;
+
+  # Find the locally dominant vertices for one single vertex
+  if (s <= dim(graph)[2] / 2) {
+    for (i in (dim(graph)[2] / 2 + 1) : dim(graph)[2]) {
+      if (is.nan(mate[i]) && max_wt < graph[s, i]) {
+        max_wt <- graph[s, i];
+        max_wt_id <- i;
+      }
+    }
+  } else {
+    for (i in 1 : (dim(graph)[2] / 2)) {
+      if (is.nan(mate[i]) && max_wt < graph[s, i]) {
+        max_wt <- graph[s, i];
+        max_wt_id <- i;
+      }
+    }
+  }
+  return(max_wt_id);
+}

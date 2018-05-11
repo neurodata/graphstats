@@ -2,24 +2,26 @@
 % Please edit documentation in R/sgm.R
 \name{sgm}
 \alias{sgm}
-\title{Matches Graphs given a seeding of vertex correspondences}
+\title{Matches Graphs given a seeding of vertex correspondences.}
 \usage{
 sgm(A, B, seeds, hard = TRUE, pad = 0, start = "barycenter",
   maxiter = 20)
 }
 \arguments{
-\item{A}{a numeric matrix, the adjacency matrix of the first graph}
+\item{A}{a numeric matrix, the \eqn{n \times n}{n*n} adjacency matrix of the first graph}
 
-\item{B}{a numeric matrix, the adjacency matrix of the second graph}
+\item{B}{a numeric matrix, the \eqn{n \times n}{n*n} adjacency matrix of the second graph}
 
-\item{seeds}{a numeric matrix, the number of seeds x 2 matching vertex table.
+\item{seeds}{a numeric matrix, the \eqn{m \times 2}{m*2} matching vertex table.
 If \code{S} is \code{NULL}, then it is using a \eqn{soft} seeding algorithm.}
 
 \item{hard}{a bloolean, TRUE for hard seeding, FALSE for soft seeding.}
 
-\item{pad}{a scalar value for padding}
+\item{pad}{a scalar value for padding.}
 
-\item{maxiter}{The number of maxiters for the Frank-Wolfe algorithm}
+\item{start}{?}
+
+\item{maxiter}{The number of maxiters for the Frank-Wolfe algorithm.}
 }
 \value{
 A numeric matrix which is the permutation matrix that determines the
@@ -32,9 +34,9 @@ to \code{m} rows (and columns) of the adjacency matrices.
 }
 \details{
 The approximate graph matching problem is to find a bijection between the
-vertices of two graphs , such that the number of edge disagreements between
+vertices of two graphs, such that the number of edge disagreements between
 the corresponding vertex pairs is minimized. For seeded graph matching, part
-of the bijection that consist of known correspondences (the seeds) is known
+of the bijection that consists of known correspondences (the seeds) is known
 and the problem task is to complete the bijection by estimating the
 permutation matrix that permutes the rows and columns of the adjacency
 matrix of the second graph.
