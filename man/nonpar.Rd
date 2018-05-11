@@ -4,23 +4,22 @@
 \alias{nonpar}
 \title{Nonparametric two-sample testing using kernel-based test statistic}
 \usage{
-nonpar(G1, G2, dim = 6, sigma = NULL, alpha = 0.05,
-  bootstrap_sample = 200, plot = FALSE)
+nonpar(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05,
+  bootstrap_sample = 200)
 }
 \arguments{
 \item{G1}{an igraph object}
 
 \item{G2}{an igraph object}
 
-\item{dim}{dimension of the latent position that graphs are embeded into, defaulted to 6}
+\item{dim}{dimension of the latent position that graphs are embeded into, defaulted to
+the maximum of two number of dimensions selected on two graphs by dimselect.R}
 
 \item{sigma}{bandwidth of the rbf kernel for computing test statistic}
 
 \item{alpha}{Significance level of hypothesis testing}
 
 \item{bootstrap_sample}{Number of bootstrap samples when performing hypothesis tesing}
-
-\item{plot}{Show a histogram of the distribution of test statistic}
 }
 \value{
 \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of

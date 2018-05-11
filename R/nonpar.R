@@ -8,15 +8,14 @@
 #' \eqn{F} and \eqn{G} into a reproducing kernel Hilbert space and then compute a distance between
 #' the resulting embeddings. For this primitive, the Hilbert space is associated with the
 #' Gaussian kernel.
-#'
+#' @import mclust
 #' @param G1 an igraph object
 #' @param G2 an igraph object
-#' @param dim dimension of the latent position that graphs are embeded into, defaulted to 6
+#' @param dim dimension of the latent position that graphs are embeded into, defaulted to
+#' the maximum of two number of dimensions selected on two graphs by dimselect.R
 #' @param sigma bandwidth of the rbf kernel for computing test statistic
 #' @param alpha Significance level of hypothesis testing
 #' @param bootstrap_sample Number of bootstrap samples when performing hypothesis tesing
-#' @param plot Show a histogram of the distribution of test statistic
-#'
 #' @return \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from the same distribution and \eqn{T} far from 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from different distribution.
@@ -25,7 +24,7 @@
 #' @author Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
 #' @export
 
-nonpar <- function(G1, G2, dim = 6, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, plot = FALSE)
+nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sample = 200)
 {
   # Check input format
   if (class(G1) == "dgCMatrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
@@ -34,11 +33,13 @@ nonpar <- function(G1, G2, dim = 6, sigma = NULL, alpha = 0.05, bootstrap_sample
   if (class(G2) == "dgCMatrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
   if (class(G2) == "matrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
   if (class(G2) != 'igraph') { stop("Input object 'G2' is not an igraph object.") }
-  if (length(dim) > 1) { stop("Input 'dim' has length > 1.") }
-  if (class(dim) != "numeric" && !is.integer(dim)) { stop("Input 'dim' is not a number.") }
-  if (dim%%1 != 0) { stop("Input 'dim' must be an integer.") }
-  if (dim < 1) { stop("Number of dimensions 'dim' is less than 1.") }
-  if (dim > igraph::gorder(G1) || dim > igraph::gorder(G2)) { stop("Num. Embedded dimensions 'dim' is greater than number of vertices.") }
+  if (!is.null(dim)) {
+    if (class(dim) != "numeric" && !is.integer(dim)) { stop("Input 'dim' is not a number.") }
+    if (dim%%1 != 0) { stop("Input 'dim' must be an integer.") }
+    if (length(dim) > 1) { stop("Input 'dim' has length > 1.") }
+    if (dim < 1) { stop("Number of dimensions 'dim' is less than 1.") }
+    if (dim > igraph::gorder(G1) || dim > igraph::gorder(G2)) { stop("Num. Embedded dimensions 'dim' is greater than number of vertices.") }
+  }
 
   if (!is.null(sigma)) {
     if (class(sigma) != "numeric") {
@@ -66,6 +67,9 @@ nonpar <- function(G1, G2, dim = 6, sigma = NULL, alpha = 0.05, bootstrap_sample
     }
   }
 
+  if (is.null(sigma)) {
+    dim = select.dim(G1, G2)
+  }
   Xhat1 = embed.graph(G1, dim)
   Xhat2 = embed.graph(G2, dim)
   if (is.null(sigma)) {
@@ -81,23 +85,13 @@ nonpar <- function(G1, G2, dim = 6, sigma = NULL, alpha = 0.05, bootstrap_sample
     reject = TRUE
   }
   if (reject) {
-    print("Reject null")
+    print("Reject the nullhypothesis that two graphs are identically distributed.")
   } else {
-    print("Fail to reject null")
+    print("Fail to reject the null hypothesis that two graphs are identically distributed.")
   }
-  if (plot == TRUE) {
-    hist(test_distribution, probability = TRUE,
-         main="Distribution of Bootstrapping Test Statistic",
-         xlab="Test Statistic", ylab="Frequency")
-    lines(density(test_distribution))
-    abline(v=test_stat,col="blue")
-    abline(v=reject_threshold,col = 'red')
-
-    legend("topright", legend=c("test_stat", "alpha"),
-           col=c("blue", "red"), cex=0.8)
-  }
+  gg = plot.distribution(test_distribution, reject_threshold, test_stat)
   out = list(X1 = Xhat1, X2 = Xhat2, bandwidth = sigma, test_stats = test_stat,
-             p_value = p_val, t_d = test_distribution)
+             p_value = p_val, bootstrap_samples = test_distribution, plot = gg)
   return(out)
 }
 
@@ -124,6 +118,18 @@ embed.graph <- function(g, dim) {
     }
   }
   return(lpv)
+}
+
+select.dim <- function(G1, G2) {
+  n1 = igraph::vcount(G1)
+  n2 = igraph::vcount(G2)
+  A1 = matrix(igraph::as_adj(G1), nrow = n1)
+  A2 = matrix(igraph::as_adj(G2), nrow = n2)
+  sigma1_sbm <- svd(A1, n1)$d
+  sigma2_sbm <- svd(A2, n2)$d
+  dim1_sbm <- dimselect(sigma1_sbm)[1]
+  dim2_sbm <- dimselect(sigma2_sbm)[1]
+  return(max(c(dim1_sbm, dim2_sbm)))
 }
 
 get.sigma <- function(X1, X2) {
@@ -199,12 +205,12 @@ sampling.distribution <- function(G1, G2, dim, bootstrap_sample_size) {
   P = estimate.param(G1, model)$P
   test_distribution = c()
   i = 1
-  while (i <= bootstrap_sample_size ) {
+  while (i <= bootstrap_sample_size) {
     tryCatch({
-      G_a = igraph::sample_sbm(n,P, n * rho)
-      G_b = igraph::sample_sbm(n,P, n * rho)
-      Xhat_a = suppressWarnings(embed.graph(G_a,6))
-      Xhat_b = suppressWarnings(embed.graph(G_b,6))
+      G_a = igraph::sample_sbm(n, P, n * rho)
+      G_b = igraph::sample_sbm(n, P, n * rho)
+      Xhat_a = suppressWarnings(embed.graph(G_a, dim))
+      Xhat_b = suppressWarnings(embed.graph(G_b, dim))
       sigma = get.sigma(Xhat_a, Xhat_b)
       ts = test.stat(Xhat_a, Xhat_b, sigma)
       test_distribution[i] = ts
@@ -219,5 +225,31 @@ sampling.distribution <- function(G1, G2, dim, bootstrap_sample_size) {
 p_value <- function(ts, test_distribution) {
   area = sum(test_distribution > ts) / length(test_distribution)
   return(area)
+}
+
+plot.distribution <- function(test_distribution, cv, ts) {
+  m = length(test_distribution)
+  minval = test_distribution[m]
+  maxval = test_distribution[1]
+  bw = (maxval - minval) / 30 # binwidth
+  df = data.frame(1:m, test_distribution)
+  colnames(df) = c('rank','test_statistics')
+  s = seq(minval,maxval,length.out = 10)
+  round.decimal <- function(x) sprintf("%.2f", x)
+  q = ggplot2::ggplot(df, aes(test_statistics))
+  q = q + ggplot2::geom_histogram(col="black",
+                     fill="blue",
+                     bins = 30,
+                     alpha = 0.2) +
+    ggplot2::labs(title="Histogram for Test Statistic") +
+    ggplot2::theme(plot.title = element_text(hjust = 0.5)) +
+    ggplot2::labs(x="Bootstrapped Test Statistic", y="Frequency") +
+    suppressWarnings(ggplot2::geom_density(color = "orange3", aes(num = m, binwidth = bw, y = ..density..*(num*binwidth)))) +
+    ggplot2::scale_x_continuous(breaks = s, labels=round.decimal)
+  q = q + geom_vline(aes(xintercept = cv, color = "Critical Value"), show.legend = TRUE)
+  if (ts < maxval) {
+    q = q + geom_vline(aes(xintercept = ts, color = "Test Statisic"), linetype = "dashed", show.legend = TRUE)
+  }
+  return(q)
 }
 
