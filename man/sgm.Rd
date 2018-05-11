@@ -15,7 +15,7 @@ sgm(A, B, seeds, hard = TRUE, pad = 0, start = "barycenter",
 \item{seeds}{a numeric matrix, the \eqn{m \times 2}{m*2} matching vertex table.
 If \code{S} is \code{NULL}, then it is using a \eqn{soft} seeding algorithm.}
 
-\item{hard}{a bloolean, TRUE for hard seeding, FALSE for soft seeding.}
+\item{hard}{a boolean, TRUE for hard seeding, FALSE for soft seeding.}
 
 \item{pad}{a scalar value for padding.}
 

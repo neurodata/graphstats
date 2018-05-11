@@ -64,12 +64,12 @@ B_matched <- P %*% B %*% t(P)
 
 # Visualize matched graphs.
 gs.plot.plot_matrix(A, title="Original A Matrix", legend.name="Entries", ffactor = TRUE)
-gs.plot.plot_matrix(B_matched, title="Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B_matched, title="Permuted, Matched B Matrix", legend.name="Entries", ffactor = TRUE)
 ```
 
 The overall connectivity of A is very closely recovered.
 
-# Example 2: r-Correlated SBM
+# Example 2: r-Correlated Stochastic Blockmodel
 
 Here, we sample (A, B) from an r-Correlated SBM via a random dot-product graph, permute the matrix like before, and observe the results of Seeded Graph Matching.
 
@@ -110,15 +110,16 @@ block2_permutation <- sample(n/2 - m/2) + m/2 + n/2
 B_permutation <- c(1:(m/2), block1_permutation, 1:(m/2)+n/2, block2_permutation)
 
 # Redefine B matrix and match using unordered sgm.
-B <- B[B_permutation,]
-P <- sgm(A, B, seeds)
+B_p <- B[B_permutation,]
+P <- sgm(A, B_p, seeds)
 
 # Apply permutation matrix.
-B_matched <- P %*% B %*% t(P)
+B_matched <- P %*% B_p %*% t(P)
 
 # Display.
 gs.plot.plot_matrix(A, title="Original A Matrix", legend.name="Entries", ffactor = TRUE)
-gs.plot.plot_matrix(B_matched, title="Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B_matched, title="Permuted, Matched B Matrix", legend.name="Entries", ffactor = TRUE)
+gs.plot.plot_matrix(B, title="Original B Matrix", legend.name="Entries", ffactor = TRUE)
 ```
 
 The within and between block structure of A is mirrored in our permuted and then rematched B matrix.

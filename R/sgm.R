@@ -29,7 +29,7 @@
 #' @param B a numeric matrix, the \eqn{n \times n}{n*n} adjacency matrix of the second graph
 #' @param seeds a numeric matrix, the \eqn{m \times 2}{m*2} matching vertex table.
 #' If \code{S} is \code{NULL}, then it is using a \eqn{soft} seeding algorithm.
-#' @param hard a bloolean, TRUE for hard seeding, FALSE for soft seeding.
+#' @param hard a boolean, TRUE for hard seeding, FALSE for soft seeding.
 #' @param pad a scalar value for padding.
 #' @param start ?
 #' @param maxiter The number of maxiters for the Frank-Wolfe algorithm.
@@ -45,7 +45,10 @@
 #' Online: \url{http://arxiv.org/abs/1209.0367}
 #'
 #' @export
-sgm <- function (A,B,seeds,hard=TRUE,pad=0,start="barycenter",maxiter=20){
+sgm <- function(A,B,seeds,hard=TRUE,pad=0,start="barycenter",maxiter=20){
+
+  validateInput(A,B,seeds,hard,pad,maxiter)
+
   gamma <- 0.1
   nv1<-nrow(A)
   nv2<-nrow(B)
@@ -168,6 +171,7 @@ sgm <- function (A,B,seeds,hard=TRUE,pad=0,start="barycenter",maxiter=20){
 sgm.ordered <- function(A,B,m,start,pad=0,maxiter=20,LAP="exact",verbose=FALSE){
 
   # In this function, seeds are assumed to be vertices 1:m in both graphs.
+  validateInput.ordered(A,B,m,start,pad,maxiter,LAP,verbose)
 
   # Collect the number of vetices in each graph.
   totv1<-ncol(A)
@@ -373,4 +377,65 @@ findMate <- function(s, graph, mate) {
     }
   }
   return(max_wt_id);
+}
+
+# Unordered function validation.
+validateInput <- function(A,B,seeds,hard,pad,maxiter) {
+
+  # Matrices
+  if (class(A) != "matrix" && class(A) != "dgCMatrix") { stop("Error: Input 'A' must be a matrix.") }
+  if (class(B) != "matrix" && class(B) != "dgCMatrix") { stop("Error: Input 'B' must be a matrix.") }
+  if (nrow(A) != ncol(A)) { stop("Error: 'A' is not a square matrix.")}
+  if (nrow(B) != ncol(B)) { stop("Error: 'B' is not a square matrix.")}
+
+  # Seeds
+  if (class(seeds) != "matrix" || ncol(seeds) != 2 || !all(seeds%%1 == 0)) {
+    stop("Error: Input 'seeds' must be an m by 2 matrix of corresponding seed indices.")
+  }
+  if (nrow(seeds) > nrow(A)) { stop("Error: Number of seeds is greater than number of vertices in A.") }
+  if (nrow(seeds) > nrow(B)) { stop("Error: Number of seeds is greater than number of vertices in B.") }
+
+  # Hard/Soft
+  if (!is.logical(hard)) { stop("Error: Input 'hard' must be a logical.")}
+
+  # Padding
+  if (!is.numeric(pad)) { stop("Error: Input 'pad' must be a number.")}
+
+  # Iterations
+  if (!is.numeric(maxiter) || maxiter%%1 != 0) { stop("Error: Input 'maxiter' must be an integer.") }
+  if (maxiter < 0) { stop("Error: Iterations 'maxiter' is less than 0.") }
+
+}
+
+# Ordered function validation.
+validateInput.ordered <- function(A,B,m,start,pad,maxiter,LAP,verbose) {
+
+  # Matrices
+  if (class(A) != "matrix" && class(A) != "dgCMatrix") { stop("Error: Input 'A' must be a matrix.") }
+  if (class(B) != "matrix" && class(B) != "dgCMatrix") { stop("Error: Input 'B' must be a matrix.") }
+  if (nrow(A) != ncol(A)) { stop("Error: 'A' is not a square matrix.")}
+  if (nrow(B) != ncol(B)) { stop("Error: 'B' is not a square matrix.")}
+
+  # Number of Seeds
+  if (m%%1 != 0 || m < 0) { stop("Error: Input 'm' (number of seeds) must be an integer and >=0.")}
+
+  # Start
+  totv <- max(ncol(A),ncol(B))
+  n <- totv - m
+  if (class(start) != "matrix" && class(start) != "dgCMatrix") { stop("Error: Input 'start' must be a matrix.") }
+  if (nrow(start) != ncol(start) || nrow(start) != n) { stop("Error: Input 'start' must be a square, n-m by n-m matrix.")}
+
+  # Padding
+  if (!is.numeric(pad)) { stop("Error: Input 'pad' must be a number.")}
+
+  # Iterations
+  if (!is.numeric(maxiter) || maxiter%%1 != 0) { stop("Error: Input 'maxiter' must be an integer.") }
+  if (maxiter < 0) { stop("Error: Iterations 'maxiter' is less than 0.") }
+
+  # LAP
+  if (LAP != "exact" && LAP != "approx") { stop("Error: LAP must be a string equal to 'exact' or 'approx'.") }
+
+  # Verbosity
+  if (!is.logical(verbose)) { stop("Error: Input 'verbose' must be a logical.")}
+
 }
