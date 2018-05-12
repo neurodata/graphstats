@@ -87,7 +87,7 @@ test_that("Small K, separable cases.", {
 test_that("BIC higher for correct model than misspecified model.", {
 
   set.seed(123)
-  num_sims <- 30
+  num_sims <- 20
 
   result <- lapply(1:num_sims, function(i) {
     # Generate 3-Block SBM
