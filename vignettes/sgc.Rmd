@@ -36,7 +36,7 @@ g <- igraph::sample_sbm(n, B, block_sizes)
 A <- igraph::as_adj(g, sparse = FALSE)
 
 # Display.
-gs.plot.plot_matrix(A, title="2-SBM: Dense Blocks", legend.name="Connection", ffactor = TRUE)
+gs.plot.plot_matrix(A, title="High Within-Block Edge Density", legend.name="Connection", ffactor = TRUE)
 
 ```
 
@@ -83,7 +83,7 @@ g <- igraph::sample_sbm(n, B, block_sizes)
 A <- igraph::as_adj(g, sparse = FALSE)
 
 # Display.
-gs.plot.plot_matrix(A, title="2-SBM: Dense Between-Block Connections", legend.name="Connection", ffactor = TRUE)
+gs.plot.plot_matrix(A, title="High Between-Block Edge Density", legend.name="Connection", ffactor = TRUE)
 
 ```
 
@@ -103,7 +103,7 @@ cat("The ARI of the true and predicted block labels is:", ari, "\n")
 
 ```
 
-Even in a 2-SBM with a very different connectivity, `sgc` still estimates the block assignments well in the distinct setting. Because the cluster fitting is applied to the spectral embedding of the graph, we may want to inspect the geometry of the embedding in Euclidean space. Here Graph 1 represents the dense block example, while Graph 2 represents the between-block example.
+Even in a 2-SBM with a very different connectivity, `sgc` still estimates the block assignments well in the distinct setting. Because the cluster fitting is applied to the spectral embedding of the graph, we may want to inspect the geometry of the embedding in Euclidean space. The `ase` return value is the output object of `embed_adjacency_matrix` (or `embed_laplacian_matrix`) from `igraph`, and can be used for latent vector estimation. Here Graph 1 represents the dense block example, while Graph 2 represents the between-block example. Nodes are colored with their true block label.
 
 ```{r, fig.height=4.25, fig.width=5}
 
@@ -126,4 +126,4 @@ p2 + xlab("Dimension 1") + ylab("Dimension 2") +
   xlim(-1, -0.4) + ylim(-0.8, 0.8)
 ```
 
-With this utility, we have a full range of tools for the spectral analysis of graphs.
+(See `ase` vignette for estimation of the latent vectors of a random dot-product graph from the embedded clusters.) The EM and K-means algorithm could easily identify the clusters in this setting. With the `sgc` utility, we have a full range of tools for the spectral analysis of graphs.
