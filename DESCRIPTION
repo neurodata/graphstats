@@ -18,7 +18,8 @@ Imports:
   plyr,
   igraph,
   mclust,
-  fpc
+  fpc,
+  rARPACK
 Suggests: 
     knitr,
     rmarkdown,

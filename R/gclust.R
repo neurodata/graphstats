@@ -5,6 +5,7 @@
 #' @param X A matrix object with n rows (data points) by d columns (dimensions).
 #' @param K=2 The maximum number of components to be considered. Model selected from 1 to K components.
 #' @return The number of components that maximizes BIC.
+#' @importFrom mclust mclustBIC
 #' @export
 gclust <- function(X, K=2) {
 
