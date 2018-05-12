@@ -16,8 +16,8 @@ Imports:
   stringr,
   abind,
   plyr,
-  mclust,
-  igraph
+  igraph,
+  mclust
 Suggests: 
     knitr,
     rmarkdown,
