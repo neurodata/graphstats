@@ -47,6 +47,9 @@ sgc <- function(g,
                 doplot=FALSE)
 {
 
+  # Validate Input Arguments.
+  validateInput.sgc(g,dmax,elb,abs,lcc,embed,clustering,Kmax,weight,verbose,doplot)
+
   # If spectral clustering is to be performed on only the largest conncected component,
   # let that be the graph of interest.
   if (lcc) {
@@ -82,7 +85,7 @@ sgc <- function(g,
   # Reduce dimensionality.
   cat("4. Finding an elbow (dimension reduction)...")
   if (abs) D <- abs(ase$D) else D <- ase$D
-  elb <- max(dimselect(D, n=1, plot=doplot)[elb], 2)
+  elb <- max(dimselect(D, n=elb, plot=doplot)[elb], 2)
   cat(", use dhat = ", elb,"\n")
   Xhat1 <- ase$X[,1:elb]
   if (!igraph::is.directed(g)) Xhat2 <- NULL else Xhat2 <- ase$Y[,1:elb]
@@ -121,3 +124,53 @@ sgc <- function(g,
 
   return(list(g=g,ase=ase,elb=elb,mc=mc,Y=Y))
 }
+
+validateInput.sgc <- function(g,dmax,elb,abs,lcc,embed,clustering,Kmax,weight,verbose,doplot)
+{
+  # Graph
+  if (class(g) != 'igraph') { stop("Error: Input object 'g' must be an igraph object.") }
+
+  # Dmax
+  if (!is.numeric(dmax) || dmax%%1 != 0 || dmax < 1) {
+    stop("Error: Input 'dmax' must be an integer and >=1.")
+  }
+
+  # Elbow
+  if (!is.numeric(elb) || elb%%1 != 0 || elb < 1) {
+    stop("Error: Input 'elb' must be an integer and >=1.")
+  }
+
+  # Absolute value, then get elbow.
+  if (!is.logical(abs)) { stop("Error: Input 'abs' must be a logical.")}
+
+  # Largest Connected Component
+  if (!is.logical(lcc)) { stop("Error: Input 'lcc' must be a logical.")}
+
+  # Embedding
+  if (embed != "ASE" && embed != "LSE") {
+    stop("Error: 'embed' must be a string equal to 'ASE' or 'LSE'.")
+  }
+
+  # Clustering
+  if (clustering != "GMM" && clustering != "Kmeans") {
+    stop("Error: 'clustering' must be a string equal to 'GMM' or 'Kmeans'.")
+  }
+
+  # Kmax
+  if (!is.numeric(Kmax) || Kmax%%1 != 0 || Kmax < 1) {
+    stop("Error: Input 'Kmax' must be an integer and >=1.")
+  }
+
+  # Weight
+  if (weight != "ptr" && weight != "binary" && weight != "raw") {
+    stop("Error: 'weight' must be a string equal to 'ptr', 'binary', or 'raw'.")
+  }
+
+  # Verbose
+  if (!is.logical(verbose)) { stop("Error: Input 'verbose' must be a logical.")}
+
+  # Plotting
+  if (!is.logical(doplot)) { stop("Error: Input 'doplot' must be a logical.")}
+
+}
+

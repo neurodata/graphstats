@@ -11,7 +11,76 @@ capture.output( {
 
 test_that("Input Validation Tests.", {
 
-  # TO DO.
+  # Graph
+  g <- "string"
+  expect_error(sgc(g), "Error: Input object 'g' must be an igraph object.")
+  g <- matrix(rep(0, 5*5), nrow = 5)
+  expect_error(sgc(g), "Error: Input object 'g' must be an igraph object.")
+
+  # Test Parameters for graph.
+  n <- 10
+  p <- 0.5
+  g <- igraph::sample_sbm(n, p, n)
+
+  # Dmax
+  dmax <- "string"
+  expect_error(sgc(g, dmax=dmax), "Error: Input 'dmax' must be an integer and >=1.")
+  dmax <- 0
+  expect_error(sgc(g, dmax=dmax), "Error: Input 'dmax' must be an integer and >=1.")
+
+  # Elbow
+  elb <- "string"
+  expect_error(sgc(g, elb=elb), "Error: Input 'elb' must be an integer and >=1.")
+  elb <- 0
+  expect_error(sgc(g, elb=elb), "Error: Input 'elb' must be an integer and >=1.")
+
+  # Absolute value, then get elbow.
+  abs <- 5
+  expect_error(sgc(g, abs=abs), "Error: Input 'abs' must be a logical.")
+  abs <- "string"
+  expect_error(sgc(g, abs=abs), "Error: Input 'abs' must be a logical.")
+
+  # Largest Connected Component
+  lcc <- 5
+  expect_error(sgc(g, lcc=lcc), "Error: Input 'lcc' must be a logical.")
+  lcc <- "string"
+  expect_error(sgc(g, lcc=lcc), "Error: Input 'lcc' must be a logical.")
+
+  # Embedding
+  embed <- "string"
+  expect_error(sgc(g, embed = embed), "Error: 'embed' must be a string equal to 'ASE' or 'LSE'.")
+  embed <- 1
+  expect_error(sgc(g, embed = embed), "Error: 'embed' must be a string equal to 'ASE' or 'LSE'.")
+
+  # Clustering
+  clustering <- "string"
+  expect_error(sgc(g, clustering = clustering), "Error: 'clustering' must be a string equal to 'GMM' or 'Kmeans'.")
+  clustering <- 1
+  expect_error(sgc(g, clustering = clustering), "Error: 'clustering' must be a string equal to 'GMM' or 'Kmeans'.")
+
+  # Kmax
+  Kmax <- "string"
+  expect_error(sgc(g, Kmax=Kmax), "Error: Input 'Kmax' must be an integer and >=1.")
+  Kmax <- 0
+  expect_error(sgc(g, Kmax=Kmax), "Error: Input 'Kmax' must be an integer and >=1.")
+
+  # Weight
+  weight <- "string"
+  expect_error(sgc(g, weight = weight), "Error: 'weight' must be a string equal to 'ptr', 'binary', or 'raw'.")
+  weight <- 1
+  expect_error(sgc(g, weight = weight), "Error: 'weight' must be a string equal to 'ptr', 'binary', or 'raw'.")
+
+  # Verbose
+  verbose <- 5
+  expect_error(sgc(g, verbose=verbose), "Error: Input 'verbose' must be a logical.")
+  verbose <- "string"
+  expect_error(sgc(g, verbose=verbose), "Error: Input 'verbose' must be a logical.")
+
+  # Plotting
+  doplot <- 5
+  expect_error(sgc(g, doplot=doplot), "Error: Input 'doplot' must be a logical.")
+  doplot <- "string"
+  expect_error(sgc(g, doplot=doplot), "Error: Input 'doplot' must be a logical.")
 
 })
 
