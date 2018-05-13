@@ -15,7 +15,8 @@ Imports:
   reshape2,
   stringr,
   abind,
-  plyr
+  plyr,
+  clue
 Suggests: 
     knitr,
     rmarkdown,
