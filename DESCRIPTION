@@ -15,8 +15,13 @@ Imports:
   reshape2,
   stringr,
   abind,
-  plyr
-Suggests: 
+  plyr,
+  clue,
+  igraph,
+  mclust,
+  fpc,
+  rARPACK
+Suggests:
     knitr,
     rmarkdown,
     testthat
