@@ -167,62 +167,55 @@ test_that("Input Validation for vnsgm.ordered", {
 
 
 # Test that we correctly nominate vertices.
-# vnsgm should perform better on a identical graphs than a correlated SBM.
 test_that("End-to-end: Identical graph vs r-SBM.", {
 
   # Number of simulations.
-  num_sims <- 20
+  num_right <- 0
+  num_wrong <- 0
 
-  # Create two graphs sets of graphs.
-  n <- 10
-  m <- 3
+  # Create graph.
+  ns <- seq(50,200,10)
   p <- 0.5
   r <- 0.8
-  x = 4
-  h = 2
-  ell = 2
-  R = 100
-  gamma = 0.01
+  h <- 2
+  ell <- 2
+  R <- 100
+  gamma <- 0.01
 
-  result <- lapply(1:num_sims, function(i) {
-    # One is a pair of identical graphs
-    ga1 <- gb1 <- igraph::sample_sbm(n, p, n)
-    A1 <- B1 <- as.matrix(igraph::as_adj(ga1))
+  result <- lapply(ns, function(n) {
+    # Simulate identical ER graphs
+    # Choose 0.2 as the proportion of seeds in a graph
+    m = 0.2 * n
+    x = m + 1
+    ga1 <- igraph::sample_sbm(n, p, n)
+    cl <- igraph::clusters(ga1)
+    ga1 <- igraph::induced.subgraph(ga1, which(cl$membership == which.max(cl$csize)))
+    ga2 <- ga1
 
-    # The other is a pair of r-SBM distributed graphs.
-    X <- matrix(rep(c(0.5, 0.5), n), nrow = n)
-    corr_graphs <- rdpg.sample.correlated(X, r)
-    ga2 = corr_graphs[[1]]
-    gb2 = corr_graphs[[2]]
-    A2 <- as.matrix(igraph::as_adj(ga2))
-    B2 <- as.matrix(igraph::as_adj(gb2))
-
-    # Permute the second of each pair.
+    # Permute the second.
     permute = c(1:m, sample(n-m)+m)
-    B1_p <- permute.vertices(gb1, permute)
-    B2_p <- permute.vertices(gb2, permute)
+    ga2_p <- igraph::permute.vertices(ga2, permute)
 
-    # Run seeded graph matching to produce permutation matrices, and apply them.
+    # Run VN to produce nominations for VOI x = m + 1.
     seeds <- as.matrix(cbind(1:m, 1:m), nrow = m)
-    vn1 <- vnsgm(x,seeds,ga1,ga2,h,ell,R,gamma)
-    vn2 <- vnsgm(x,seeds,gb1,gb2,h,ell,R,gamma)
-    gb1_matched = as.vector(which.max(vn1$P[as.character(x),]))
-    gb2_matched = as.vector(which.max(vn2$P[as.character(x),]))
+    vn1 <- vnsgm(x,seeds,ga1,ga2_p,h,ell,R,gamma)
+    id_matched = as.vector(which.max(vn1$P[as.character(x),]))
 
-
-    # Count the number of vertex disagreements between the matched graphs.
-    E1 <- abs(permute[x] - gb1_matched)
-    E2 <- abs(permute[x] - gb2_matched)
-    return(list(E1 = E1, E2 = E2))
+    # Count the number of vertex disagreements in nomination.
+    if (permute[x] == id_matched) {
+      num_right <- num_right + 1
+    } else {
+      num_wrong <- num_wrong + 1
+    }
+    return(list(num_right = num_right, num_wrong = num_wrong))
   })
 
-  # Split results into separate vectors.
-  result_identical <- sapply(result, function(res){res$E1})
-  result_sbm <- sapply(result, function(res) {res$E2})
+  num_right <- sapply(result, function(res){res$num_right})
+  num_wrong <- sapply(result, function(res) {res$num_wrong})
 
   # Test difference in disagreements via Wilcoxon Test. Caution: This is a hack.
   alpha <- 0.05
-  pval <- wilcox.test(result_identical, result_sbm, alt='less', exact=FALSE)$p.value
+  pval <- wilcox.test(num_wrong, num_right, alt='less', exact=FALSE)$p.value
   expect_lt(pval, alpha)
 
 })
