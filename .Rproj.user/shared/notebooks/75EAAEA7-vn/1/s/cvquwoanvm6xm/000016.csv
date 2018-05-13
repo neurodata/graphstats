@@ -1,4 +1,0 @@
-"0","nominated.vertex = as.numeric(colnames(vn$P)[apply(vn$P,1,which.max)])"
-"0","df = as.data.frame(rbind(permute,nominated.vertex))"
-"0","row.names(df) = c('True Permutation of G1','VN Permutation')"
-"0","df"
