@@ -140,6 +140,11 @@ validateInput.sgc <- function(g,dmax,elb,abs,lcc,embed,clustering,Kmax,weight,ve
     stop("Error: Input 'elb' must be an integer and >=1.")
   }
 
+  # More Elbows than Dimensions
+  if (elb > dmax) {
+    stop("Error: Number of elbows 'elb' is greater than maximum dimension 'dmax'.")
+  }
+
   # Absolute value, then get elbow.
   if (!is.logical(abs)) { stop("Error: Input 'abs' must be a logical.")}
 

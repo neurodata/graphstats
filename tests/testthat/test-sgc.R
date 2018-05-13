@@ -34,6 +34,12 @@ test_that("Input Validation Tests.", {
   elb <- 0
   expect_error(sgc(g, elb=elb), "Error: Input 'elb' must be an integer and >=1.")
 
+  # More elbows than dimensions.
+  dmax <- 3
+  elb <- dmax + 1
+  expect_error(sgc(g, dmax=dmax, elb=elb),
+               "Error: Number of elbows 'elb' is greater than maximum dimension 'dmax'.")
+
   # Absolute value, then get elbow.
   abs <- 5
   expect_error(sgc(g, abs=abs), "Error: Input 'abs' must be a logical.")
