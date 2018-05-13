@@ -6,14 +6,15 @@ This guide explains how to view the changes to the `graphstats` package made by 
 
 ## Step 1: Clone GitHub Repository
 
-You can find the `graphstats` GitHub repo here: https://github.com/neurodata/graphstats. Navigate to the containing directory in your machine, and run:
+You can find the `graphstats` GitHub repo here: https://github.com/neurodata/graphstats. Navigate to the containing directory in your machine, and run the following in the Terminal:
 - `git clone https://github.com/neurodata/graphstats.git`
+- `cd graphstats`
 - `git checkout dev-ndd-sprint4`
 This will move you to the development branch.
 
 ## Step 2: Install Dependencies
 
-Because this package will be viewed in development stage, it is necessary to install the dependencies in `R`. There is no need to load them. Open Rstudio and run the following code. This will work even if you have some of these packages.
+Because this package will be viewed in development stage, it is necessary to install the dependencies in `R`. There is no need to load them. Open Rstudio and run the following code in the `R` console, Rstudio console, or the Terminal version of `R`. (This will work even if you have some of these packages.)
 
 ```r
 packages <- c("ggplot2",

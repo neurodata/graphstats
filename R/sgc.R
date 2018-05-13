@@ -12,6 +12,7 @@
 #' @param elb an index for elbow
 #' @param abs a boolean to take abs on elbow finder or not
 #' @param embed either \code{ASE} or \code{LSE}, spectral embedding method
+#' @param lcc logical of whether to use the largest connected component or not.
 #' @param clustering either \code{GMM} or \code{Kmeans}, clustering method
 #' @param weight either \code{ptr} pr \code{binary} or \code{raw} to determine whether to perform pass-to-rank or not, default is \code{raw}
 #' @param verbose boolean to determine whether to display an intermediate fitting progress status of \code{mclust} or not, default is \code{TRUE}
