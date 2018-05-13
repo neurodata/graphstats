@@ -16,11 +16,12 @@ Imports:
   stringr,
   abind,
   plyr,
+  clue,
   igraph,
   mclust,
   fpc,
   rARPACK
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
     testthat
