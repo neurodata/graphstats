@@ -174,7 +174,7 @@ test_that("End-to-end: r-Correlated ER Graphs.", {
   num_wrong <- 0
 
   # Create graph.
-  ns <- seq(40,200,20)
+  ns <- seq(10,100,30)
   p <- 0.5
   r <- 0.8
   h <- 2
@@ -185,7 +185,7 @@ test_that("End-to-end: r-Correlated ER Graphs.", {
   result <- lapply(ns, function(n) {
     # Simulate identical ER graphs
     # Choose 0.2 as the proportion of seeds in a graph
-    m = 0.2 * n
+    m = 0.5 * n
     x = m + 1
     ga1 <- igraph::sample_sbm(n, p, n)
     cl <- igraph::clusters(ga1)

@@ -60,7 +60,7 @@ test_that("End-to-end testing.", {
 
     ## Simulate  core-periphery SBM, and simple ER graph.
     set.seed(123)
-    n <- 100
+    n <- 40
     num_class1 <- n/2
 
     # SBM Params

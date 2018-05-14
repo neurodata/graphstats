@@ -99,7 +99,7 @@ test_that("Small K, separable cases.", {
   num_right <- 0
   num_wrong <- 0
   g <- 2
-  n <- 50*g
+  n <- 20*g
 
   for (s in 1:num_sims) {
     # Separates data into two clusters.
@@ -122,7 +122,7 @@ test_that("Small K, separable cases.", {
   g <- 3
   num_right <- 0
   num_wrong <- 0
-  n <- 50*g
+  n <- 20*g
 
   for (s in 1:num_sims) {
     # Separates data into three clusters.
