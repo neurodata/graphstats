@@ -9,10 +9,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, warning=FALSE, echo=FALSE}
-suppressMessages(require(graphstats))
-suppressMessages(require(mclust))
-suppressMessages(require(ggplot2))
+```{r, warning=FALSE, message=FALSE}
+require(graphstats)
+require(mclust)
+require(ggplot2)
 ```
 
 Here, we present the `ase` function, used for representing graphs in lower-dimensions. 
