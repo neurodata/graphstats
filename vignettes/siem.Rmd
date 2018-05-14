@@ -12,7 +12,6 @@ vignette: >
 ```{r, warning=FALSE, echo=FALSE}
 require(graphstats)
 require(ggplot2)
-require(latex2exp)
 ```
 
 For a walkthrough including the model, see [model](http://docs.neurodata.io/graphstats/siem/siem.html).
@@ -66,8 +65,8 @@ for (i in 1:length(Es)) {
   }
 }
 
-gs.plot.plot_matrix(os_pval, legend.name = TeX("$p$-value"), xlabel = TeX("$c_i$"),
-                     ylabel = TeX("$c_j$"), title = TeX("$p$-value that $p_{c_i} > p_{c_j}$, Sample 1"),
+gs.plot.plot_matrix(os_pval, legend.name = "p-value", xlabel = "c_i",
+                     ylabel = "c_j", title = "p-value that p_{c_i} > p_{c_j}, Sample 1",
                      limits=c(0, 1), vfactor=TRUE)
 ```
 
