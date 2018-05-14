@@ -84,4 +84,4 @@ p <- ggplot(dat) + geom_point(aes(x = V1, y = V2), color=blocks) +
 p + xlab("PC Score 1") + ylab("PC Score 2")
 ```
 
-Here, the X's represent the original latent vectors, while the data can clearly rotated as shown to surround these vectors. 
+Here, the X's represent the original latent vectors, while the data can clearly rotated as shown to surround these vectors.
