@@ -9,10 +9,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, warning=FALSE, echo=FALSE}
-suppressMessages(require(graphstats))
-suppressMessages(require(mclust))
-suppressMessages(require(ggplot2))
+```{r, warning=FALSE, message=FALSE}
+require(graphstats)
+require(mclust)
+require(ggplot2)
 ```
 
 The `sgc` function performs a sequence of tasks to cluster a network. This sequence includes dimensionality reduction, model-selection, and mixture modelling. Given a graph G, we wish to assign each of the vertices in V to a cluster, representing some kind of structure in the network. 
