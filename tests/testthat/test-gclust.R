@@ -62,6 +62,7 @@ test_that("Small K, separable cases.", {
   expect_true(num_right > num_wrong)
 
   # Same test for 3 components.
+  set.seed(789)
   g <- 3
   num_right <- 0
   num_wrong <- 0

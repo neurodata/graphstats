@@ -12,7 +12,7 @@ p <- 0.5
 set.seed(12345)
 
 # Sample matrix A, and permute to .
-A <- matrix(as_adj(sample_sbm(n, as.matrix(p), n)), nrow = n)
+A <- matrix(as_adj(sample_sbm(n, p, n)), nrow = n)
 B <- A[c(1:m, sample(n-m)+m),]
 
 # P is the permutation matrix that will turn match B to A.

@@ -55,11 +55,11 @@ test_that("End-to-end testing.", {
   num_sims <- 10
   cp_is_better <- 0
   er_is_better <- 0
+  set.seed(123)
 
   for (s in 1:num_sims) {
 
     ## Simulate  core-periphery SBM, and simple ER graph.
-    set.seed(123)
     n <- 100
     num_class1 <- n/2
 

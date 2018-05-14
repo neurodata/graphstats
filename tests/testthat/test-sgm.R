@@ -136,6 +136,7 @@ test_that("End-to-end: Identical graph vs r-SBM.", {
 
   # Number of simulations.
   num_sims <- 20
+  set.seed(1234)
 
   # Create two graphs sets of graphs.
   n <- 30
@@ -187,6 +188,7 @@ test_that("End-to-end: rho-SBM vs ER graph.", {
 
   # Number of simulations.
   num_sims <- 20
+  set.seed(5678)
 
   # Create two graphs sets of graphs.
   n <- 30

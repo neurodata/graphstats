@@ -6,7 +6,6 @@ require(ggplot2)
 ## ---- fig.height=4.25, fig.width=5---------------------------------------
 
 # SBM parameters.
-set.seed(123)
 n <- 50
 B <- matrix(c(0.75, 0.25,
               0.25, 0.75), nrow = 2)
@@ -14,6 +13,7 @@ block_sizes <- c(n/2, n/2)
 true_block_assignments <- rep(c(1, 2), block_sizes)
 
 # Sample and save adjacency matrix.
+set.seed(123)
 g <- igraph::sample_sbm(n, B, block_sizes)
 A <- igraph::as_adj(g, sparse = FALSE)
 
@@ -40,7 +40,6 @@ cat("The ARI of the true and predicted block labels is:", ari, "\n")
 ## ---- fig.height=4.25, fig.width=5---------------------------------------
 
 # SBM parameters.
-set.seed(789)
 n <- 50
 B <- matrix(c(0.25, 0.75,
               0.75, 0.25), nrow = 2)
@@ -48,6 +47,7 @@ block_sizes <- c(n/2, n/2)
 true_block_assignments <- rep(c(1, 2), block_sizes)
 
 # Sample and save adjacency matrix.
+set.seed(789)
 g <- igraph::sample_sbm(n, B, block_sizes)
 A <- igraph::as_adj(g, sparse = FALSE)
 

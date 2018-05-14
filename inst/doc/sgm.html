@@ -95,7 +95,7 @@ p &lt;-<span class="st"> </span><span class="fl">0.5</span>
 <span class="kw">set.seed</span>(<span class="dv">12345</span>)
 
 <span class="co"># Sample matrix A, and permute to .</span>
-A &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">as_adj</span>(<span class="kw">sample_sbm</span>(n, <span class="kw">as.matrix</span>(p), n)), <span class="dt">nrow =</span> n)
+A &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">as_adj</span>(<span class="kw">sample_sbm</span>(n, p, n)), <span class="dt">nrow =</span> n)
 B &lt;-<span class="st"> </span>A[<span class="kw">c</span>(<span class="dv">1</span>:m, <span class="kw">sample</span>(n-m)+m),]
 
 <span class="co"># P is the permutation matrix that will turn match B to A.</span>
