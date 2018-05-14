@@ -4,12 +4,14 @@
 \alias{gclust}
 \title{Select number of mixture components for Gaussian Mixture Model via maximizing BIC.}
 \usage{
-gclust(X, K = 2)
+gclust(X, K = 2, verbose = FALSE)
 }
 \arguments{
 \item{X}{A matrix object with n rows (data points) by d columns (dimensions).}
 
 \item{K=2}{The maximum number of components to be considered. Model selected from 1 to K components.}
+
+\item{verbose=FALSE}{whether to print Mclust clustering output.}
 }
 \value{
 The number of components that maximizes BIC.

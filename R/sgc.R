@@ -44,7 +44,7 @@ sgc <- function(g,
                 clustering="GMM",
                 Kmax=9,
                 weight="raw",
-                verbose=TRUE,
+                verbose=FALSE,
                 doplot=FALSE)
 {
 
@@ -54,28 +54,28 @@ sgc <- function(g,
   # If spectral clustering is to be performed on only the largest conncected component,
   # let that be the graph of interest.
   if (lcc) {
-    cat("1. Finding an lcc...\n")
+    if (verbose) { cat("1. Finding an lcc...\n") }
     # finding the largest connected component
     cl <- igraph::clusters(g)
     g <- igraph::induced.subgraph(g, which(cl$membership == which.max(cl$csize)))
   }
-  summary(g)
+  if (verbose) { summary(g) }
 
   # Select weight representation of graph.
   if (igraph::is.weighted(g)) {
     if (weight=="ptr") {
-      cat("2. Passing-to-rank...\n")
+      if (verbose) { cat("2. Passing-to-rank...\n") }
       g <- rank(g)
     } else if (weight=="binary") {
-      cat("2. Binarizing the edge weight...\n")
+      if (verbose) { cat("2. Binarizing the edge weight...\n") }
       E(g)$weight <- ifelse(E(g)$weight > 0, 1, 0)
     } else {
-      cat("2. Using the raw edge weight...\n")
+      if (verbose) { cat("2. Using the raw edge weight...\n") }
     }
   }
 
   # Embed the graph into latent space via ASE or LSE.
-  cat(paste0("3. Embedding the graph into dmax = ", dmax, "...\n"))
+  if (verbose) { cat(paste0("3. Embedding the graph into dmax = ", dmax, "...\n")) }
   if (embed=="ASE") {
     ase <- igraph::embed_adjacency_matrix(g,dmax,options=list(maxiter=10000))
   } else {
@@ -84,16 +84,16 @@ sgc <- function(g,
   }
 
   # Reduce dimensionality.
-  cat("4. Finding an elbow (dimension reduction)...")
+  if (verbose) { cat("4. Finding an elbow (dimension reduction)...") }
   if (abs) D <- abs(ase$D) else D <- ase$D
   elb <- max(dimselect(D, n=elb, plot=doplot)[elb], 2)
-  cat(", use dhat = ", elb,"\n")
+  if (verbose) { cat(", use dhat = ", elb,"\n") }
   Xhat1 <- ase$X[,1:elb]
   if (!igraph::is.directed(g)) Xhat2 <- NULL else Xhat2 <- ase$Y[,1:elb]
   Xhat <- cbind(Xhat1,Xhat2)
 
   # Cluster vertices in latent space.
-  cat("5. Clustering vertices...")
+  if (verbose) { cat("5. Clustering vertices...") }
   mc <- Y <- NULL
   if (clustering %in% c("GMM","gmm")) {
     if (length(Kmax)>1) {
@@ -101,9 +101,9 @@ sgc <- function(g,
     } else {
       mc <- mclust::Mclust(Xhat,2:Kmax, verbose=verbose)
     }
-    cat(", Khat = ", mc$G, "\n")
+    if (verbose) { cat(", Khat = ", mc$G, "\n") }
     if (doplot) plot(mc,what="BIC")
-    print(summary(mc))
+    if (verbose) { print(summary(mc)) }
     Y <- mc$class
   } else if (clustering %in% c("DA", "da")) {
 
@@ -117,8 +117,8 @@ sgc <- function(g,
     }
     if (doplot) plot(mc$crit, type="b")
     Y <- mc$pamobj$cluster
-    cat(", Khat = ", max(Y), "\n")
-    print(table(Y))
+    if (verbose) { cat(", Khat = ", max(Y), "\n") }
+    if (verbose) { print(table(Y)) }
     mc$data <- Xhat
     mc$class <- Y
   }

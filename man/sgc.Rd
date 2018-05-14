@@ -5,7 +5,7 @@
 \title{Run spectral clustering on a (possibly directed) (possibly weighted) graph.}
 \usage{
 sgc(g, dmax = 2, elb = 1, abs = FALSE, lcc = TRUE, embed = "ASE",
-  clustering = "GMM", Kmax = 9, weight = "raw", verbose = TRUE,
+  clustering = "GMM", Kmax = 9, weight = "raw", verbose = FALSE,
   doplot = FALSE)
 }
 \arguments{

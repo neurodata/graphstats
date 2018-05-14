@@ -45,7 +45,7 @@ Now, we simply pass the `igraph` object to `sgc` to predict cluster assignments.
 ```{r, fig.height=4.25, fig.width=5}
 
 # Spectral Graph Clustering on G.
-SGC1 <- sgc(g, verbose = FALSE)
+SGC1 <- sgc(g)
 
 ```
 
@@ -92,7 +92,7 @@ We run the same procedure.
 ```{r, fig.height=4.25, fig.width=5}
 
 # Spectral Graph Clustering on G.
-SGC2 <- sgc(g, verbose = FALSE)
+SGC2 <- sgc(g)
 
 # Comparison of cluster assignments.
 predicted_block_assignments <- SGC2$Y
@@ -118,7 +118,9 @@ p1 <- ggplot(dat1) + geom_point(aes(x = X1, y = X2), color=true_block_assignment
 p1 + xlab("Dimension 1") + ylab("Dimension 2") + 
   ggtitle("ASE of Graph 1: High Within-Block Edge Density") + 
   xlim(-1, -0.4) + ylim(-0.8, 0.8)
+```
 
+```{r, fig.height=4.25, fig.width=5}
 dat2 <- data.frame(X2)
 p2 <- ggplot(dat2) + geom_point(aes(x = X1, y = X2), color=true_block_assignments)
 p2 + xlab("Dimension 1") + ylab("Dimension 2") + 
