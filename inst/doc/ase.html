@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Ronak Mehta" />
+
+<meta name="date" content="2018-05-14" />
+
+<title>Adjacency Spectral Embedding</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Adjacency Spectral Embedding</h1>
+<h4 class="author"><em>Ronak Mehta</em></h4>
+<h4 class="date"><em>2018-05-14</em></h4>
+
+
+
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(graphstats)
+<span class="kw">require</span>(mclust)
+<span class="kw">require</span>(ggplot2)</code></pre></div>
+<p>Here, we present the <code>ase</code> function, used for representing graphs in lower-dimensions.</p>
+<div id="stochastic-blockmodel-via-random-dot-product-graph" class="section level2">
+<h2>Stochastic Blockmodel via Random Dot-Product Graph</h2>
+<p>We will apply ASE to a SBM constructed from an RDPG. We start with latent vectors [0.85, 0] and [0.3, 0.8]. These make edge probability within a block approximately 0.75, and between blocks approximately 0.25. The Adjacency Matrix is plotted below.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Create latent vectors, and edge probability matrix.</span>
+block1 &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">c</span>(<span class="fl">0.85</span>, <span class="dv">0</span>), <span class="dt">nrow =</span> <span class="dv">2</span>)
+block2 &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">c</span>(<span class="fl">0.3</span>, <span class="fl">0.8</span>), <span class="dt">nrow =</span> <span class="dv">2</span>)
+block_probs &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">t</span>(block1) %*%<span class="st"> </span>block1,
+                        <span class="kw">t</span>(block1) %*%<span class="st"> </span>block2,
+                        <span class="kw">t</span>(block2) %*%<span class="st"> </span>block1,
+                        <span class="kw">t</span>(block2) %*%<span class="st"> </span>block2), <span class="dt">ncol =</span> <span class="dv">2</span>)
+
+<span class="co"># Create SBM. Use higher edge probability if nodes are from same block.</span>
+<span class="kw">set.seed</span>(<span class="dv">456</span>)
+n &lt;-<span class="st"> </span><span class="dv">60</span>
+block.sizes &lt;-<span class="st"> </span><span class="kw">c</span>(n/<span class="dv">2</span>, n/<span class="dv">2</span>)
+blocks &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), block.sizes)
+g &lt;-<span class="st"> </span>igraph::<span class="kw">sample_sbm</span>(n, block_probs, block.sizes)
+<span class="kw">gs.plot.plot_matrix</span>(igraph::<span class="kw">as_adjacency_matrix</span>(g, <span class="dt">sparse =</span> <span class="ot">FALSE</span>),
+                    <span class="dt">legend.name=</span><span class="st">&quot;Connection&quot;</span>,
+                    <span class="dt">ffactor =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAGYCAMAAACte8ELAAAAtFBMVEUAAAAAADoAAGYAOpAAZrYAv8QzMzM6AAA6ADo6AGY6ZmY6kNtNTU1NTW5NTY5Nbm5NbqtNjshmAABmADpmtrZmtv9uTU1uTW5uTY5uq+SOTU2OTW6ObquOyP+QOgCQ2/+rbk2rbo6r5P+2ZgC2///Ijk3Iq27I5KvI///bkDrbtrbb/7bb///kq27k///r6+vy8vL4dm3/tmb/trb/yI7/25D/5Kv//7b//8j//9v//+T///+KIyiEAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAO+ElEQVR4nO3dD3/TRhLG8bRH6N3h0sAdLX9qoGnTwl2TO7hgAn7/7+skO4698szsrqWx5cnv+dDirEcjab5WkN20PZmT0Dk59AEQ3wAcPAAHD8DBA3DwABw8AAcPwMEDcPAAHDwABw/AwQNw8AAcPAAHD8DBA3DwABw8AAcPwMEDcPAAHDwABw/AwQNw8AAcPAAHD8DBA3DwABw81cD/2UjyRT6V5WOr793ewy8bgPfX3sMvG4D3197DLxuA99fewy8bgPfX3sMvG4D3197DLxuA99fewy8bgPfX3sMvG4D3197DLxuA99fewy8bgPfX3sMvG4D3197DLxuA99fewy8bgPfX3sMvGxP469vJ5MXit8fvVmuHnNBh6wMCX5xdzX46n188aX/dJj2FD0lO26wf3X2VT1mp0DFdOq2MuZH2ZLosVK2PbuTAN6/OV7/Nnq8uYYDjAN+qtr8trR82SUsANoH93IpjAV+f/T6ZTDeA23AFVwCP/Aq+bu6wrr8/Bzgs8NlVcwc9LQc2517BV/PS2G5RRqptZK5nWx8XcCvbAJffZElY5WAAe8R+m9R8i27eARe/TZKwysEA9kj2g45p8z7ppfpBRx6rHAxgj/T8qDKPVQ4GsEd6ApsUwnCE+QrbmHSVpFLXWrrtfZunta4HGGDvAAxwGoABBjgOcNZWg9k9mpqw26yceaxCi7T+w/aTnXWAAfYOwACnARhggEMDp3MvtE2rhFeFtmTCa3S556QW2kbpk50qgAH2DsAApwEYYIDjAJf5CVV5sLIW6SMTQNr5tk4tsLkOMMDeARjgNAADDHAc4CxF/hWQ6phVGpillk9FqbmhcCQAA+wdgAFOA7C2IcAAHyBD3EXfnZ42hKytNipz3URW3DvHutMrw2ydBmB5XgAPF4ABTgMwwOI0AA4A/MGanEZkVlnbaHtL102minXh8M2tF48ABtg7ABeuC4dvbg0wwHsJwIXrwuGbW8cF1iiyalJ9RWm6VEtXVmrZSk8CDLB3AAY4DcAAAxwMWKPI4atgWleN9G69FsyMdgAKq3QbDzDA3qkGTgOwCTyMUa9wBXsCH+MVDPC9Ak5PrwwyDyzMSyvV/LRjKhKtATYDsKyWDtMsBTgTgAFOAzDAOwZgjxz+32wwNS1lc+5l69o+0vpCTaEUYIC9AzDAaQAGGOBgwIKAuSQAKFXaHbQEbDWUlK2thWM1XzHCk4slgAH2DsAApwEYYIDjAGvDtKSldY1V2drcm8Jkwyj7LmwmtFg8Ahhg7wAMcBqAAQY4DrA5fAvFrMo+qWFpCp2lHJMEb+5NOzeAAfYOwACnARhggIMBZ4dTpqk9Z21zqi2Ze1Pq10uaZv4FkQbgzfosh6qjgAE8BxjgbgAG+APAAYGVuWuTMJ1MCqu1piDAC08WqlUEYIC9A/CpsAQwwEUBGGDvDP+f9C/TMdXKttYapvWacqd1ulQWYb+dFgAD7B2AAU4DMMAAxwHemaJwI2Fy2V7SpIt0pCetAmGtszXAuY0A7huAAU4DcCjg2fN38/nXt5PH71YrAIcCvmhlL560v26jAQsKldzS3JVJa1WWqP0a0QqUPoU7Gj3w9Q/NFXzz6nx5JS8CcCDgr7/80cDObpGXATgQ8OWLWQL8sElaAbC5I0e40ljANz9fzbiC+wCP/Aq+mM7LgSsQlWFqsxcG3am35t7ZWusqrGvAWlehbNzANy8nbaZlN1kAHx1wmwVs0dskgI8XuLmUyz7oAPjogLcD8D0FVnTymsqMO101CktBQtFsNaZse20CAAO8lwAMcBqAAQY4KrA5TE1Txc0VaPMVjqK2VDgZ4Ry001o/CTDA3gEY4DQAAwxwaOAKFBNei/XyEGQ0GA1SM8zrCykF/vL65OTkL39WQXx8Nv/89Fm2DOARAH88edT8/ddv3lQ4lOC2AfjwwJ++W1h9eV1zDQN8PMDvb2H/99u8vZpP2uv589N/Pj05eXb3e1O1fGL54MGn75rv6f9eIHe2AHhswF9eP1h/8XGB+qD5q/mG/f6bN6vfF399+q6BbB98fvqovYIXV3F3Cy/gsghzz05Ug6xQEx4VlpbvSCotAm60NrDbxx9b2EeL793J7/OP3/62ql4Bb20B8JiBl0AL0GcLxNXvHxeXZvPEinAFvLUFwGMD3vwWveTagL0DPlnm2ae/vhGANyoBHhvw3U1W86dp5gqer78JcwUbaiMD3nibtPEn6rPtK3kJq/4Z7AbcQdlWy1dZBcLcTTVtQ81J6Gq6ar2EpTLg5QcdX163F+n6njgFXt4f/3p7o9x8V2+hO3fRAI8VuHG5+6jy7l1tB3jx9vfb9p3y4n1wg731Phjg0QI7BmCA0wB8/4CtFKpVtLBeMdqSFrPM6iPtUmgBMMDeAVgts/pIu9wVWD7rnq53AVgts/pIuxwW+L89YVcBWC2z+ki7DAmcnp5w2p3ztyC15DcU9pY+V5b8RrVdAS4JwH0CMMBpAK7oCnBJAO6T4e+iTQ9hTMJXWguBwqqSdAplKqO17gv85fXyHyD1CMBDxAv41wftr14BeIg4AX/+x5v5p7/1u4QBHiJOwC1uiwwwwF7A2TM26bThaGCasrCRuQ/z9aHsPF3STqtTCjDAAN9j4IPcZKUBOH3UKS2aobzjkbxNAjh91CnteQW3P0574A86ssDmUvpkvoX2nDn3bZ3OUpmttlG63qnqCzxAAAY4DcAAyzoAKxMFONseYD2D/ZsNWZh0ABU6nVJla/MuWigQ4LV67Vi1va0fFQELJ3o63P9TC+CRAnMFS10B3grAAKcB2NgZwHePtKHlWwBclcHeJhWx5t96aMM0W1h9tOFLMsKha37Khp16gI15ATxIAB43cN9/HAzwuIE/Px3NPy4EWNimL/D7k7+P5gq2JqQ9l986HZq2taammJjRDNMvC5v1Bf7Xn+P5Fg2wkEh/BgMsBGCAAQa4Vwa9ixbGYRqakOl6Wi9srS1pRHn4bEUeHmCAAb7fwL0DMMBpAL6nwMIwFYCaaGMVwIpM1Bv6bIRS4Zw7SwDnAnDfAHxwYN8ADHAagO8VsDZyYaAakTBtE0Cp0krNfQtdyyLsW3qFAbw1K21JoAC4JAB3upYF4O1JaEMG2DUAd7qW5R4Cp6eXLpl+mpNGYU26sySUaltb/bXdmge2CMAAewdggNMArPSSAjDA3hkeOB1aP9uaFoZQ9y4665TdW94WYID3EoABTgNwIODZj5PJdD7/+nby+N1qDeA4wDcvp/Pr78/nF0/aX7dJgfNYRfNSJ5etqBl30YadYy3bh1YxcuDrs6vm6p3evDqfz56vLmGAK5qNHLhNcxW3uC3yfP6wSfo0wGYzL7WK5IAvz67WwG24giuajf8KvmzurgCOC3zZ3GKZwOvTUww7QxBKsxsJBVqfnbnzMVunT66/Gjvw5eLdkXWTlQ5foOgMAeB9xwKe/bS8bI23SenwBYrOEADedyzgi0mbaXMnXfBBB8DCVyMHFgNw9slIwNrcBSttEoKONq+0NL+3LIxWoXWs3RvAAHsHYIDTAAwwwKsEARbOXZiEtnT3KNtmvWVnjtrcs+smvHnUWuv06AA+Bdg5AAOcBmDtBAGWlwB2zfD/jQ7TSSvY5s5He41oQp16pTTfVVmSlAEG2DsAA5wGYIABjgpcGGXu0pCtrc35ChSdXRZBml21gnUABtg7AAOcBmCAAY4PrIxQqtJaDFCqWW1/pR6wIldWBTDA7gEY4DQAA2zMawC1ilKA3f5DaOkcheELYNIMLUOptUWR96isypcCDLB3AK5WqygFGGDvAFytVlF6/MBZtVNhffurzqgsW7V1BYVQLvQSumZ31CkAGGDvAAxwGoABBjgYsDV3wVZbN3tVwAsj1w4gT9QvAAPsHYA/CPUD+QIMsHsA/iDUD+QbGFibe0WVMHILUiISqqwtO89ppRUvD4AB9k41cBqAzRbDGPUKV7D63ADAx3gFAwxwTkdZl2ZVGW3uWbD81mm91DU9I4AB3ksABjgNwAADHBFYMRFspY8qy5S1+aZb5htmlbPHKlRJuwQYYO8ADHAagAEGOA5w9ty1IZjrpoICqWkKbUzpfL21t04VwPI6wMMF4MIADDDAAO8/wwNrk0gfCXMxo8xSfXIXTenwrVJhrdMHYIC9AzDAaQAGGOA4wKatxSdMNG+b72NBpk8KraVSBVI73U4A3vzSLAV4xwAMcBqArdMFWIEB2CvD/3+TNCdTc5vbVLM6q7ZmH+u1oDW0CpYVAAPsHYABTgMwwADHAU7PVht5xbomli5pLbThC10rWIXDKQzAAHsHYIDTAAwwwHGAa7C256vp7BxBJq+gtRA6mnsDeHMwmk5FG60FwJsBGOA0AGt7A3hzMJpORRutBcCbcbqLVkZSqFk2X6GPtqEZbUcV+9Y2BBhg7wAMcBqA4wF/fTt5/G71BcDxgC+etL9ukwJXpbJ8bPW92zsy6ikAvnl1Pp89X13Ch5zQYevDAre4LfIyh5zQYevvAfDDJu5HRAYNV/D+2rtCagF4f+1dIbVwk7W/9q6QWnibtL/2jox6SoBvXqofdOx3Qoetjwuc5JATOmw9wO4TOmw9wO4TOmw9wO4TOmw9wO4TOmw9wO4TOmz9PQHejPMH096fex/54ZcF4GNtXxiAj7V9YQA+1vaF6fm/eCdjD8DBA3DwABw8AAfP7sDJj8MPnNmPk8nUdReLH1Hx6t/0nbzwnVBxdgdOfs5j2Ny8nM6vvz/33MVFO3qv/hdnV7OfXA+/PDsDpz+pNWyuz66al//UcRfXP9z+JKFH/9ufUPScUHl2Bk5/1nL4NFex3y6+/vJH09ur/62q94TKMlrgy+bbnNsuLl/MHIGvz35vbyEAtnL52A9gfvPzlStwc4fV3EIAbOSyucXy28XF8vLyu4IXtxBHDux6C3G5eHvhdhP0ctLG7Sau7el7j1iRUb5Nat9jeO/iuefbpOZbdPMSPe63SemPww+bi+UV5rmLBbBX//aDjqnrhMrDR5XBA3DwABw8AAcPwMEDcPAAHDwABw/AwQNw8AAcPAAHD8DBA3DwABw8AAcPwMEDcPAAHDwABw/AwQNw8AAcPAAHD8DBA3DwABw8/wdDXI2AxrmlWwAAAABJRU5ErkJggg==" /><!-- --></p>
+</div>
+<div id="embedding-the-graph" class="section level2">
+<h2>Embedding the Graph</h2>
+<p>Now, we call the function to embed the adjacency matrix in R^2. Ideally, we observe two clear clusters in the plotted data. Returned is an nx2 matrix.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Embed graph into R^2.</span>
+dim &lt;-<span class="st"> </span><span class="dv">2</span>
+X &lt;-<span class="st"> </span><span class="kw">ase</span>(g, dim)
+dat &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(X)
+
+<span class="co"># Display.</span>
+p &lt;-<span class="st"> </span><span class="kw">ggplot</span>(dat) +<span class="st"> </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> V1, <span class="dt">y =</span> V2), <span class="dt">color=</span>blocks)
+p +<span class="st"> </span><span class="kw">xlab</span>(<span class="st">&quot;PC Score 1&quot;</span>) +<span class="st"> </span><span class="kw">ylab</span>(<span class="st">&quot;PC Score 2&quot;</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+</div>
+<div id="estimating-the-block-assignments" class="section level2">
+<h2>Estimating the Block Assignments</h2>
+<p>One application of <code>ase</code> is graph clustering. If we cluster the embedded data as if it were a mixture of Gaussians, the cluster means consistenty estimate the latent vectors (down to a rotation).</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Cluster using EM algorithm.</span>
+model &lt;-<span class="st"> </span><span class="kw">Mclust</span>(X, <span class="dt">verbose =</span> <span class="ot">FALSE</span>)
+predictions &lt;-<span class="st"> </span><span class="kw">round</span>(model$z[,<span class="dv">2</span>])
+
+<span class="co"># Find cluster means. Rotate the data to be around latent vectors via Procrustes.</span>
+means &lt;-<span class="st"> </span>model$parameters$mean
+latent_vecs &lt;-<span class="st"> </span><span class="kw">cbind</span>(block1, block2)
+M &lt;-<span class="st"> </span><span class="kw">svd</span>(means %*%<span class="st"> </span><span class="kw">t</span>(latent_vecs))
+R &lt;-<span class="st"> </span>M$u %*%<span class="st"> </span><span class="kw">t</span>(M$v)
+X_R &lt;-<span class="st"> </span>X %*%<span class="st"> </span>R
+
+<span class="co"># Display.</span>
+dat &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(X_R)
+vec &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">t</span>(latent_vecs))
+p &lt;-<span class="st"> </span><span class="kw">ggplot</span>(dat) +<span class="st"> </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">x =</span> V1, <span class="dt">y =</span> V2), <span class="dt">color=</span>blocks) +
+<span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">data =</span> vec, <span class="dt">mapping =</span> <span class="kw">aes</span>(<span class="dt">x=</span>V1, <span class="dt">y=</span>V2, <span class="dt">shape=</span><span class="dv">4</span>), <span class="dt">size =</span> <span class="dv">5</span>) +<span class="st"> </span>
+<span class="st">  </span><span class="kw">scale_shape_identity</span>()
+
+p +<span class="st"> </span><span class="kw">xlab</span>(<span class="st">&quot;PC Score 1&quot;</span>) +<span class="st"> </span><span class="kw">ylab</span>(<span class="st">&quot;PC Score 2&quot;</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Here, the X’s represent the original latent vectors, while the data can clearly rotated as shown to surround these vectors.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

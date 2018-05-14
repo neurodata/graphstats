@@ -1,0 +1,137 @@
+---
+title: "Spectral Graph Clustering"
+author: "Ronak Mehta"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ASE}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, warning=FALSE, message=FALSE}
+require(graphstats)
+require(mclust)
+require(ggplot2)
+```
+
+The `sgc` function performs a sequence of tasks to cluster a network. This sequence includes dimensionality reduction, model-selection, and mixture modelling. Given a graph G, we wish to assign each of the vertices in V to a cluster, representing some kind of structure in the network. 
+
+## Example 1: 2-Stochastic Blockmodel with Highly Connected Blocks
+
+We generate a 2-SBM where the edges have high probability when they are considered between vertices of the same block. (NOTE: the matrix is visualized with the diagonal going from bottom left to top right.)
+
+```{r, fig.height=4.25, fig.width=5}
+
+# SBM parameters.
+set.seed(123)
+n <- 50
+B <- matrix(c(0.75, 0.25,
+              0.25, 0.75), nrow = 2)
+block_sizes <- c(n/2, n/2)
+true_block_assignments <- rep(c(1, 2), block_sizes)
+
+# Sample and save adjacency matrix.
+g <- igraph::sample_sbm(n, B, block_sizes)
+A <- igraph::as_adj(g, sparse = FALSE)
+
+# Display.
+gs.plot.plot_matrix(A, title="High Within-Block Edge Density", legend.name="Connection", ffactor = TRUE)
+
+```
+
+Now, we simply pass the `igraph` object to `sgc` to predict cluster assignments. Clustering and embedding algorithms (such as ASE versus LSE, or K-means instead of GMM) can be tuned via optional parameters.
+
+```{r, fig.height=4.25, fig.width=5}
+
+# Spectral Graph Clustering on G.
+SGC1 <- sgc(g)
+
+```
+
+The `mc` field of the output object is an `mclust` object containing the clustering information. We can also retrieve the MAP cluster assignments via the `Y` return value, and compare them to the true assignments via ARI.
+
+```{r, fig.height=4.25, fig.width=5}
+
+# Comparison of cluster assignments.
+predicted_block_assignments <- SGC1$Y
+
+# Adjusted Random Index 
+ari <- mclust::adjustedRandIndex(predicted_block_assignments, true_block_assignments)
+cat("The ARI of the true and predicted block labels is:", ari, "\n")
+
+```
+
+On graphs with a clear SBM structure, as in this example, `sgc` can recover the block assignments nearly perfectly.
+
+## Example 2: 2-Stochastic Blockmodel with High Between-Block Edge Probability
+
+In this example, we consider a blockmodel with many edges across blocks, and fewer within blocks. We assume the same set up as before and call `sgc` similarly.
+
+```{r, fig.height=4.25, fig.width=5}
+
+# SBM parameters.
+set.seed(789)
+n <- 50
+B <- matrix(c(0.25, 0.75,
+              0.75, 0.25), nrow = 2)
+block_sizes <- c(n/2, n/2)
+true_block_assignments <- rep(c(1, 2), block_sizes)
+
+# Sample and save adjacency matrix.
+g <- igraph::sample_sbm(n, B, block_sizes)
+A <- igraph::as_adj(g, sparse = FALSE)
+
+# Display.
+gs.plot.plot_matrix(A, title="High Between-Block Edge Density", legend.name="Connection", ffactor = TRUE)
+
+```
+
+We run the same procedure.
+
+```{r, fig.height=4.25, fig.width=5}
+
+# Spectral Graph Clustering on G.
+SGC2 <- sgc(g)
+
+# Comparison of cluster assignments.
+predicted_block_assignments <- SGC2$Y
+
+# Adjusted Random Index 
+ari <- mclust::adjustedRandIndex(predicted_block_assignments, true_block_assignments)
+cat("The ARI of the true and predicted block labels is:", ari, "\n")
+
+```
+
+Even in a 2-SBM with a very different connectivity, `sgc` still estimates the block assignments well in the distinct setting. Because the cluster fitting is applied to the spectral embedding of the graph, we may want to inspect the geometry of the embedding in Euclidean space. The `ase` return value is the output object of `embed_adjacency_matrix` (or `embed_laplacian_matrix`) from `igraph`, and can be used for latent vector estimation. Here Graph 1 represents the dense block example, while Graph 2 represents the between-block example. Nodes are colored with their true block label.
+
+```{r, fig.height=4.25, fig.width=5}
+
+# Retrieve latent vector estimates.
+X1 <- SGC1$ase$X
+X2 <- SGC2$ase$X
+
+# Display.
+
+dat1 <- data.frame(X1)
+colnames(dat1) <- c("x", "y")
+dat1$color <- factor(true_block_assignments)
+p1 <- ggplot(dat1, aes(x = x, y = y, color=color)) + geom_point()
+p1 + xlab("Dimension 1") + ylab("Dimension 2") +  
+  scale_color_discrete(name="True Block") +
+  ggtitle("ASE of Graph 1: High Within-Block Edge Density") + 
+  xlim(-1, 1) + ylim(-0.8, 0.8)
+```
+
+```{r, fig.height=4.25, fig.width=5}
+dat2 <- data.frame(X2)
+colnames(dat2) <- c("x", "y")
+dat2$color <- factor(true_block_assignments)
+p2 <- ggplot(dat2, aes(x = x, y = y, color=color)) + geom_point()
+p2 + xlab("Dimension 1") + ylab("Dimension 2") + 
+  scale_color_discrete(name="True Block") +
+  ggtitle("ASE of Graph 2: High Between-Block Edge Density")  + 
+  xlim(-1, 1) + ylim(-0.8, 0.8)
+```
+
+See `ase` vignette for estimation of the latent vectors of a random dot-product graph from the embedded clusters, by running `vignette('ase', package='graphstats')`. The EM and K-means algorithm could easily identify the clusters in this setting. With the `sgc` utility, we have a full range of tools for the spectral analysis of graphs.

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Kemeng Zhang" />
+
+<meta name="date" content="2018-05-14" />
+
+<title>Vertex Nomination via Seeded Graph Matching</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Vertex Nomination via Seeded Graph Matching</h1>
+<h4 class="author"><em>Kemeng Zhang</em></h4>
+<h4 class="date"><em>2018-05-14</em></h4>
+
+
+
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">suppressMessages</span>(<span class="kw">require</span>(graphstats))
+<span class="kw">suppressMessages</span>(<span class="kw">require</span>(igraph))
+<span class="kw">suppressMessages</span>(<span class="kw">require</span>(ggplot2))</code></pre></div>
+<div id="background" class="section level1">
+<h1>Background</h1>
+<p>Consider two networks on overlapping, non-identical vertex sets. Given vertices of interest in the first network, we seek to identify the corresponding vertices, if any exist, in the second network. Our methodology identifies vertices in a local neighborhood of the vertices of interest in the first network that have verifiable corresponding vertices in the second network.</p>
+<p>Leveraging these known correspondences, referred to as seeds, we match the induced subgraphs in each network generated by the neighborhoods of these verified seeds, and rank the vertices of the second network in terms of the most likely matches to the original vertices of interest.</p>
+</div>
+<div id="simulation-on-isomorphic-graphs" class="section level1">
+<h1>Simulation on Isomorphic Graphs</h1>
+<p>Here, we produce a simple random graph G1 with n = 10 and p = 0.5. We then produce B by maintaining the first m = 3 rows (the seeds), and permuting the remaining n - m vertices.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Number of seeds, total nubmer of vertices, and edge probability.</span>
+m &lt;-<span class="st"> </span><span class="dv">3</span>
+n &lt;-<span class="st"> </span><span class="dv">10</span>
+p &lt;-<span class="st"> </span><span class="fl">0.5</span>
+<span class="kw">set.seed</span>(<span class="dv">123</span>)
+
+<span class="co"># Sample graph 1, and permute to graph 2; delete a vertex to show VN works</span>
+<span class="co"># when total number of vertices are different.</span>
+g1 =<span class="st"> </span><span class="kw">sample_sbm</span>(n, <span class="kw">as.matrix</span>(p), n)
+permute =<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>:m, <span class="kw">sample</span>(n-m)+m)
+g2 =<span class="st"> </span><span class="kw">permute.vertices</span>(g1, permute)
+g2 =<span class="st"> </span><span class="kw">delete.vertices</span>(g2, <span class="dv">10</span>)
+
+seeds &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">cbind</span>(<span class="dv">1</span>:m, <span class="dv">1</span>:m), <span class="dt">nrow =</span> m)
+x =<span class="st"> </span><span class="dv">4</span>
+h =<span class="st"> </span><span class="dv">1</span>
+ell =<span class="st"> </span><span class="dv">2</span>
+R =<span class="st"> </span><span class="dv">100</span>
+gamma =<span class="st"> </span><span class="fl">0.01</span>
+vn =<span class="st"> </span><span class="kw">vnsgm</span>(x,seeds,g1,g2,h,ell,R,gamma,<span class="dt">plotF =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Here green represents the set of seeds; red represents VOIs; blue represents unobserved vertices we matched via SGM. Shade of color represents how likely vertex i in graph 1 is a match to vertex j in graph 2.</p>
+</div>
+<div id="simulation-on-r-correlated-er-graphs" class="section level1">
+<h1>Simulation on r-Correlated ER Graphs</h1>
+<p>Here, we sample (G1, G2) from an r-Correlated ER distribution via a random dot-product graph, permute the matrix like before, and observe the results of Vertex Nomination.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Define latent vectors for 2-SBM RDPG in X.</span>
+n &lt;-<span class="st"> </span><span class="dv">10</span>
+X1 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="fl">0.85</span>, <span class="dv">0</span>), n/<span class="dv">2</span>), <span class="dt">nrow =</span> n/<span class="dv">2</span>, <span class="dt">byrow =</span> <span class="ot">TRUE</span>)
+X2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="fl">0.3</span>,<span class="fl">0.8</span>), n/<span class="dv">2</span>), <span class="dt">nrow =</span> n/<span class="dv">2</span>, <span class="dt">byrow =</span> <span class="ot">TRUE</span>)
+X &lt;-<span class="st"> </span><span class="kw">rbind</span>(X1, X2)
+<span class="kw">set.seed</span>(<span class="dv">6789</span>)
+
+<span class="co"># Pearson correlation coefficient.</span>
+r &lt;-<span class="st"> </span><span class="fl">0.75</span>
+
+<span class="co"># Sample r-SBM.</span>
+sampled_graphs &lt;-<span class="st"> </span><span class="kw">rdpg.sample.correlated</span>(X, r)
+g1 =<span class="st"> </span>sampled_graphs[[<span class="dv">1</span>]]
+g2 =<span class="st"> </span>sampled_graphs[[<span class="dv">2</span>]]
+A &lt;-<span class="st"> </span><span class="kw">as_adj</span>(g1, <span class="dt">sparse =</span> <span class="ot">FALSE</span>)
+B &lt;-<span class="st"> </span><span class="kw">as_adj</span>(g2, <span class="dt">sparse =</span> <span class="ot">FALSE</span>)
+<span class="co"># Display overlap.</span>
+<span class="kw">gs.plot.plot_matrix</span>(A +<span class="st"> </span>B, <span class="dt">title=</span><span class="st">&quot;A + B (Overlap)&quot;</span>, <span class="dt">legend.name=</span><span class="st">&quot;A_ij + B_ij&quot;</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>These graphs are not exactly equal, but have high correlation. Their matrix addition, pictured above, has many 2 and 0 entries, and few 1 entries. Here, we choose the first two vertices in each graph as our seeding.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Identify seeds.</span>
+m &lt;-<span class="st"> </span><span class="dv">2</span>
+seeds &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">cbind</span>(<span class="dv">1</span>:m, <span class="dv">1</span>:m), <span class="dt">nrow =</span> m)
+
+<span class="co"># Set up permutation.</span>
+permute =<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>:m, <span class="kw">sample</span>(n-m)+m)
+<span class="co"># Apply permutation and delete 1 vertex from graph 2 two make vertex set size different for two graphs.</span>
+g2_p =<span class="st"> </span><span class="kw">permute.vertices</span>(g2, permute)
+g2_p =<span class="st"> </span><span class="kw">delete.vertices</span>(g2_p, <span class="dv">10</span>)
+vn =<span class="st"> </span><span class="kw">vnsgm</span>(x,seeds,g1,g2_p,h,ell,R,gamma,<span class="dt">plotF =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Here we display our original permutation for comparison purposes.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nominated.vertex =<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">colnames</span>(vn$P)[<span class="kw">apply</span>(vn$P,<span class="dv">1</span>,which.max)])
+df =<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">rbind</span>(permute,nominated.vertex))
+<span class="kw">row.names</span>(df) =<span class="st"> </span><span class="kw">c</span>(<span class="st">'True Permutation of G1'</span>,<span class="st">'VN Permutation'</span>)
+df</code></pre></div>
+<pre><code>##                        V1 V2 V3 V4 V5 V6 V7 V8 V9 V10
+## True Permutation of G1  1  2  8  9  6  5  7  4  3  10
+## VN Permutation          1  2  8  1  6  5  7  4  3   9</code></pre>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

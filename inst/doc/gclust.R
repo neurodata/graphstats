@@ -1,28 +1,10 @@
----
-title: "Model-Based Clustering"
-author: "Ronak Mehta"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{GCLUST}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r, warning=FALSE, message=FALSE}
+## ---- warning=FALSE, message=FALSE---------------------------------------
 require(graphstats)
 require(mclust)
 require(MASS)
 require(ggplot2)
-```
 
-Here, we use the `gclust` function to select the optimal number of clusters for a Gaussian Mixture Model. This function uses the Bayesian Information Criterion (BIC) for data-based model selection.
-
-## A Mixture of 2 Normal Densities
-
-We generate a mixture of 2 Gaussian densities, and try to estimate the number of components from simulated data.
-
-```{r, fig.height=4, fig.width=5}
+## ---- fig.height=4, fig.width=5------------------------------------------
 
 # Mixture parameters
 mu0 <- -1.5
@@ -44,11 +26,8 @@ p <- ggplot(data.frame(x = c(-4, 4)), aes(x = x)) +
         stat_function(fun = norm1_pdf, colour = "dodgerblue3", size = 1)
 p + xlab("X") + ylab("PDF") + ggtitle("Mixture of Two Gaussian Densities")
 
-```
 
-Given sufficient data, we expect `gclust` to return 2 as the optimal number of components, when considering component numbers from 1 to 5.
-
-```{r, fig.height=3.5, fig.width=5}
+## ---- fig.height=3.5, fig.width=5----------------------------------------
 # Condition on class sizes of pi0*n and pi1*n to sample data matrix X.
 set.seed(123)
 n <- 100
@@ -59,6 +38,4 @@ X <- as.matrix(c(X0, X1), nrow = n)
 # Run gclust, which will consider models from K = 1 to 5.
 G <- gclust(X, K = 5)
 cat("The BIC-optimal number of components for the data is:", G, "\n")
-```
 
-The selected number of components can then be used as a parameter for a clustering algorithm such as EM.

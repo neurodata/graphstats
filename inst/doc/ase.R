@@ -1,27 +1,9 @@
----
-title: "Adjacency Spectral Embedding"
-author: "Ronak Mehta"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{ASE}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-```{r, warning=FALSE, message=FALSE}
+## ---- warning=FALSE, message=FALSE---------------------------------------
 require(graphstats)
 require(mclust)
 require(ggplot2)
-```
 
-Here, we present the `ase` function, used for representing graphs in lower-dimensions. 
-
-## Stochastic Blockmodel via Random Dot-Product Graph
-
-We will apply ASE to a SBM constructed from an RDPG. We start with latent vectors [0.85, 0] and [0.3, 0.8]. These make edge probability within a block approximately 0.75, and between blocks approximately 0.25. The Adjacency Matrix is plotted below.
-
-```{r, fig.height=4.25, fig.width=5}
+## ---- fig.height=4.25, fig.width=5---------------------------------------
 
 # Create latent vectors, and edge probability matrix.
 block1 <- as.matrix(c(0.85, 0), nrow = 2)
@@ -40,13 +22,8 @@ g <- igraph::sample_sbm(n, block_probs, block.sizes)
 gs.plot.plot_matrix(igraph::as_adjacency_matrix(g, sparse = FALSE),
                     legend.name="Connection",
                     ffactor = TRUE)
-```
 
-## Embedding the Graph
-
-Now, we call the function to embed the adjacency matrix in R^2. Ideally, we observe two clear clusters in the plotted data. Returned is an nx2 matrix.
-
-```{r, fig.height=4, fig.width=4}
+## ---- fig.height=4, fig.width=4------------------------------------------
 # Embed graph into R^2.
 dim <- 2
 X <- ase(g, dim)
@@ -55,14 +32,8 @@ dat <- as.data.frame(X)
 # Display.
 p <- ggplot(dat) + geom_point(aes(x = V1, y = V2), color=blocks)
 p + xlab("PC Score 1") + ylab("PC Score 2")
-```
 
-
-## Estimating the Block Assignments
-
-One application of `ase` is graph clustering. If we cluster the embedded data as if it were a mixture of Gaussians, the cluster means consistenty estimate the latent vectors (down to a rotation).
-
-```{r, fig.height=4, fig.width=4}
+## ---- fig.height=4, fig.width=4------------------------------------------
 # Cluster using EM algorithm.
 model <- Mclust(X, verbose = FALSE)
 predictions <- round(model$z[,2])
@@ -82,6 +53,4 @@ p <- ggplot(dat) + geom_point(aes(x = V1, y = V2), color=blocks) +
   scale_shape_identity()
 
 p + xlab("PC Score 1") + ylab("PC Score 2")
-```
 
-Here, the X's represent the original latent vectors, while the data can clearly rotated as shown to surround these vectors. 
