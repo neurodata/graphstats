@@ -17,6 +17,8 @@ sgc(g, dmax = 2, elb = 1, abs = FALSE, lcc = TRUE, embed = "ASE",
 
 \item{abs}{a boolean to take abs on elbow finder or not}
 
+\item{lcc}{logical of whether to use the largest connected component or not.}
+
 \item{embed}{either \code{ASE} or \code{LSE}, spectral embedding method}
 
 \item{clustering}{either \code{GMM} or \code{Kmeans}, clustering method}
