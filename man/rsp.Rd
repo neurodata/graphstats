@@ -2,29 +2,25 @@
 % Please edit documentation in R/rsp.R
 \name{rsp}
 \alias{rsp}
-\title{Generates a random matrix to use as a
- starting point of the multistart (SGM-step) algorithm. For some
- \eqn{alpha} in (0,\code{g}), output matrix is weighted towards the bary-center
- by \eqn{(1-alpha)} and towards another randomly generated
- doubly-stochastic matrix by \eqn{alpha}.}
+\title{Find a suitable initial position for multistart SGM}
 \usage{
-rsp(n, g)
+rsp(n, gamma)
 }
 \arguments{
 \item{n}{the dimension to make the output matrix}
 
-\item{g}{(short for gamma) a number between 0 and 1 input
+\item{gamma}{a number between 0 and 1 input
 by the user as an upper bound for step \eqn{alpha}}
 }
 \value{
 a random doubly stochastic matrix
 }
 \description{
-Generates a random matrix to use as a
- starting point of the multistart (SGM-step) algorithm. For some
- \eqn{alpha} in (0,\code{g}), output matrix is weighted towards the bary-center
- by \eqn{(1-alpha)} and towards another randomly generated
- doubly-stochastic matrix by \eqn{alpha}.
+Generates a random matrix to use as a starting point of the
+multistart SGM algorithm. For some \eqn{alpha} in (0,\code{gamma}),
+output matrix is weighted towards the barycenter by \eqn{(1-alpha)}
+and towards another randomly generated doubly-stochastic matrix by
+\eqn{alpha}.
 }
 \author{
 Heather Gaddy Patsolic <hgaddy1@jhu.edu>
