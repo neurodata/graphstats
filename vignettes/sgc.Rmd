@@ -128,4 +128,4 @@ p2 + xlab("Dimension 1") + ylab("Dimension 2") +
   xlim(-1, -0.4) + ylim(-0.8, 0.8)
 ```
 
-(See `ase` vignette for estimation of the latent vectors of a random dot-product graph from the embedded clusters.) The EM and K-means algorithm could easily identify the clusters in this setting. With the `sgc` utility, we have a full range of tools for the spectral analysis of graphs.
+See `ase` vignette for estimation of the latent vectors of a random dot-product graph from the embedded clusters, by running `vignette('ASE', package='graphstats')`. The EM and K-means algorithm could easily identify the clusters in this setting. With the `sgc` utility, we have a full range of tools for the spectral analysis of graphs.

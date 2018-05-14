@@ -71,7 +71,7 @@ gs.plot.plot_matrix(B, title="Original B Matrix", legend.name="Entries", ffactor
 We can see the similarity between A and the matched B, and the dissimilarity between the original and matched B. Below, we mark the edge disagreements of our approximate solution.
 
 ```{r, fig.width=5, fig.height=4}
-gs.plot.plot_matrix(abs(A-B_matched), title="Disagreements", legend.name="Disagreement = 1", ffactor = TRUE)
+gs.plot.plot_matrix(abs(A-B_matched), title="Disagreements", legend.name="Disagreement", ffactor = TRUE)
 ```
 
 The overall connectivity of A is very closely recovered.
