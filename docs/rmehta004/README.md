@@ -37,12 +37,12 @@ install.packages(packages)
 
 In RStudio, go to File > Open Project and navigate to the `graphstats.Rproj` file in the `graphstats` repo. To ensure that the package builds correctly, run the following:
 
+- Build the package: `CTRL` + `SHIFT` + `B`
+- Build the vignettes:
 ```r
 devtools::build_vignettes()
 ```
-Next, run the following commands in order.
-- `CTRL` + `SHIFT` + `B` to build the package.
-- `CTRL` + `SHIFT` + `T` to test the package.
+- Test the package: `CTRL` + `SHIFT` + `T`
 
 ## Step 4: Read Vignettes
 
