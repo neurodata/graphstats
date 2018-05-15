@@ -25,13 +25,13 @@ Leveraging these known correspondences, referred to as seeds, we match the induc
 
 # Simulation on Isomorphic Graphs
 
-Here, we produce a simple random graph G1 with n = 20 and p = 0.5. We then produce B by maintaining the first m = 3 rows (the seeds), and permuting the remaining n - m vertices.
+Here, we produce a simple random graph G1 with n = 10 and p = 0.5. We then produce G2 by maintaining the first m = 3 rows (the seeds), and permuting the remaining n - m vertices. We delete the last vertex of G2 just make two graphs different sizes.
 
 ```{r, fig.width = 5, fig.height=4}
 
 # Number of seeds, total nubmer of vertices, and edge probability.
 m <- 3
-n <- 20
+n <- 10
 p <- 0.5
 set.seed(1234)
 
@@ -51,8 +51,15 @@ gamma = 0.01
 vn = vnsgm(x,seeds,g1,g2,h,ell,R,gamma,plotF = TRUE)
 ```
 
-Here green represents the set of seeds; red represents VOIs; blue represents unobserved vertices we matched via SGM. Shade of color represents how likely vertex i in graph 1 is a match to vertex j in graph 2.
+Here green represents the set of seeds; red represents VOIs; blue represents unobserved vertices we matched via SGM. Shade of color represents how likely vertex i in graph 1 is a match to vertex j in graph 2. Note that for a particular row, in the output probability matrix, the sum should be 1. In this case, we do not see any shade change, therefore we only have one prediction of match for each vertex.
 
+Let's compare out prediction of matches to our original permutation.
+```{r, fig.width=5, fig.height=4}
+nominated.vertex = as.numeric(colnames(vn$P)[apply(vn$P,1,which.max)])
+df = as.data.frame(rbind(permute,nominated.vertex))
+row.names(df) = c('True Permutation of G1','VN Predicted Permutation')
+df
+```
 
 # Simulation on r-Correlated ER Graphs
 
