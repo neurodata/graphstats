@@ -1,0 +1,90 @@
+---
+title: "Nonparametric two-sample testing"
+author: "Kemeng Zhang"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Nonpar}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  code_folding: hide
+---
+```{r, warning=FALSE, message=FALSE}
+require(igraph)
+require(graphstats)
+require(mclust)
+require(ggplot2)
+require(gridExtra)
+```
+
+We present `nonpar`, nonparametric two-sample testing on random graphs used to test the hypothesis that two graphs are identically distributed.
+
+## Testing/Simulation
+### Stochastic Blockmodel Example
+We illustrate the hypothesis tests through simulated examples. We simulate two graphs from Stochastic Blockmodel. For graph 1, edge probability within a block is approximately 0.23, and between blocks approximately 0.76, with block membership probabilities (0.4,0.6). Let graph 2 has the same block membership probabilities, but edge probability within a block is approximately 0.23 + epsilon, and between blocks approximately 0.76, where epsilon is 0.01.
+
+We then test, for a given epsilon > 0, the hypothesis whether graph 1 and graph 2 are identially distributed. `nonpar` uses bootstrapping to conduct hypothesis testing.
+
+```{r, fig.height=3.5, fig.width=5}
+# Generate two graphs from SBM
+set.seed(123)
+n <- 100
+block.sizes <- c(n * 0.4, n * 0.6)
+block_probs <- matrix(c(0.23, 0.76,
+                        0.76, 0.23), nrow = 2)
+epsilon = 0.01
+block_probs.epsilon <- matrix(c(0.23 + epsilon, 0.76, 
+                                0.76, 0.23 + epsilon), nrow = 2)
+g1 <- igraph::sample_sbm(n, block_probs, block.sizes)
+g2 <- igraph::sample_sbm(n, block_probs.epsilon, block.sizes)
+```
+
+Here, let's visualize the two graphs we simulated through their adjacency matrices.
+
+```{r, fig.height=3, fig.width=8}
+A1 <- matrix(as_adj(g1), nrow = 100)
+A2 <- matrix(as_adj(g2), nrow = 100)
+
+p1 = gs.plot.plot_matrix(A1, legend.name = "connection", xlabel = "vertex", 
+                    ylabel = "vertex", title = "Two Graphs Simulated from 
+                    SBM", ffactor = TRUE)
+p2 = gs.plot.plot_matrix(A2, legend.name = "connection", xlabel ="vertex", 
+                         ylabel = "vertex", ffactor = TRUE)
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Now, we can embed two graphs to R^2 and compare their latent positions:
+
+```{r, fig.height=3.5, fig.width=5}
+embed.graph <- function(g, dim) {
+  # Call ase to get latent position
+  lpv = graphstats::ase(g, dim)
+  for (i in 1:dim) {
+    if (sign(lpv[1, i]) != 1) {
+      lpv[, i] = -lpv[, i]
+    }
+  }
+  return(lpv)
+}
+Xhat = embed.graph(g1, 2)
+Xhat_epsilon = embed.graph(g2, 2)
+Xhat_df = as.data.frame(Xhat)
+Xhat_epsilon_df = as.data.frame(Xhat_epsilon)
+gg <- ggplot(Xhat_df, aes(x=V1, y=V2, color = "Graph 1")) + 
+  geom_point(size=1, shape=1)
+gg + geom_point(data = Xhat_epsilon_df, aes(x=V1, y=V2,color = "Graph 2"),
+                size=1, shape=1) + 
+  labs(title="Latent Positions of Two Graphs", x="X", y="Y") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Now, the significance level is set to default alpha = 0.05 and the rejection regions are specified via B = 200 bootstrap permutation using the estimated latent positions.
+
+```{r, fig.height=4, fig.width=6}
+np = nonpar(g1, g2, printResult = TRUE)
+```
+```{r, fig.height=4, fig.width=6}
+np$plot
+```
+
+We reject the null hypothesis if test statistic (blue dashed line) is to the right of the critical value (red line). Here we failed to reject our null since our test statistic is inside the acceptance region.
