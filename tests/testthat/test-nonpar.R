@@ -91,7 +91,7 @@ test_that("End-to-end testing.", {
     g_sbm <- igraph::sample_sbm(n, pref.matrix=B_sbm, block.sizes=c(num_class1, num_class2))
     # Simple random graph.
     g_er <- igraph::sample_sbm(n, pref.matrix=B_er, block.sizes=c(num_class1, num_class2))
-    invisible(capture.output(np <- nonpar(g_sbm, g_er, bootstrap_sample = 50)))
+    invisible(capture.output(np <- nonpar(g_sbm, g_er, bootstrap_sample = 50, plot)))
     test.stat <- append(test.stat, np$p_value)
   }
 

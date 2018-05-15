@@ -15,19 +15,7 @@ require(igraph)
 require(reshape2)
 ```
 
-## Principle Component Analysis
-
-Principle component analysis, or PCA is a technique that is widely used for applications such as dimensionality reduction. PCA can be defined as the orthogonal projection of the data onto a lower dimensional linear space, know as the principle subspace, such that the variance of the projected data is maximized.
-
-### Solution
-
-The variance will be a maximum when we set each principle component equal to the eigenvector. Here, the corresponding eigenvalue measures the relative importance of each principle component. Dimension reduction is then achieved by selecting only the top few coordinates (principle components).
-
-The problem that we shall focus on now is that of deciding how many coordinates should be retained.
-
-## Dimensionality Selection
-
-The gist of our method consists of explicitly constructing a model for the eigenvalues and estimating the position of the “gap” or the “elbow” by maximizing a profile likelihood function.
+Here, we use the `dimselect` function to select the optimal number of dimensions for dimensionality reduction problems. The gist of our method consists of explicitly constructing a model for the eigenvalues and estimating the position of the “gap” or the “elbow”.
 
 ### Scree plot
 Plot the eigenvalues in descending order (often called a scree plot) and look for a “big gap” or an “elbow” in such a graph.
@@ -47,13 +35,9 @@ g + geom_bar(stat="identity", width = 0.5, fill="tomato2") +
       theme(axis.text.x = element_text(angle=65, vjust=0.6))
 ```
 
-### The Method
-
-First, order measures of importance of the corresponding coordinates. In the case of PCA these are ordered eigenvalues. Our basic idea is very simple. If a “gap” or an “elbow” exists at position N, then we can think of two different sections seperated by position N as samples from two different distributions. For simplicity, we assume these distributions are Gaussian. We then proceed to compute the MLE for N based on the profile likelihood.
-
 ## Testing/Simulated Examples
 
-Here, we run a simulation on a stochastic blockmodel (SBM). We will generate a two-block SBM, and run Adjacency Spectral Embedding (ASE) on it. Here we expect the number of dimensions selected by dimselect.R to be the number of blocks.
+Here, we run a simulation on a stochastic blockmodel (SBM). We will generate a two-block SBM, and compute the singular values of the adjacency matrix. Here we expect the number of dimensions selected by `dimselect` to be the number of blocks.
 
 ```{r, fig.height=3.5, fig.width=5}
 set.seed(123)
@@ -74,10 +58,10 @@ g_sbm <- igraph::sample_sbm(n, pref.matrix=B_sbm, block.sizes=c(num_class1, num_
 A_sbm <- igraph::as_adj(g_sbm)
 A = matrix(A_sbm, nrow = 100)
 gs.plot.plot_matrix(A, legend.name = "connection", xlabel = "vertex", 
-                    ylabel = "vertex", title = "Graph Simulated from SBM")
+                    ylabel = "vertex", title = "Graph Simulated from SBM",ffactor = TRUE)
 ```
 
-Run dimselect.R on the vector of singular values we get from adjacency matrix:
+Run `dimselect` on the vector of singular values we get from adjacency matrix:
 
 ```{r, fig.height=3.5, fig.width=5}
 sigma_sbm <- svd(A, n)$d

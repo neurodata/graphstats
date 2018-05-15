@@ -16,58 +16,41 @@ require(mclust)
 require(ggplot2)
 require(gridExtra)
 ```
-## Introduction
-The nonparametric two-sample hypothesis testing problem involves:
-given X_1, X_2, …, X_n i.i.d. F and Y_1, Y_2, …, Y_m i.i.d. G, test the null hypothesis of F = G against the alternative hypothesis of F is not equal to G. The test statistic is based on embedding F and G into a reproducing kernel Hilbert space and then compute a distance between the resulting embeddings. For this primitive, the Hilbert space is associated with the Gaussian kernel.
+
+We present `nonpar`, nonparametric two-sample testing on random graphs used to test the hypothesis that two graphs are identically distributed.
 
 ## Testing/Simulation
 ### Stochastic Blockmodel Example
-We illustrate the hypothesis tests through simulated examples. Let F_epsilon for a given epsilon > 0 be mixture of point masses corresponding to a two-block stochastic block model with block membership probabilities (0.4,0.6) and block probabilities 0.23+epsilon if in the same block, 0.76 otherwise. 
+We illustrate the hypothesis tests through simulated examples. We simulate two graphs from Stochastic Blockmodel. For graph 1, edge probability within a block is approximately 0.23, and between blocks approximately 0.76, with block membership probabilities (0.4,0.6). Let graph 2 has the same block membership probabilities, but edge probability within a block is approximately 0.23 + epsilon, and between blocks approximately 0.76, where epsilon is 0.01.
 
-Suppose we are given two graphs G ~ F_0 (known) and G_epsilon ~ F_epsilon (unknown).
-We then test, for a given epsilon > 0, the hypothesis whether F_0 and F_epsilon are the same distribution.
-We will use bootstrapping to conduct hypothesis testing. First, we need to construct a sampling distribution of our test statistic. Under null, we sample two graphs on 100 vertices from RDPG(F_0), then compute our test statistic using nonpar() 200 times. Then we can construct a rejection region and test whether the test statistic of G and G_epsilon lies inside that region (therefore we reject the null; otherwise, we fail to reject the null).
+We then test, for a given epsilon > 0, the hypothesis whether graph 1 and graph 2 are identially distributed. `nonpar` uses bootstrapping to conduct hypothesis testing.
 
 ```{r, fig.height=3.5, fig.width=5}
-# Generate Adjacency Matrix
-sbm <- function(epsilon) {
-  n <- 100
-  blocks <- c(rep(0, n*0.4), rep(1, n*0.6))
-  A <- matrix(rep(0, n*n), nrow = n)
-  for (i in 2:n) {
-    for (j in 1:(i-1)) {
-      if (blocks[i] == blocks[j]) {
-        A[i, j] <- rbinom(1, 1, 0.23 + epsilon)
-      } else {
-        A[i, j] <- rbinom(1, 1, 0.76)
-      }
-      A[j, i] <- A[i, j]
-    }
-  }
-  g <- igraph::graph_from_adjacency_matrix(A)
-  g
-}
+# Generate two graphs from SBM
+set.seed(123)
+n <- 100
+block.sizes <- c(n * 0.4, n * 0.6)
+block_probs <- matrix(c(0.23, 0.76,
+                        0.76, 0.23), nrow = 2)
+epsilon = 0.01
+block_probs.epsilon <- matrix(c(0.23 + epsilon, 0.76, 
+                                0.76, 0.23 + epsilon), nrow = 2)
+g1 <- igraph::sample_sbm(n, block_probs, block.sizes)
+g2 <- igraph::sample_sbm(n, block_probs.epsilon, block.sizes)
 ```
 
-Now, we are given two graphs to perform hypothesis testing:
-G ~ F_0, G_epsilon ~ F_epsilon;
-
-where we set epsilon to be 0.01.
-```{r, fig.height=3.5, fig.width=5}
-g = sbm(0)
-g_epsilon = sbm(0.01)
-```
+Here, let's visualize the two graphs we simulated through their adjacency matrices.
 
 ```{r, fig.height=3, fig.width=8}
-A_sbm <- igraph::as_adj(g)
-A = matrix(A_sbm, nrow = 100)
-A_epsilon_sbm <- igraph::as_adj(g_epsilon)
-A_epsilon = matrix(A_epsilon_sbm, nrow = 100)
-g1 = gs.plot.plot_matrix(A, legend.name = "connection", xlabel = "vertex", 
-                    ylabel = "vertex", title = "Graph Simulated from SBM")
-g2 = gs.plot.plot_matrix(A_epsilon, legend.name = "connection", 
-                         xlabel ="vertex", ylabel = "vertex")
-grid.arrange(g1, g2, nrow = 1)
+A1 <- matrix(as_adj(g1), nrow = 100)
+A2 <- matrix(as_adj(g2), nrow = 100)
+
+p1 = gs.plot.plot_matrix(A1, legend.name = "connection", xlabel = "vertex", 
+                    ylabel = "vertex", title = "Two Graphs Simulated from 
+                    SBM", ffactor = TRUE)
+p2 = gs.plot.plot_matrix(A2, legend.name = "connection", xlabel ="vertex", 
+                         ylabel = "vertex", ffactor = TRUE)
+grid.arrange(p1, p2, nrow = 1)
 ```
 
 Now, we can embed two graphs to R^2 and compare their latent positions:
@@ -83,8 +66,8 @@ embed.graph <- function(g, dim) {
   }
   return(lpv)
 }
-Xhat = embed.graph(g, 2)
-Xhat_epsilon = embed.graph(g_epsilon, 2)
+Xhat = embed.graph(g1, 2)
+Xhat_epsilon = embed.graph(g2, 2)
 Xhat_df = as.data.frame(Xhat)
 Xhat_epsilon_df = as.data.frame(Xhat_epsilon)
 gg <- ggplot(Xhat_df, aes(x=V1, y=V2, color = "Graph 1")) + 
@@ -95,10 +78,13 @@ gg + geom_point(data = Xhat_epsilon_df, aes(x=V1, y=V2,color = "Graph 2"),
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Now, the significance level is set to alpha = 0.05 and the rejection regions are specified via B = 200 bootstrap permutation using the estimated latent positions.
+Now, the significance level is set to default alpha = 0.05 and the rejection regions are specified via B = 200 bootstrap permutation using the estimated latent positions.
+
 ```{r, fig.height=4, fig.width=6}
-np = nonpar(g, g_epsilon)
+np = nonpar(g1, g2, printResult = TRUE)
+```
+```{r, fig.height=4, fig.width=6}
 np$plot
 ```
 
-We reject the null hypothesis if test statistic yielded by G and G_epsilon are in the top 5% of test_distribution (to the right of the red vertical line). Here we failed to reject our null because our test statistic is inside the acceptance region.
+We reject the null hypothesis if test statistic (blue dashed line) is to the right of the critical value (red line). Here we failed to reject our null since our test statistic is inside the acceptance region.

@@ -59,7 +59,6 @@ test_that("End-to-end testing.", {
   for (s in 1:num_sims) {
 
     ## Simulate  core-periphery SBM, and simple ER graph.
-    set.seed(123)
     n <- 40
     num_class1 <- n/2
 
@@ -73,6 +72,7 @@ test_that("End-to-end testing.", {
                       p, p), nrow = 2)
 
     # 2-block simulation.
+    set.seed(123)
     g_sbm <- igraph::sample_sbm(n, pref.matrix=B_sbm, block.sizes=c(num_class1, num_class2))
     # Simple random graph.
     g_er <- igraph::sample_sbm(n, pref.matrix=B_er, block.sizes=c(num_class1, num_class2))

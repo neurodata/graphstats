@@ -172,7 +172,7 @@ test_that("End-to-end: r-Correlated ER Graphs.", {
   # Number of simulations.
   num_right <- 0
   num_wrong <- 0
-
+  set.seed(1234)
   # Create graph.
   ns <- seq(10,100,30)
   p <- 0.5

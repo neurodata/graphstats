@@ -16,6 +16,7 @@
 #' @param sigma bandwidth of the rbf kernel for computing test statistic
 #' @param alpha Significance level of hypothesis testing
 #' @param bootstrap_sample Number of bootstrap samples when performing hypothesis tesing
+#' @param printResult logical indicating if output the result of hypothesis testing is to be printed
 #' @return \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from the same distribution and \eqn{T} far from 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from different distribution.
@@ -24,48 +25,10 @@
 #' @author Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
 #' @export
 
-nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sample = 200)
+nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, printResult = FALSE)
 {
   # Check input format
-  if (class(G1) == "dgCMatrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
-  if (class(G1) == "matrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
-  if (class(G1) != 'igraph') { stop("Input object 'G1' is not an igraph object.") }
-  if (class(G2) == "dgCMatrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
-  if (class(G2) == "matrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
-  if (class(G2) != 'igraph') { stop("Input object 'G2' is not an igraph object.") }
-  if (!is.null(dim)) {
-    if (class(dim) != "numeric" && !is.integer(dim)) { stop("Input 'dim' is not a number.") }
-    if (dim%%1 != 0) { stop("Input 'dim' must be an integer.") }
-    if (length(dim) > 1) { stop("Input 'dim' has length > 1.") }
-    if (dim < 1) { stop("Number of dimensions 'dim' is less than 1.") }
-    if (dim > igraph::gorder(G1) || dim > igraph::gorder(G2)) { stop("Num. Embedded dimensions 'dim' is greater than number of vertices.") }
-  }
-
-  if (!is.null(sigma)) {
-    if (class(sigma) != "numeric") {
-      stop("Input object 'sigma' is not a numeric value.")
-    } else if (length(sigma) != 1) {
-      stop("Input object 'sigma' is not a numeric value.")
-    }
-  }
-  if (class(alpha) != "numeric") {
-    stop("Input object 'alpha' is not a numeric value.")
-  } else if (length(alpha) != 1) {
-    stop("Input object 'alpha' is not a numeric value.")
-  } else {
-    if (alpha >= 1 || alpha <= 0) {
-      stop("Significance level alpha must be strictly between 0 and 1.")
-    }
-  }
-  if (class(bootstrap_sample) != "numeric") {
-    stop("Input object 'bootstrap_sample' is not a numeric value.")
-  } else if (length(bootstrap_sample) != 1) {
-    stop("Input object 'bootstrap_sample' is not a numeric value.")
-  } else {
-    if (bootstrap_sample <= 20) {
-      stop("The size of bootstrap sample is too small. Pick a larger value.")
-    }
-  }
+  nonpar.validateInput(G1, G2, dim, sigma, alpha, bootstrap_sample, printResult)
 
   if (is.null(sigma)) {
     dim = select.dim(G1, G2)
@@ -84,10 +47,12 @@ nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sam
   if (p_val <= alpha) {
     reject = TRUE
   }
-  if (reject) {
-    print("Reject the nullhypothesis that two graphs are identically distributed.")
-  } else {
-    print("Fail to reject the null hypothesis that two graphs are identically distributed.")
+  if (printResult) {
+    if (reject) {
+      print("Reject the nullhypothesis that two graphs are identically distributed.")
+    } else {
+      print("Fail to reject the null hypothesis that two graphs are identically distributed.")
+    }
   }
   gg = plot.distribution(test_distribution, reject_threshold, test_stat)
   out = list(X1 = Xhat1, X2 = Xhat2, bandwidth = sigma, test_stats = test_stat,
@@ -253,3 +218,46 @@ plot.distribution <- function(test_distribution, cv, ts) {
   return(q)
 }
 
+nonpar.validateInput <- function(G1, G2, dim, sigma, alpha, bootstrap_sample, printResult) {
+
+  if (class(G1) == "dgCMatrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
+  if (class(G1) == "matrix") { G1 = igraph::graph_from_adjacency_matrix(G1) }
+  if (class(G1) != 'igraph') { stop("Input object 'G1' is not an igraph object.") }
+  if (class(G2) == "dgCMatrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
+  if (class(G2) == "matrix") { G2 = igraph::graph_from_adjacency_matrix(G2) }
+  if (class(G2) != 'igraph') { stop("Input object 'G2' is not an igraph object.") }
+  if (!is.null(dim)) {
+    if (class(dim) != "numeric" && !is.integer(dim)) { stop("Input 'dim' is not a number.") }
+    if (dim%%1 != 0) { stop("Input 'dim' must be an integer.") }
+    if (length(dim) > 1) { stop("Input 'dim' has length > 1.") }
+    if (dim < 1) { stop("Number of dimensions 'dim' is less than 1.") }
+    if (dim > igraph::gorder(G1) || dim > igraph::gorder(G2)) { stop("Num. Embedded dimensions 'dim' is greater than number of vertices.") }
+  }
+
+  if (!is.null(sigma)) {
+    if (class(sigma) != "numeric") {
+      stop("Input object 'sigma' is not a numeric value.")
+    } else if (length(sigma) != 1) {
+      stop("Input object 'sigma' is not a numeric value.")
+    }
+  }
+  if (class(alpha) != "numeric") {
+    stop("Input object 'alpha' is not a numeric value.")
+  } else if (length(alpha) != 1) {
+    stop("Input object 'alpha' is not a numeric value.")
+  } else {
+    if (alpha >= 1 || alpha <= 0) {
+      stop("Significance level alpha must be strictly between 0 and 1.")
+    }
+  }
+  if (class(bootstrap_sample) != "numeric") {
+    stop("Input object 'bootstrap_sample' is not a numeric value.")
+  } else if (length(bootstrap_sample) != 1) {
+    stop("Input object 'bootstrap_sample' is not a numeric value.")
+  } else {
+    if (bootstrap_sample <= 20) {
+      stop("The size of bootstrap sample is too small. Pick a larger value.")
+    }
+  }
+  if (!is.logical(printResult)) { stop("Error: Input 'plotF' must be a logical.")}
+}

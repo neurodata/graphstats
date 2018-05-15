@@ -60,7 +60,7 @@ p + xlab("PC Score 1") + ylab("PC Score 2")
 
 ## Estimating the Block Assignments
 
-One application of `ase` is graph clustering. If we cluster the embedded data as if it were a mixture of Gaussians, the cluster means consistenty estimate the latent vectors (down to a rotation).
+One application of `ase` is graph clustering. If we cluster the embedded data as if it were a mixture of Gaussians, the cluster means consistent estimate the latent vectors (down to a rotation).
 
 ```{r, fig.height=4, fig.width=4}
 # Cluster using EM algorithm.

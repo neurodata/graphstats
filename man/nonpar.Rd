@@ -5,7 +5,7 @@
 \title{Nonparametric two-sample testing using kernel-based test statistic}
 \usage{
 nonpar(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05,
-  bootstrap_sample = 200)
+  bootstrap_sample = 200, printResult = FALSE)
 }
 \arguments{
 \item{G1}{an igraph object}
@@ -20,6 +20,8 @@ the maximum of two number of dimensions selected on two graphs by dimselect.R}
 \item{alpha}{Significance level of hypothesis testing}
 
 \item{bootstrap_sample}{Number of bootstrap samples when performing hypothesis tesing}
+
+\item{printResult}{logical indicating if output the result of hypothesis testing is to be printed}
 }
 \value{
 \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
