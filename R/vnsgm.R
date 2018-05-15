@@ -43,6 +43,7 @@
 #' in \eqn{G_1} and \eqn{G_2}, respectively.
 #'
 #' @import igraph
+#' @import plyr
 #' @author Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>
 #'
 #' @references Patsolic, Heather G.; Park, Youngser; Lyzinski, Vince; Priebe, Carey E. (2017).
@@ -238,31 +239,31 @@ plotP <- function(P,Seed,G1_vertices,G2_vertices,x)
   P$vertex = as.factor(sort(G1_vertices))
   x.f = as.factor(x)
   P.m <- suppressMessages(melt(P))
-  P.m$Category <- P.m$vertex
+  P.s <- plyr::ddply(P.m, .(variable), transform,
+                 rescale = scale(value))
+  P.s$Category <- P.s$vertex
   seed.set = as.factor(Seed)
   set1 = setdiff(G1_vertices,x.f)
   set2 = setdiff(set1,seed.set)
   set3 = setdiff(set1,set2)
   set4 = setdiff(G1_vertices,set1)
-  levels(P.m$Category) <- list("VOI" = set4,
+  levels(P.s$Category) <- list("VOI" = set4,
                                "Seed" = set3,
                                "Other" = set2)
-  P.m$rescale <- P.m$value + 100*(as.numeric(P.m$Category)-1)
-  scalerange <- range(P.m$value)
-  gradientends <- scalerange + rep(c(0,100,200), each=2)
-  colorends <- c("white", "firebrick", "white", "springgreen", "white", "steelblue")
-  gg = ggplot(P.m, aes(variable, vertex)) +
-    geom_tile(aes(fill = rescale), colour = "white") +
+  P.s$rescale = (P.s$rescale-min(P.s$rescale))/(max(P.s$rescale)-min(P.s$rescale))
+
+  gg = ggplot(P.s, aes(variable, vertex)) +
+    geom_tile(aes(alpha = rescale,fill = Category), colour = "white") +
+    scale_alpha(range=c(0,1)) +
     xlab("Vertices of Graph 2") + ylab("Vertices of Graph 1") +
-    labs(title = "Likelihood of Vertices in Graph 1 Matched to Vertices in Graph 2") +
-    scale_fill_gradientn(colours = colorends, values = scales::rescale(gradientends)) +
+    labs(title = "Proportion of times Vertices in Graph 1 Matched to Vertices in Graph 2",
+         alpha = "Proportion") +
     scale_x_discrete(expand = c(0, 0)) +
     scale_y_discrete(expand = c(0, 0)) +
-    theme_grey(base_size = 9) +
-    theme(legend.position = "none",
-    axis.ticks = element_blank(),
+    theme_classic(base_size = 9) +
+    theme(axis.ticks = element_blank(),
     axis.text.x = element_text(angle = 0, hjust = 0))
-  return(gg)
+    return(gg)
 }
 
 # Unordered function validation.

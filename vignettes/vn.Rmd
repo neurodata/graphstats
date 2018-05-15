@@ -55,11 +55,18 @@ Here green represents the set of seeds; red represents VOIs; blue represents uno
 
 Let's compare out prediction of matches to our original permutation.
 ```{r, fig.width=5, fig.height=4}
-nominated.vertex = as.numeric(colnames(vn$P)[apply(vn$P,1,which.max)])
+# If no match is found for a given vertex, the index of the nominated vertex is set to zero
+P = vn$P
+col = colnames(P)
+P$"0" = 0
+P = P[c("0",col)]
+permute[permute == 10] = 0 # The 10th vertex in graph 2 is deleted
+nominated.vertex = as.numeric(colnames(P)[apply(P,1,which.max)])
 df = as.data.frame(rbind(permute,nominated.vertex))
 row.names(df) = c('True Permutation of G1','VN Predicted Permutation')
 df
 ```
+
 
 # Simulation on r-Correlated ER Graphs
 
@@ -74,7 +81,7 @@ X <- rbind(X1, X2)
 set.seed(6789)
 
 # Pearson correlation coefficient.
-r <- 0.75
+r <- 0.5
 
 # Sample r-SBM.
 sampled_graphs <- rdpg.sample.correlated(X, r)
@@ -86,7 +93,7 @@ B <- as_adj(g2, sparse = FALSE)
 gs.plot.plot_matrix(A + B, title="A + B (Overlap)", legend.name="A_ij + B_ij")
 ```
 
-These graphs are not exactly equal, but have high correlation. Their matrix addition, pictured above, has many 2 and 0 entries, and few 1 entries. Here, we choose the first two vertices in each graph as our seeding.
+These graphs are not exactly equal. Their matrix addition, pictured above, has many 2 and 0 entries, and some 1 entries. Here, we choose the first two vertices in each graph as our seeding.
 
 ```{r, fig.width=4.5, fig.height=4}
 
