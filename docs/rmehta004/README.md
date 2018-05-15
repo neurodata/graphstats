@@ -38,7 +38,7 @@ install.packages(packages)
 In RStudio, go to File > Open Project and navigate to the `graphstats.Rproj` file in the `graphstats` repo. To ensure that the package builds correctly, run the following:
 
 ```r
-devtools::document()
+devtools::build_vignettes()
 ```
 Next, run the following commands in order.
 - `CTRL` + `SHIFT` + `B` to build the package.
@@ -46,4 +46,4 @@ Next, run the following commands in order.
 
 ## Step 4: Read Vignettes
 
-All vignettes can be found in the `vignettes` directory of the package. Open any file and click 'Knit' at the top of the RStudio toolbar to view the HTML rendered versions.
+All vignettes can be found in the `vignettes` directory of the package. Vignette any function by running `vignette('<FUNCTION-NAME', package = 'graphstats')` in the `R` console. (Ex: `vignette('ase', package = "graphstats")`.)
