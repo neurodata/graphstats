@@ -51,7 +51,7 @@ gamma = 0.01
 vn = vnsgm(x,seeds,g1,g2,h,ell,R,gamma,plotF = TRUE)
 ```
 
-Here green represents the set of seeds; red represents VOIs; blue represents unobserved vertices we matched via SGM. Shade of color represents how likely vertex i in graph 1 is a match to vertex j in graph 2. Note that for a particular row, in the output probability matrix, the sum should be 1. In this case, we do not see any shade change, therefore we only have one prediction of match for each vertex.
+Here green represents the set of seeds; red represents VOIs; blue represents unobserved vertices we matched via SGM. Shade of color represents how likely vertex i in graph 1 is a match to vertex j in graph 2. In this case, we do not see any shade change, therefore we only have one prediction of match for each vertex.
 
 Let's compare out prediction of matches to our original permutation.
 ```{r, fig.width=5, fig.height=4}
