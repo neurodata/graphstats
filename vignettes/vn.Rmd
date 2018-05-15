@@ -95,7 +95,7 @@ gs.plot.plot_matrix(A + B, title="A + B (Overlap)", legend.name="A_ij + B_ij")
 
 These graphs are not exactly equal. Their matrix addition, pictured above, has many 2 and 0 entries, and some 1 entries. Here, we choose the first two vertices in each graph as our seeding.
 
-```{r, fig.width=4.5, fig.height=4}
+```{r, fig.width=5, fig.height=4}
 
 # Identify seeds.
 m <- 2
