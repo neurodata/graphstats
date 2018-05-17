@@ -1,0 +1,20 @@
+---
+title: "Mouse Connectome Exploration"
+author: "Eric Bridgeford"
+date: "May 17, 2018"
+output: html_document
+---
+
+https://www.researchgate.net/publication/261327031_A_mesoscale_connectome_of_the_mouse_brain
+
+# Visualization of Connectome
+
+```{r}
+
+```
+
+# SBM
+
+```{r}
+
+```

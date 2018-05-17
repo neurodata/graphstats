@@ -1,0 +1,27 @@
+---
+title: "Fly Connectome Exploration"
+author: "Eric Bridgeford"
+date: "May 17, 2018"
+output: html_document
+---
+
+```{r, message=FALSE}
+require(igraph)
+require(graphstats)
+```
+
+# Visualization of Connectome
+
+```{r}
+fly <- read_graph(file='../data/fly_mushroom.graphml', format="graphml")
+fly.mtx <- as_adjacency_matrix(fly, type="both", sparse=FALSE)
+rownames(fly.mtx) <- c()
+colnames(fly.mtx) <- c()
+gs.plot.plot_matrix(fly.mtx)
+```
+
+# SBM
+
+```{r}
+
+```

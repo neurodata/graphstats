@@ -1,0 +1,27 @@
+---
+title: "Human Connectome Exploration"
+author: "Eric Bridgeford"
+date: "May 17, 2018"
+output: html_document
+---
+
+# Visualization of Connectome
+
+```{r}
+
+```
+
+# SBM
+
+## Left/Right
+
+```{r}
+
+```
+
+
+## Gray/White
+
+```{r}
+
+```
