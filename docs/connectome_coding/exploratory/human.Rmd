@@ -5,10 +5,16 @@ date: "May 17, 2018"
 output: html_document
 ---
 
+```{r}
+require(graphstats)
+```
+
 # Visualization of Connectome
 
 ```{r}
+dwi.graph <- data(human.dmri)
 
+fmri.graph <- data(human.fmri)
 ```
 
 # SBM
