@@ -39,7 +39,7 @@
 #' @return the matrix as a plot.
 #' @author Eric Bridgeford
 #' @export
-gs.plot.plot_adjacency <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=FALSE,
+gs.plot.plot_adjacency <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
                                 font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001) {
   # load adjacency matrix as a dense matrix
   adj <- as_adjacency_matrix(g, attr=edge.attr, names=vertex.label, type="both", sparse=FALSE)

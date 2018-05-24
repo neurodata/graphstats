@@ -58,11 +58,18 @@ mouse.duke <- make_plots("mouse.duke", "Mouse dMRI", "Source ROI", "Target ROI",
                          "Target Region", "weight", edge.xfm="log10")
 ```
 
-# Mouse Connectome, Allan Institute
+# Mouse Connectome, Allan Institute, Ipsi-Lateral
 
 ```{r}
-mouse.allan <- make_plots("mouse.allan", "Mouse, Green Protein", "Source ROI", "Target ROI", "region",
-                          "Source Region", "Target Region", "weight", edge.xfm="log10")
+mouse.allan.ipsi <- make_plots("mouse.allan.ipsi", "Mouse, Green Protein, Ipsilateral", "Source ROI", "Target ROI", "region",
+                               "Source Region", "Target Region", "weight", edge.xfm="log10")
+```
+
+# Mouse Connectome, Allan Institute, Contra-Lateral
+
+```{r}
+mouse.allan.contra <- make_plots("mouse.allan.contra", "Mouse, Green Protein, Contralateral", "Source ROI", "Target ROI", "region",
+                                 "Source Region", "Target Region", "weight", edge.xfm="log10")
 ```
 
 # Comparisons
