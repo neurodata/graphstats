@@ -7,8 +7,8 @@
 #' @importFrom reshape2 melt
 #' @param g input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.
 #' @param title the title for the square plot. Defaults to \code{""}.
-#' @param xlabel the x label for the square plot. Defaults to \code{"Vertex"}.
-#' @param ylabel the y label for the square plot. Defaults to \code{"Vertex"}.
+#' @param src.label the source label for the graph. Defaults to \code{"Vertex"}.
+#' @param tgt.label the target label for the graph. Defaults to \code{"Vertex"}.
 #' @param edge.attr the name of the attribute to use for weights. Defaults to \code{NULL}.
 #' \itemize{
 #' \item{\code{is.null(edge.attr)} plots the graph as a binary adjacency matrix.}
@@ -39,7 +39,7 @@
 #' @return the matrix as a plot.
 #' @author Eric Bridgeford
 #' @export
-gs.plot.plot_adjacency <- function(g, title="",xlabel="Vertex", ylabel="Vertex", edge.attr=FALSE,
+gs.plot.plot_adjacency <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=FALSE,
                                 font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001) {
   # load adjacency matrix as a dense matrix
   adj <- as_adjacency_matrix(g, attr=edge.attr, names=vertex.label, type="both", sparse=FALSE)
@@ -56,12 +56,12 @@ gs.plot.plot_adjacency <- function(g, title="",xlabel="Vertex", ylabel="Vertex",
       if (edge.xfm == "log") {
         edge.xfm=log
         # set 0-weight edges to far lower than rest of graph
-        adj.data$Weight[adj.data$Weight == 0] <- min(adj.data$Weight)/100
+        adj.data$Weight <- adj.data$Weight + eps
         wt.name = sprintf("log(%s)", wt.name)
       } else if (edge.xfm == "log10") {
         edge.xfm = log10
         # set 0-weight edges to far lower than rest of graph
-        adj.data$Weight[adj.data$Weight == 0] <- min(adj.data$Weight)/100
+        adj.data$Weight <- adj.data$Weight + eps
         wt.name = sprintf("log10(%s)", wt.name)
       }
       adj.data$Weight <- do.call(edge.xfm, list(adj.data$Weight))
@@ -75,10 +75,13 @@ gs.plot.plot_adjacency <- function(g, title="",xlabel="Vertex", ylabel="Vertex",
   #}
   plot.adj <- ggplot(adj.data, aes(x=Source, y=Target, fill=Weight)) +
     geom_tile() +
-    xlab(xlabel) +
-    ylab(ylabel) +
+    xlab(src.label) +
+    ylab(tgt.label) +
     ggtitle(title) +
     theme_bw()
+  if (vertex.label) {
+    plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
+  }
   if (is.character(edge.attr)) {
     plot.adj <- plot.adj +
       scale_fill_gradientn(colors=edge.colors, name=wt.name)

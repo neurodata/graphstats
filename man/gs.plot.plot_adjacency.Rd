@@ -4,9 +4,9 @@
 \alias{gs.plot.plot_adjacency}
 \title{Graph plot}
 \usage{
-gs.plot.plot_adjacency(g, title = "", xlabel = "Vertex",
-  ylabel = "Vertex", edge.attr = FALSE, font.size = NULL,
-  vertex.label = FALSE, vertex.attr = FALSE, log.xfm = FALSE,
+gs.plot.plot_adjacency(g, title = "", src.label = "Vertex",
+  tgt.label = "Vertex", edge.attr = FALSE, font.size = NULL,
+  vertex.label = FALSE, vertex.attr = FALSE, edge.xfm = FALSE,
   eps = 1e-04)
 }
 \arguments{
@@ -14,13 +14,13 @@ gs.plot.plot_adjacency(g, title = "", xlabel = "Vertex",
 
 \item{title}{the title for the square plot. Defaults to \code{""}.}
 
-\item{xlabel}{the x label for the square plot. Defaults to \code{"Vertex"}.}
+\item{src.label}{the source label for the graph. Defaults to \code{"Vertex"}.}
 
-\item{ylabel}{the y label for the square plot. Defaults to \code{"Vertex"}.}
+\item{tgt.label}{the target label for the graph. Defaults to \code{"Vertex"}.}
 
-\item{edge.attr}{the name of the attribute to use for weights. Defaults to \code{FALSE}.
+\item{edge.attr}{the name of the attribute to use for weights. Defaults to \code{NULL}.
 \itemize{
-\item{\code{edge.attr==FALSE} plots the graph as a binary adjacency matrix.}
+\item{\code{is.null(edge.attr)} plots the graph as a binary adjacency matrix.}
 \item{\code{is.character(edge.attr)} plot the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
 }}
 

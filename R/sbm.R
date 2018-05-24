@@ -3,17 +3,11 @@
 #' A function to fit a stochastic block model to a weighted or unweighted graph.
 #'
 #' @param g an \code{igraph} object. See \code{\link[igraph]{graph}} for details.
-#' @param community.attribute the attribute of the graph vertices denoting the vertex communities. Should be that \code{community.attr %in% names(vertex.attributes(g))}.
-#' @return the \code{[n, n]} probability matrix for each block, as an \code{igraph} object.
+#' @param community.attribute the attribute of the graph vertices denoting the vertex communities. Should be that \code{community.attribute %in% names(vertex.attributes(g))}.
+#' @return the probability matrix for each block, as an \code{igraph} object.
 #' Vertices will be the unique communities for attribute \code{community.attribute}. Each vertex in the resulting graph will have an attribute \code{community} indicating the vertices in \code{graph} that
 #' comprise the particular community the vertex summarizes See \code{\link[igraph]{graph}} for details.
-#' @examples
-#' library(graphstats)
 #'
-#' # sample a graph from an SBM
-#' g <- sample_sbm(n=20, block.sizes=c(12, 8), pref.matrix=cbind(c(0.8, 0.2), c(0.2, 0.8)))
-#' communities <- list(a=V(g)[1:12], b=V(g)[13:20])  # define communities of vertices in g
-#' sbm.g <- gs.sbm.fit(g, communities)  # fit SBM to graph
 #' @author Eric Bridgeford
 #' @export
 gs.sbm.fit <- function(g, community.attribute) {

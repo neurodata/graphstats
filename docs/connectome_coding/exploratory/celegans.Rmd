@@ -12,7 +12,6 @@ require(gridExtra)
 require(ggplot2)
 ```
 
-
 ```{r}
 # define this function
 load.data <- function(dat)
@@ -21,16 +20,24 @@ load.data <- function(dat)
   name <- data(list=dat, envir = e)[1]
   e[[name[[1]]]]
 }
-make_plots <- function(datname, title, vertex.name, attr.code, attr.name, wt) {
+make_plots <- function(datname, title, src.name, tgt.name, attr.code, src.attr.name,
+                       tgt.attr.name, wt, edge.xfm) {
   # Adjacency Matrix
   g <- load.data(datname)
-  adj.plot <- gs.plot.plot_adjacency(g, title=title, edge.attr = wt, xlabel=vertex.name, ylabel=vertex.name)
+  adj.plot <- gs.plot.plot_adjacency(g, title=title, edge.attr = wt, src.label=src.name,
+                                     tgt.label=tgt.name, edge.xfm=edge.xfm)
   
   # Degree Sequence
-  gr.degseq <- degree(g)
-  gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq)
-  deg.plot <- ggplot(gr.deg.dat, aes(x=degree)) +
-    geom_density() +
+  gr.degseq.in <- degree(g, mode="in")
+  gr.degseq.out <- degree(g, mode="out")
+  if (isTRUE(all.equal(as.numeric(gr.degseq.in), as.numeric(gr.degseq.out)))) {
+    gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction="undirected")
+  } else {
+    gr.deg.dat <- rbind(data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction="in"),
+                        data.frame(vertex=names(V(g)), degree=gr.degseq.out, Direction="out"))
+  }
+  deg.plot <- ggplot(gr.deg.dat, aes(x=degree, group=Direction, fill=Direction)) +
+    geom_density(alpha=0.2) +
     xlab("Vertex Degree") +
     ylab("Probability") +
     ggtitle(title) +
@@ -38,61 +45,64 @@ make_plots <- function(datname, title, vertex.name, attr.code, attr.name, wt) {
   
   # SBM
   gr.sbm <- gs.sbm.fit(g, community.attribute=attr.code)
-  sbm.plot <- gs.plot.plot_adjacency(gr.sbm, title=title, xlabel=attr.name, vertex.label=TRUE, ylabel=attr.name, edge.attr="weight")
+  sbm.plot <- gs.plot.plot_adjacency(gr.sbm, title=title, src.label=src.attr.name,
+                                     tgt.label=tgt.attr.name, vertex.label=TRUE, edge.attr="weight")
   return(list(adj.plot=adj.plot, deg.plot=deg.plot, sbm.plot=sbm.plot))
 }
-```
-
-# Fly, Left Hemisphere
-
-```{r}
-fly.left <- make_plots("fly.left", "Fly, Left Hemisphere", "Neuron", "type", "Neuron Type", NULL)
 ```
 
 # C Elegans, Gap, Male
 
 ```{r}
-celegans.gap.male <- make_plots("celegans.gap.male", "C Elegans, Gap, Male", "Neuron", "type", "Neuron Type", NULL)
+celegans.male.gap <- make_plots("celegans.male.gap", "C Elegans, Gap, Male", "Source Neuron",
+                                "Target Neuron", "type", "Source Neuron Type", "Target Neuron Type",
+                                "weight", edge.xfm="log10")
 ```
 
 # C Elegans, Gap, Herm
 
 ```{r}
-celegans.gap.herm <- make_plots("celegans.gap.herm", "C Elegans, Gap, Herm", "Neuron", "type", "Neuron Type", NULL)
+celegans.herm.gap <- make_plots("celegans.herm.gap", "C Elegans, Gap, Herm", "Source Neuron",
+                                "Target Neuron", "type", "Source Neuron Type", "Target Neuron Type",
+                                "weight", edge.xfm="log10")
 ```
 
 # C Elegans, Chem, Male
 
 ```{r}
-celegans.chem.male <- make_plots("celegans.chem.male", "C Elegans, Chem, Male", "Neuron", "type", "Neuron Type", NULL)
+celegans.male.chem <- make_plots("celegans.male.chem", "C Elegans, Chem, Male",
+                                 "Source Neuron", "Target Neuron", "type", "Source Neuron Type",
+                                 "Target Neuron Type", "weight", edge.xfm="log10")
 ```
 
 # C Elegans, Chem, Herm
 
 ```{r}
-celegans.chem.herm <- make_plots("celegans.chem.herm", "C Elegans, Chem, Herm", "Neuron", "type", "Neuron Type", NULL)
+celegans.herm.chem <- make_plots("celegans.herm.chem", "C Elegans, Chem, Herm", "Source Neuron",
+                                 "Target Neuron", "type", "Source Neuron Type", "Target Neuron Type",
+                                 "weight", edge.xfm="log10")
 ```
 
 # Comparisons
 
 ## Adjacency Matrix
 
-```{r, fig.width=12, fig.height=5}
-grid.arrange(celegans.gap.male$adj.plot, celegans.gap.herm$adj.plot, ncol=2)
-grid.arrange(celegans.chem.male$adj.plot, celegans.chem.herm$adj.plot, ncol=2)
+```{r, fig.width=13, fig.height=5}
+grid.arrange(celegans.male.gap$adj.plot, celegans.herm.gap$adj.plot, ncol=2)
+grid.arrange(celegans.male.chem$adj.plot, celegans.herm.chem$adj.plot, ncol=2)
 ```
 
 ## Degree Sequence
 
-```{r, fig.width=12, fig.height=5}
-grid.arrange(celegans.gap.male$deg.plot, celegans.gap.herm$deg.plot, ncol=2)
-grid.arrange(celegans.chem.male$deg.plot, celegans.chem.herm$deg.plot, ncol=2)
+```{r, fig.width=13, fig.height=5}
+grid.arrange(celegans.male.gap$deg.plot, celegans.herm.gap$deg.plot, ncol=2)
+grid.arrange(celegans.male.chem$deg.plot, celegans.herm.chem$deg.plot, ncol=2)
 ```
 
 ## SBM
 
-```{r, fig.width=12, fig.height=5}
-grid.arrange(celegans.gap.male$sbm.plot, celegans.gap.herm$sbm.plot, ncol=2)
-grid.arrange(celegans.chem.male$sbm.plot, celegans.chem.herm$sbm.plot, ncol=2)
+```{r, fig.width=13, fig.height=5}
+grid.arrange(celegans.male.gap$sbm.plot, celegans.herm.gap$sbm.plot, ncol=2)
+grid.arrange(celegans.male.chem$sbm.plot, celegans.herm.chem$sbm.plot, ncol=2)
 ```
 
