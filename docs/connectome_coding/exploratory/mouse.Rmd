@@ -4,17 +4,73 @@ author: "Eric Bridgeford"
 date: "May 17, 2018"
 output: html_document
 ---
-
-https://www.researchgate.net/publication/261327031_A_mesoscale_connectome_of_the_mouse_brain
-
-# Visualization of Connectome
-
-```{r}
-
+```{r, message=FALSE}
+require(igraph)
+require(graphstats)
+require(gridExtra)
+require(ggplot2)
 ```
 
-# SBM
 
 ```{r}
-
+# define this function
+load.data <- function(dat)
+{
+  e <- new.env()
+  name <- data(list=dat, envir = e)[1]
+  e[[name[[1]]]]
+}
+make_plots <- function(datname, title, vertex.name, attr.code, attr.name, wt) {
+  # Adjacency Matrix
+  g <- load.data(datname)
+  adj.plot <- gs.plot.plot_adjacency(g, title=title, edge.attr = wt, xlabel=vertex.name, ylabel=vertex.name)
+  
+  # Degree Sequence
+  gr.degseq <- degree(g)
+  gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq)
+  deg.plot <- ggplot(gr.deg.dat, aes(x=degree)) +
+    geom_density() +
+    xlab("Vertex Degree") +
+    ylab("Probability") +
+    ggtitle(title) +
+    theme_bw()
+  
+  # SBM
+  gr.sbm <- gs.sbm.fit(g, community.attribute=attr.code)
+  sbm.plot <- gs.plot.plot_adjacency(gr.sbm, title=title, xlabel=attr.name, vertex.label=TRUE, ylabel=attr.name, edge.attr="weight")
+  return(list(adj.plot=adj.plot, deg.plot=deg.plot, sbm.plot=sbm.plot))
+}
 ```
+
+# Mouse Connectome, Duke
+
+```{r}
+mouse.duke <- make_plots("mouse.duke", "Mouse dMRI", "Region", "region", "Region", "weight")
+```
+
+# Mouse Connectome, Allan Institute
+
+```{r}
+mouse.allan <- make_plots("mouse.allan", "Mouse green fluorescent protein", "Region", "region", "Region", "weight")
+```
+
+# Comparisons
+
+## Adjacency Matrix
+
+```{r, fig.width=12, fig.height=5}
+grid.arrange(mouse.duke$adj.plot, mouse.allan$adj.plot, ncol=2)
+```
+
+## Degree Sequence
+
+```{r, fig.width=12, fig.height=5}
+grid.arrange(mouse.duke$deg.plot, mouse.allan$deg.plot, ncol=2)
+```
+
+## SBM
+
+```{r, fig.width=12, fig.height=5}
+grid.arrange(mouse.duke$sbm.plot, mouse.allan$sbm.plot, ncol=2)
+```
+

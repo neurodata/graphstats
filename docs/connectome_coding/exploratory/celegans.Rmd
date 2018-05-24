@@ -1,9 +1,10 @@
 ---
-title: "Human Connectome Exploration"
+title: "C Elegans Exploration"
 author: "Eric Bridgeford"
-date: "May 17, 2018"
+date: "May 23, 2018"
 output: html_document
 ---
+
 ```{r, message=FALSE}
 require(igraph)
 require(graphstats)
@@ -42,18 +43,34 @@ make_plots <- function(datname, title, vertex.name, attr.code, attr.name, wt) {
 }
 ```
 
-# Human dMRI Connectome
+# Fly, Left Hemisphere
 
 ```{r}
-human.dmri.hem <- make_plots("human.dmri", "Human dMRI", "Region", "tissue", "Tissue Class", "weight")
-human.dmri.tissue <- make_plots("human.dmri", "Human dMRI", "Region", "hemisphere", "Hemisphere", "weight")
+fly.left <- make_plots("fly.left", "Fly, Left Hemisphere", "Neuron", "type", "Neuron Type", NULL)
 ```
 
-# Human fMRI Connectome
+# C Elegans, Gap, Male
 
 ```{r}
-human.fmri.hem <- make_plots("human.fmri", "Human fMRI", "Region", "tissue", "Tissue Class", "weight")
-human.fmri.tissue <- make_plots("human.fmri", "Human fMRI", "Region", "hemisphere", "Hemisphere", "weight")
+celegans.gap.male <- make_plots("celegans.gap.male", "C Elegans, Gap, Male", "Neuron", "type", "Neuron Type", NULL)
+```
+
+# C Elegans, Gap, Herm
+
+```{r}
+celegans.gap.herm <- make_plots("celegans.gap.herm", "C Elegans, Gap, Herm", "Neuron", "type", "Neuron Type", NULL)
+```
+
+# C Elegans, Chem, Male
+
+```{r}
+celegans.chem.male <- make_plots("celegans.chem.male", "C Elegans, Chem, Male", "Neuron", "type", "Neuron Type", NULL)
+```
+
+# C Elegans, Chem, Herm
+
+```{r}
+celegans.chem.herm <- make_plots("celegans.chem.herm", "C Elegans, Chem, Herm", "Neuron", "type", "Neuron Type", NULL)
 ```
 
 # Comparisons
@@ -61,18 +78,21 @@ human.fmri.tissue <- make_plots("human.fmri", "Human fMRI", "Region", "hemispher
 ## Adjacency Matrix
 
 ```{r, fig.width=12, fig.height=5}
-grid.arrange(human.dmri.hem$adj.plot, human.fmri.hem$adj.plot, ncol=2)
+grid.arrange(celegans.gap.male$adj.plot, celegans.gap.herm$adj.plot, ncol=2)
+grid.arrange(celegans.chem.male$adj.plot, celegans.chem.herm$adj.plot, ncol=2)
 ```
 
 ## Degree Sequence
 
 ```{r, fig.width=12, fig.height=5}
-grid.arrange(human.dmri.hem$deg.plot, human.fmri.hem$deg.plot, ncol=2)
+grid.arrange(celegans.gap.male$deg.plot, celegans.gap.herm$deg.plot, ncol=2)
+grid.arrange(celegans.chem.male$deg.plot, celegans.chem.herm$deg.plot, ncol=2)
 ```
 
 ## SBM
 
 ```{r, fig.width=12, fig.height=5}
-grid.arrange(human.dmri.hem$sbm.plot, human.fmri.hem$sbm.plot, ncol=2)
-grid.arrange(human.dmri.tissue$sbm.plot, human.fmri.tissue$sbm.plot, ncol=2)
+grid.arrange(celegans.gap.male$sbm.plot, celegans.gap.herm$sbm.plot, ncol=2)
+grid.arrange(celegans.chem.male$sbm.plot, celegans.chem.herm$sbm.plot, ncol=2)
 ```
+
