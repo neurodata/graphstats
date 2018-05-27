@@ -28,8 +28,8 @@ make_plots <- function(datname, title, src.name, tgt.name, attr.code, src.attr.n
                                      tgt.label=tgt.name, edge.xfm=edge.xfm)
   
   # Degree Sequence
-  gr.degseq.in <- degree(g, mode="in")
-  gr.degseq.out <- degree(g, mode="out")
+  gr.degseq.in <- strength(g, mode="in")
+  gr.degseq.out <- strength(g, mode="out")
   if (isTRUE(all.equal(as.numeric(gr.degseq.in), as.numeric(gr.degseq.out)))) {
     gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction="undirected")
   } else {
@@ -44,7 +44,7 @@ make_plots <- function(datname, title, src.name, tgt.name, attr.code, src.attr.n
     theme_bw()
   
   # SBM
-  gr.sbm <- gs.sbm.fit(g, community.attribute=attr.code)
+  gr.sbm <- gs.sbm.fit(g, community.attribute=attr.code, edge.attr="weight")
   sbm.plot <- gs.plot.plot_adjacency(gr.sbm, title=title, src.label=src.attr.name,
                                      tgt.label=tgt.attr.name, vertex.label=TRUE, edge.attr="weight")
   return(list(adj.plot=adj.plot, deg.plot=deg.plot, sbm.plot=sbm.plot))
@@ -54,22 +54,22 @@ make_plots <- function(datname, title, src.name, tgt.name, attr.code, src.attr.n
 # Mouse Connectome, Duke
 
 ```{r}
-mouse.duke <- make_plots("mouse.duke", "Mouse dMRI", "Source ROI", "Target ROI", "region", "Source Region",
+mouse.duke <- make_plots("mouse.duke", "Mouse dMRI", "Source ROI", "Target ROI", "level1", "Source Region",
                          "Target Region", "weight", edge.xfm="log10")
 ```
 
 # Mouse Connectome, Allan Institute, Ipsi-Lateral
 
 ```{r}
-mouse.allan.ipsi <- make_plots("mouse.allan.ipsi", "Mouse, Green Protein, Ipsilateral", "Source ROI", "Target ROI", "region",
-                               "Source Region", "Target Region", "weight", edge.xfm="log10")
+#mouse.allan.ipsi <- make_plots("mouse.allan.ipsi", "Mouse, Green Protein, Ipsilateral", "Source ROI", "Target ROI", "region",
+#                               "Source Region", "Target Region", "weight", edge.xfm="log10")
 ```
 
 # Mouse Connectome, Allan Institute, Contra-Lateral
 
 ```{r}
-mouse.allan.contra <- make_plots("mouse.allan.contra", "Mouse, Green Protein, Contralateral", "Source ROI", "Target ROI", "region",
-                                 "Source Region", "Target Region", "weight", edge.xfm="log10")
+#mouse.allan.contra <- make_plots("mouse.allan.contra", "Mouse, Green Protein, Contralateral", "Source ROI", "Target ROI", "region",
+#                                 "Source Region", "Target Region", "weight", edge.xfm="log10")
 ```
 
 # Comparisons
@@ -77,18 +77,21 @@ mouse.allan.contra <- make_plots("mouse.allan.contra", "Mouse, Green Protein, Co
 ## Adjacency Matrix
 
 ```{r, fig.width=12, fig.height=5}
-grid.arrange(mouse.duke$adj.plot, mouse.allan$adj.plot, ncol=2)
+#grid.arrange(mouse.duke$adj.plot, mouse.allan$adj.plot, ncol=2)
+mouse.duke$adj.plot
 ```
 
 ## Degree Sequence
 
 ```{r, fig.width=12, fig.height=5}
-grid.arrange(mouse.duke$deg.plot, mouse.allan$deg.plot, ncol=2)
+#grid.arrange(mouse.duke$deg.plot, mouse.allan$deg.plot, ncol=2)
+mouse.duke$deg.plot
 ```
 
 ## SBM
 
 ```{r, fig.width=12, fig.height=5}
-grid.arrange(mouse.duke$sbm.plot, mouse.allan$sbm.plot, ncol=2)
+#grid.arrange(mouse.duke$sbm.plot, mouse.allan$sbm.plot, ncol=2)
+mouse.duke$sbm.plot
 ```
 

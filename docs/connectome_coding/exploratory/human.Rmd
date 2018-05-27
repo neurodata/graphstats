@@ -20,24 +20,33 @@ load.data <- function(dat)
   name <- data(list=dat, envir = e)[1]
   e[[name[[1]]]]
 }
-make_plots <- function(datname, title, vertex.name, attr.code, attr.name, wt) {
+make_plots <- function(datname, title, src.name, tgt.name, attr.code, src.attr.name,
+                       tgt.attr.name, wt, edge.xfm) {
   # Adjacency Matrix
   g <- load.data(datname)
-  adj.plot <- gs.plot.plot_adjacency(g, title=title, edge.attr = wt, xlabel=vertex.name, ylabel=vertex.name)
+  adj.plot <- gs.plot.plot_adjacency(g, title=title, edge.attr = wt, src.label=src.name,
+                                     tgt.label=tgt.name, edge.xfm=edge.xfm)
   
   # Degree Sequence
-  gr.degseq <- degree(g)
-  gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq)
-  deg.plot <- ggplot(gr.deg.dat, aes(x=degree)) +
-    geom_density() +
+  gr.degseq.in <- strength(g, mode="in")
+  gr.degseq.out <- strength(g, mode="out")
+  if (isTRUE(all.equal(as.numeric(gr.degseq.in), as.numeric(gr.degseq.out)))) {
+    gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction="undirected")
+  } else {
+    gr.deg.dat <- rbind(data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction="in"),
+                        data.frame(vertex=names(V(g)), degree=gr.degseq.out, Direction="out"))
+  }
+  deg.plot <- ggplot(gr.deg.dat, aes(x=degree, group=Direction, fill=Direction)) +
+    geom_density(alpha=0.2) +
     xlab("Vertex Degree") +
     ylab("Probability") +
     ggtitle(title) +
     theme_bw()
   
   # SBM
-  gr.sbm <- gs.sbm.fit(g, community.attribute=attr.code)
-  sbm.plot <- gs.plot.plot_adjacency(gr.sbm, title=title, xlabel=attr.name, vertex.label=TRUE, ylabel=attr.name, edge.attr="weight")
+  gr.sbm <- gs.sbm.fit(g, community.attribute=attr.code, edge.attr="weight")
+  sbm.plot <- gs.plot.plot_adjacency(gr.sbm, title=title, src.label=src.attr.name,
+                                     tgt.label=tgt.attr.name, vertex.label=TRUE, edge.attr="weight")
   return(list(adj.plot=adj.plot, deg.plot=deg.plot, sbm.plot=sbm.plot))
 }
 ```
@@ -45,15 +54,19 @@ make_plots <- function(datname, title, vertex.name, attr.code, attr.name, wt) {
 # Human dMRI Connectome
 
 ```{r}
-human.dmri.hem <- make_plots("human.dmri", "Human dMRI", "Region", "tissue", "Tissue Class", "weight")
-human.dmri.tissue <- make_plots("human.dmri", "Human dMRI", "Region", "hemisphere", "Hemisphere", "weight")
+human.dmri.tissue <- make_plots("human.dmri", "Human dMRI", "Source ROI", "Target ROI", "tissue", "Tissue Type",
+                         "Tissue Type", "weight", edge.xfm="log10")
+human.dmri.hem <- make_plots("human.dmri", "Human dMRI", "Source ROI", "Target ROI", "tissue", "Hemisphere",
+                         "Hemisphere", "weight", edge.xfm="log10")
 ```
 
 # Human fMRI Connectome
 
 ```{r}
-human.fmri.hem <- make_plots("human.fmri", "Human fMRI", "Region", "tissue", "Tissue Class", "weight")
-human.fmri.tissue <- make_plots("human.fmri", "Human fMRI", "Region", "hemisphere", "Hemisphere", "weight")
+human.fmri.hem <- make_plots("human.fmri", "Human fMRI", "Source ROI", "Target ROI", "tissue", "Hemisphere",
+                         "Hemisphere", "weight", edge.xfm=FALSE)
+human.fmri.tissue <- make_plots("human.fmri", "Human fMRI", "Source ROI", "Target ROI", "tissue", "Hemisphere",
+                         "Hemisphere", "weight", edge.xfm=FALSE)
 ```
 
 # Comparisons

@@ -29,8 +29,8 @@ make_plots <- function(datname, title, src.name, tgt.name, attr.code, src.attr.n
                                      tgt.label=tgt.name, edge.xfm=edge.xfm)
   
   # Degree Sequence
-  gr.degseq.in <- degree(g, mode="in")
-  gr.degseq.out <- degree(g, mode="out")
+  gr.degseq.in <- strength(g, mode="in")
+  gr.degseq.out <- strength(g, mode="out")
   if (isTRUE(all.equal(as.numeric(gr.degseq.in), as.numeric(gr.degseq.out)))) {
     gr.deg.dat <- data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction="undirected")
   } else {
