@@ -146,8 +146,8 @@ make_plots &lt;- function(datname, title, src.name, tgt.name, attr.code, src.att
                                      tgt.label=tgt.name, edge.xfm=edge.xfm)
   
   # Degree Sequence
-  gr.degseq.in &lt;- degree(g, mode=&quot;in&quot;)
-  gr.degseq.out &lt;- degree(g, mode=&quot;out&quot;)
+  gr.degseq.in &lt;- strength(g, mode=&quot;in&quot;)
+  gr.degseq.out &lt;- strength(g, mode=&quot;out&quot;)
   if (isTRUE(all.equal(as.numeric(gr.degseq.in), as.numeric(gr.degseq.out)))) {
     gr.deg.dat &lt;- data.frame(vertex=names(V(g)), degree=gr.degseq.in, Direction=&quot;undirected&quot;)
   } else {
