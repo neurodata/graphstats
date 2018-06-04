@@ -1,3 +1,11 @@
+nan.sum <- function(x) {sum(x, na.rm=TRUE)}
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
 #' Graph Heatmap plot
 #'
 #' A function that plots an igraph object, as a heatmap.
@@ -5,6 +13,7 @@
 #' @import ggplot2
 #' @import igraph
 #' @importFrom reshape2 melt
+#' @importFrom ggpubr as_ggplot
 #' @param g input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.
 #' @param title the title for the square plot. Defaults to \code{""}.
 #' @param src.label the source label for the graph. Defaults to \code{"Vertex"}.
@@ -40,15 +49,18 @@
 #' @author Eric Bridgeford
 #' @export
 gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
-                            font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001) {
+                            font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001,
+                            degree=TRUE) {
   # load adjacency matrix as a dense matrix
   adj <- as_adjacency_matrix(g, attr=edge.attr, names=vertex.label, type="both", sparse=FALSE)
   adj.data <- melt(adj)  # melt the graph to a data-frame with row and colnames preserved
   colnames(adj.data) <- c("Source", "Target", "Weight")
+  alpha = 1
+  hist.src <- apply(adj, c(1), nan.sum)
+  hist.tgt <- apply(adj, c(2), nan.sum)
+  edge.colors=c("#020202")
   if (!is.character(edge.attr)) {
     adj.data$Weight <- factor(adj.data$Weight, levels=c(0, 1), ordered=TRUE)
-    edge.colors <- c("#ffffff", "#000000")  # binarize the graph as white or black according to 0 or 1
-    names(edge.colors) <- levels(adj.data$Weight)  # name the connections 0 or 1 accordingly
     wt.name <- "Connection"
   } else {
     wt.name <- edge.attr
@@ -66,28 +78,50 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
       }
       adj.data$Weight <- do.call(edge.xfm, list(adj.data$Weight))
     }
-    # color the vertices on a purple scale
-    edge.colors <- c("#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3",  "#4a1486")
   }
-  #if (is.character(vertex.attr)) {
-    # reorder the vertices so that vertices in same group are together
+  hist.dat <- rbind(data.frame(Vertex=1:dim(adj)[1], Degree=hist.src/max(hist.src), Type=wt.name, direction="Source"),
+                    data.frame(Vertex=1:dim(adj)[1], Degree=hist.tgt/max(hist.tgt), Type=wt.name, direction="Target"))
 
-  #}
-  plot.adj <- ggplot(adj.data, aes(x=Source, y=Target, fill=Weight)) +
-    geom_tile() +
+  plot.adj <- ggplot(adj.data, aes(x=Source, y=Target, alpha=Weight)) +
+    geom_tile(fill=edge.colors) +
     xlab(src.label) +
     ylab(tgt.label) +
     ggtitle(title) +
-    theme_bw()
+    theme_bw() +
+    theme(rect=element_blank(), panel.grid=element_blank())
   if (vertex.label) {
     plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
   }
   if (is.character(edge.attr)) {
     plot.adj <- plot.adj +
-      scale_fill_gradientn(colors=edge.colors, name=wt.name)
+      scale_fill_gradientn(colors=edge.colors, name=wt.name) +
+      guides(alpha=guide_legend(title=wt.name))
   } else {
     plot.adj <- plot.adj +
-      scale_fill_manual(values=edge.colors, name=wt.name)
+      scale_fill_manual(values=edge.colors, name=wt.name) +
+      guides(alpha=guide_legend(title=wt.name))
+  }
+  if (degree) {
+    thm = list(theme_void(),
+               guides(fill=FALSE),
+               theme(plot.margin=unit(rep(0,4), "lines"), legend.position=NaN))
+    top.plot <- ggplot(subset(hist.dat, direction == "Source"), aes(x=Vertex, y=Degree, fill=Type, color=Type, group=Type)) +
+      geom_bar(stat = "identity", position="identity", alpha=alpha) +
+      scale_color_manual(values=edge.colors) +
+      scale_fill_manual(values=edge.colors) +
+      thm
+    right.plot <- ggplot(subset(hist.dat, direction == "Target"), aes(x=Vertex, y=Degree, fill=Type, color=Type, group=Type)) +
+      geom_bar(stat = "identity", position="identity", alpha=alpha) +
+      scale_color_manual(values=edge.colors) +
+      scale_fill_manual(values=edge.colors) +
+      coord_flip() +
+      thm
+    empty <- ggplot() + geom_blank() + thm
+    pleg <- g_legend(plot.adj)
+    widths=c(0.6, 0.2, 0.2)
+    heights=c(0.2, 0.8)
+    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot + ggtitle(title), empty, empty, plot.adj + theme(legend.position=NaN) + ggtitle(""), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights))
   }
   #if (is.character(vertex.attr)) {
   #  vertices <- colnames(adj)
@@ -107,14 +141,6 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
   return(plot.adj)
 }
 
-nan.sum <- function(x) {sum(x, na.rm=TRUE)}
-
-g_legend<-function(a.gplot){
-  tmp <- ggplot_gtable(ggplot_build(a.gplot))
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  legend <- tmp$grobs[[leg]]
-  return(legend)
-}
 #' Graph Grid plot
 #'
 #' A function that plots an igraph object, as a grid, with intensity denoted by the size of dots on the grid.
@@ -122,6 +148,8 @@ g_legend<-function(a.gplot){
 #' @import ggplot2
 #' @import igraph
 #' @importFrom reshape2 melt
+#' @importFrom gridExtra arrangeGrob
+#' @importFrom ggpubr as_ggplot
 #' @param g input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.
 #' @param title the title for the square plot. Defaults to \code{""}.
 #' @param src.label the source label for the graph. Defaults to \code{"Vertex"}.
@@ -178,8 +206,8 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
     adj <- as_adjacency_matrix(g, attr=attr, names=vertex.label, type="both", sparse=FALSE)
     adj.data <- melt(adj)  # melt the graph to a data-frame with row and colnames preserved
     colnames(adj.data) <- c("Source", "Target", "Weight")
-    #hist.src <- apply(adj, c(1), nan.sum)
-    #hist.tgt <- apply(adj, c(2), nan.sum)
+    hist.src <- apply(adj, c(1), nan.sum)
+    hist.tgt <- apply(adj, c(2), nan.sum)
     if (is.null(attr)) {
        wt.name = "Connection"
     } else {
@@ -204,27 +232,52 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
       adj.data$Weight <- (adj.data$Weight - min(adj.data$Weight, na.rm=TRUE))/(max(adj.data$Weight, na.rm=TRUE) - min(adj.data$Weight, na.rm=TRUE))  # normalize on 0-1
     }
     plot.dat <- rbind(plot.dat, cbind(adj.data, Type=wt.name))
-    #hist.dat <- rbind(hist.dat, rbind(data.frame(Degree=hist.src, Type=wt.name, direction="Source"),
-    #                                  data.frame(Degree=hist.tgt, Type=wt.name, direction="Target")))
+    hist.dat <- rbind(hist.dat, rbind(data.frame(Vertex=1:dim(adj)[1], Degree=hist.src/max(hist.src), Type=wt.name, direction="Source"),
+                                      data.frame(Vertex=1:dim(adj)[1], Degree=hist.tgt/max(hist.tgt), Type=wt.name, direction="Target")))
   }
-  #hist.dat$Degree <- as.vector(hist.dat$Degree)
+  hist.dat$Degree <- as.vector(hist.dat$Degree)
   plot.adj <- ggplot(plot.dat, aes(x=Source, y=Target, size=Weight, color=Type, group=Type), alpha=alpha) +
     geom_point() +
     xlab(src.label) +
     ylab(tgt.label) +
     ggtitle(title) +
-    theme_bw()
+    theme_bw() +
+    theme(rect=element_blank(), panel.grid=element_blank()) +
+    guides(color=guide_legend(order=2), size=guide_legend(order=1))
   plot.adj <- plot.adj + scale_color_manual(values=cvec)
+  if (vertex.label) {
+    plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
+  } else {
+    plot.adj <- plot.adj +
+      xlim(1, dim(adj)[1]) +
+      ylim(1, dim(adj)[1])
+  }
   if (degree) {
-    plot.adj <- ggMarginal(plot.adj, type="histogram", groupColour = TRUE, groupFill=TRUE)
+    thm = list(theme_void(),
+               guides(fill=FALSE),
+               theme(plot.margin=unit(rep(0,4), "lines"), legend.position=NaN))
+    top.plot <- ggplot(subset(hist.dat, direction == "Source"), aes(x=Vertex, y=Degree, fill=Type, color=Type, group=Type)) +
+      geom_bar(stat = "identity", position="identity", alpha=alpha) +
+      scale_color_manual(values=cvec) +
+      scale_fill_manual(values=cvec) +
+      thm
+    right.plot <-  ggplot(subset(hist.dat, direction == "Target"), aes(x=Vertex, y=Degree, fill=Type, color=Type, group=Type)) +
+      geom_bar(stat = "identity", position="identity", alpha=alpha) +
+      scale_color_manual(values=cvec) +
+      scale_fill_manual(values=cvec) +
+      coord_flip() +
+      thm
+    empty <- ggplot() + geom_blank() + thm
+    pleg <- g_legend(plot.adj)
+    widths=c(0.6, 0.2, 0.2)
+    heights=c(0.2, 0.8)
+    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot + ggtitle(title), empty, empty, plot.adj + theme(legend.position=NaN) + ggtitle(""), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights))
   }
   #if (is.character(vertex.attr)) {
   # reorder the vertices so that vertices in same group are together
 
   #}
-  if (vertex.label) {
-    plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
-  }
   #if (is.character(vertex.attr)) {
   #  vertices <- colnames(adj)
   #  jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
@@ -250,6 +303,8 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
 #' @import ggplot2
 #' @import igraph
 #' @importFrom reshape2 melt
+#' @importFrom gridExtra arrangeGrob
+#' @importFrom ggpubr as_ggplot
 #' @param g input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.
 #' @param title the title for the square plot. Defaults to \code{""}.
 #' @param src.label the source label for the graph. Defaults to \code{"Vertex"}.
@@ -342,15 +397,22 @@ gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="V
     xlab(src.label) +
     ylab(tgt.label) +
     ggtitle(title) +
-    theme_bw()
+    theme_bw() +
+    theme(rect=element_blank(), panel.grid=element_blank())
 
   if (length(edge.attr) > 1) {
     for (i in 2:length(edge.attr)) {
       plot.adj <- plot.adj +
         geom_point(data=subset(plot.dat, Type == edge.attr[i]), aes(x=Source, y=Target, size=Weight, fill=Type, color=Type, group=Type), alpha=1)
     }
+    plot.adj <- plot.adj +
+      scale_size_continuous(range = c(0,2))
+
   }
   plot.adj <- plot.adj + scale_color_manual(values=cvec) + scale_fill_manual(values=cvec)
+  if (vertex.label) {
+    plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
+  }
   if (degree) {
     thm = list(theme_void(),
                guides(fill=FALSE),
@@ -368,19 +430,15 @@ gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="V
       thm
     empty <- ggplot() + geom_blank() + thm
     pleg <- g_legend(plot.adj)
-    plot.adj <- plot.adj + theme(legend.position=NaN)
     widths=c(0.6, 0.2, 0.2)
     heights=c(0.2, 0.8)
-    plot.adj <- as_ggplot(arrangeGrob(list(top.plot, empty, empty, plot.adj, right.plot, pleg), byrow=TRUE,
-                                      ncol=3, nrow=2, widths=widths, heights=heights, main=title))
+    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot + ggtitle(title), empty, empty, plot.adj + theme(legend.position=NaN) + ggtitle(""), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights))
   }
   #if (is.character(vertex.attr)) {
   # reorder the vertices so that vertices in same group are together
 
   #}
-  if (vertex.label) {
-    plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
-  }
   #if (is.character(vertex.attr)) {
   #  vertices <- colnames(adj)
   #  jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))

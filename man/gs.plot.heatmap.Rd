@@ -6,7 +6,7 @@
 \usage{
 gs.plot.heatmap(g, title = "", src.label = "Vertex", tgt.label = "Vertex",
   edge.attr = NULL, font.size = NULL, vertex.label = FALSE,
-  vertex.attr = FALSE, edge.xfm = FALSE, eps = 1e-04)
+  vertex.attr = FALSE, edge.xfm = FALSE, eps = 1e-04, degree = TRUE)
 }
 \arguments{
 \item{g}{input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.}

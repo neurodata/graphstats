@@ -23,12 +23,16 @@ Imports:
   abind,
   plyr,
   clue,
-  igraph,
   mclust,
   fpc,
-  rARPACK
+  rARPACK,
+  gridExtra,
+  grid,
+  ggpubr
 Suggests:
-    knitr,
-    rmarkdown,
-    testthat
+  knitr,
+  rmarkdown,
+  testthat
+Depends:
+  igraph
 VignetteBuilder: knitr
