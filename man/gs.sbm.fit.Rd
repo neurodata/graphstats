@@ -4,10 +4,22 @@
 \alias{gs.sbm.fit}
 \title{Stochastic Block Model}
 \usage{
-gs.sbm.fit(g, community.attribute)
+gs.sbm.fit(g, community.attribute, edge.attr = NULL, vertex.label = FALSE)
 }
 \arguments{
 \item{g}{an \code{igraph} object. See \code{\link[igraph]{graph}} for details.}
+
+\item{edge.attr}{the name of the attribute to use for weights. Defaults to \code{NULL}.
+\itemize{
+\item{\code{is.null(edge.attr)} plots the graph as a binary adjacency matrix.}
+\item{\code{is.character(edge.attr)} plot the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
+}}
+
+\item{vertex.label}{an attribute for naming the vertices. Defaults to \code{NULL}.
+\itemize{
+\item{\code{vertex.label==FALSE} name the vertices \code{V(g)} sequentially, as 1, 2, ... n.}
+\item{\code{vertex.label==TRUE} name the vertices \code{V(g)} as \code{V(g)$name}.}
+}}
 }
 \value{
 the probability matrix for each block, as an \code{igraph} object.

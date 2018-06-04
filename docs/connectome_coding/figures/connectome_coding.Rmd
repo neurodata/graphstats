@@ -1,0 +1,29 @@
+---
+title: "Connectome Coding Notebook"
+output: html_notebook
+---
+
+# Exploratory Plots
+
+```{r}
+require(igraph)
+require(graphstats)
+require(gridExtra)
+require(ggplot2)
+require(ggExtra)
+```
+
+```{r}
+mouse.plot <- gs.plot.heatmap(mouse.duke, title="(A) Mouse dMRI Connectome", src.label="Source Neuron",
+                              tgt.label="Target Neuron", edge.attr="weight", edge.xfm="log10")
+fly.plot <- gs.plot.heatmap(fly.left, title="(B) Fly Mushroom Body Connectome", src.label="Source Allen Region",
+                            tgt.label="Target Allen Region")
+celegans.plot <- gs.plot.grid(celegans.male, title="(C) Celegans Connectome", src.label="Source Neuron",
+                              tgt.label="Target Neuron", edge.attr=c("gap", "chemical"), degree=TRUE)
+human.plot <- gs.plot.heatmap_overlay(human.mri, title="(D) Human MRI Connectome", src.label="Brodmann Area", tgt.label="Brodmann Area",
+                                      edge.attr=c("fMRI", "dMRI"))
+```
+
+```{r}
+grid.arrange(mouse.plot, fly.plot, celegans.plot, human.plot, nrow=2)
+```
