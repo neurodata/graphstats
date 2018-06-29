@@ -364,7 +364,7 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
 #' @return the graph/graphs as a plot.
 #' @author Eric Bridgeford
 #' @export
-gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
+gs.plot.heatmap_overlay <- function(g, title="", src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
                                     font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001,
                                     degree=FALSE) {
   if (!is.vector(edge.attr)) {
@@ -482,6 +482,29 @@ gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="V
   #}
   return(plot.adj)
 }
+
+gs.plot.sbm <- function(g, title="", edge.attr="dMRI", src.label="Source Community", tgt.label="Target Community") {
+  V.comm <- V(g)$community
+  names(V.comm) <- names(V(g))
+  Vlist <- do.call(c, V.comm)  # get the full list of vertices ordered by community
+  Vlist.comm <- do.call(c, lapply(names(V.comm), function(comm) rep(comm, length(V.comm[[comm]]))))
+  P.mtx <- matrix(0, nrow=length(Vlist.comm), ncol=length(Vlist.comm))
+  colnames(P.mtx) <- Vlist.comm
+  rownames(P.mtx) <- Vlist.comm
+  edge.vals <- get.edge.attribute(g, edge.attr)
+  g.es <- E(g)
+  for (i in 1:length(g.es)) {
+    vtxs <- ends(g, g.es[i])
+    P.mtx[rownames(P.mtx) == vtxs[1], colnames(P.mtx) == vtxs[2]] <- edge.vals[i]
+  }
+  rownames(P.mtx) <- Vlist; colnames(P.mtx) <- Vlist
+  melted.p <- melt(P.mtx); names(melted.p) <- c("source", "target", edge.attr)
+  vertices.data <- data.frame(id=Vlist, community=Vlist.comm)
+  sbm.adjg <- graph_from_data_frame(melted.p, vertices=vertices.data)
+  hmap.sbm <- gs.plot.heatmap(sbm.adjg, title=title, src.label=src.label, tgt.label=tgt.label,
+                              degree=FALSE, edge.attr = edge.attr)
+  return(hmap.sbm)
+}
 ```
 
 ```{r}
@@ -502,3 +525,9 @@ grid.arrange(celegans.plot, fly.plot, mouse.plot, human.plot, nrow=2)
 ```
 
 # SBM Plots
+
+```{r}
+human.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attrs=NULL)
+human.sbm <- delete_vertices(human.sbm, "non-labelled")
+gs.plot.sbm(human.sbm, edge.attr="dMRI")
+```
