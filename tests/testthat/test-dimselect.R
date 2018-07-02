@@ -10,19 +10,19 @@ test_that("Out-of-range, or non-integer 'n' value.", {
 
   # Less than 1, or greater than the number of vertices.
   n <- 0
-  expect_error(dimselect(sdev, n), "Input object 'n' must be in the appropriate interval.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'n' must be in the appropriate interval.")
   n <- -10
-  expect_error(dimselect(sdev, n), "Input object 'n' must be in the appropriate interval.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'n' must be in the appropriate interval.")
   n <- leneig + 1
-  expect_error(dimselect(sdev, n), "Input object 'n' must be in the appropriate interval.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'n' must be in the appropriate interval.")
 
   # Not a single number.
   n <- "string"
-  expect_error(dimselect(sdev, n), "Input object 'n' is not a numeric value.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'n' is not a numeric value.")
   n <- sdev
-  expect_error(dimselect(sdev, n), "Input object 'n' is not a numeric value.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'n' is not a numeric value.")
   n <- matrix(c(1, 0, 0, 1), nrow = 2)
-  expect_error(dimselect(sdev, n), "Input object 'n' is not a numeric value.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'n' is not a numeric value.")
 })
 
 test_that("Incorrect input standard deviation vector 'dat'.", {
@@ -30,19 +30,12 @@ test_that("Incorrect input standard deviation vector 'dat'.", {
   # Not a graph or a matrix of any kind.
   sdev <- "string"
   n <- 1
-  expect_error(dimselect(sdev, n), "Input object 'sdev' is not a one-dimensional numeric array.")
-
-  # 'sdev' is a matrx with more than one row.
-  A1 <- matrix(c(1, 0, 0, 1), nrow = 2)
-  A2 <- matrix(c(1, 0, 0, 1), nrow = 2)
-  sdev <- cbind(A1, A2)
-  n <- 1
-  expect_error(dimselect(sdev, n), "Input object 'sdev' is not a one-dimensional numeric array.")
+  expect_error(gs.dim.select(sdev, n=n), "Input object 'X' is not a graph, a matrix/complex matrix or 2-D array, array, nor a one-dimensional numeric array.")
 
   # Matrix, but not a valid sdev vector.
-  sdev <- matrix(c('1', 2, 3, 4, 5, 6))
+  sdev <- matrix(c('a', 2, 3, 4, 5, 6))
   n <- 1
-  expect_error(dimselect(sdev, n), "Input object 'sdev' contains non-numeric values.")
+  expect_error(gs.dim.select(sdev, n=n), "Your input 'X' is a 1-D vector, array, or matrix, but has invalid entries and cannot be cast to numeric.")
 })
 
 
@@ -81,12 +74,12 @@ test_that("End-to-end testing.", {
     ## select dimenstion with dimselect.
     A_sbm <- igraph::as_adj(g_sbm)
     sigma_sbm <- rARPACK::svds(A_sbm,10)$d
-    dim_sbm <- dimselect(sigma_sbm)[1]
+    dim_sbm <- gs.dim.select(sigma_sbm)$elbow[1]
     sbm_dimselected <- append(sbm_dimselected, dim_sbm)
 
     A_er <- igraph::as_adj(g_er)
     sigma_er <- rARPACK::svds(A_er,10)$d
-    dim_er <- dimselect(sigma_er)[1]
+    dim_er <- gs.dim.select(sigma_er)$elbow[1]
     er_dimselected <- append(er_dimselected, dim_er)
   }
 

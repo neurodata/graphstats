@@ -2,37 +2,34 @@
 #'
 #' Spectral decomposition of the adjacency matrices of graphs.
 #'
-#' This function computes a \code{no}-dimensional Euclidean representation of
+#' This function computes a \code{k}-dimensional Euclidean representation of
 #' the graph based on its adjacency matrix, \eqn{A}. This representation is
 #' computed via the singular value decomposition of the adjacency matrix,
-#' \eqn{A=UDV^T}.In the case, where the graph is a random dot product graph
-#' generated using latent position vectors in \eqn{R^{no}} for each vertex, the
+#' \eqn{A=UDV^T}. In the case, where the graph is a random dot product graph
+#' generated using latent position vectors in \eqn{R^{k}} for each vertex, the
 #' embedding will provide an estimate of these latent vectors.
 #'
 #' For undirected graphs the latent positions are calculated as
-#' \eqn{X=U^{no}D^{1/2}}{U[no] sqrt(D[no])}, where \eqn{U^{no}}{U[no]} equals
-#' to the first \code{no} columns of \eqn{U}, and \eqn{D^{1/2}}{sqrt(D[no])} is
-#' a diagonal matrix containing the top \code{no} singular values on the
+#' \eqn{X=U^{k}D^{1/2}}{U[k] sqrt(D[k])}, where \eqn{U^{k}}{U[k]} equals
+#' to the first \code{k} columns of \eqn{U}, and \eqn{D^{1/2}}{sqrt(D[k])} is
+#' a diagonal matrix containing the top \code{k} singular values on the
 #' diagonal.
 #'
 #' For directed graphs the embedding is defined as the pair
-#' \eqn{X=U^{no}D^{1/2}}{U[no] sqrt(D[no])} and \eqn{Y=V^{no}D^{1/2}}{V[no]
-#' sqrt(D[no])}. (For undirected graphs \eqn{U=V}, so it is enough to keep one
+#' \eqn{X=U^{k}D^{1/2}}{U[k] sqrt(D[k])} and \eqn{Y=V^{k}D^{1/2}}{V[k]
+#' sqrt(D[k])}. (For undirected graphs \eqn{U=V}, so it is enough to keep one
 #' of them.)
 #'
 #' @param g The input graph, directed or undirected.
 #' @param dim An integer scalar. This value is the embedding dimension of the
 #' spectral embedding. Should be smaller than the number of vertices. The
-#' largest \code{no}-dimensional non-zero singular values are used for the
-#' spectral embedding.
-#' @return A list containing with entries: \item{X}{Estimated latent positions,
-#' an \code{n} times \code{no} matrix, \code{n} is the number of vertices.}
-#' \item{Y}{\code{NULL} for undirected graphs, the second half of the latent
-#' positions for directed graphs, an \code{n} times \code{no} matrix, \code{n}
-#' is the number of vertices.} \item{D}{The eigenvalues (for undirected graphs)
-#' or the singular values (for directed graphs) calculated by the algorithm.}
-#' \item{options}{A named list, information about the underlying ARPACK
-#' computation. See \code{\link{arpack}} for the details.}
+#' largest \code{k}-dimensional non-zero singular values are used for the spectral embedding.
+#' @return A list containing the following:
+#' \item{\code{X}}{an \code{n} by \code{k} matrix indicating the estimated latent positions, where \code{n} is the number of vertices of \code{g}.}
+#' \item{\code{Y}}{\code{NULL} if \code{g} is undirected. If \code{g} is directed, \code{Y} is a \code{n} by \code{k} matrix indicating the second half of the latent positions.}
+#' \item{D}{The eigenvalues (for undirected graphs) or the singular values (for directed graphs) associated with the latent positions.}
+#' \item{options}{A named list, information about the underlying ARPACK computation. See \code{\link{arpack}} for the details.}
+#' @author Gabor Csardi \email{csardi.gabor@@gmail.com}
 #' @seealso \code{\link{sample_dot_product}}
 #' @references Sussman, D.L., Tang, M., Fishkind, D.E., Priebe, C.E.  A
 #' Consistent Adjacency Spectral Embedding for Stochastic Blockmodel Graphs,
@@ -46,19 +43,18 @@
 #' RDP <- sample_dot_product(lpvs)
 #' embed <- embed_adjacency_matrix(RDP, 5)
 #' @export
-ase <- function(g, dim) {
+gs.embed.ase <- function(g, k) {
 
   # Input validation.
-  if (class(g) == "dgCMatrix") { g = igraph::graph_from_adjacency_matrix(g) }
-  if (class(g) == "matrix") { g = igraph::graph_from_adjacency_matrix(g) }
+  if (class(g) == "dgCMatrix" || class(g) == "matrix") { g = graph_from_adjacency_matrix(g) }
   if (class(g) != 'igraph') { stop("Input object 'g' is not an igraph object.") }
-  if (length(dim) > 1) { stop("Input 'dim' has length > 1.") }
-  if (class(dim) != "numeric" && !is.integer(dim)) { stop("Input 'dim' is not a number.") }
-  if (dim%%1 != 0) { stop("Input 'dim' must be an integer.") }
-  if (dim < 1) { stop("Number of dimensions 'dim' is less than 1.") }
-  if (dim > igraph::gorder(g)) { stop("Num. Embedded dimensions 'dim' is greater than number of vertices.") }
+  if (length(k) > 1) { stop("The number of embedding dimensions 'k' has length > 1.") }
+  if (class(k) != "numeric" && !is.integer(k)) { stop("The number of embedding dimensions 'k' is not a number.") }
+  if (k%%1 != 0) { stop("The number of embedding dimensions 'k' must be an integer.") }
+  if (k < 1) { stop("The number of embedding dimensions 'k' < 1.") }
+  if (k > gorder(g)) { stop("The number of embedding dimensions 'k' is greater than number of vertices.") }
 
   # Produce matrix from igraph function.
-  X <- igraph::embed_adjacency_matrix(g, dim)$X
-  return(X)
+  out <- embed_adjacency_matrix(g, k)
+  return(out)
 }

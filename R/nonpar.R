@@ -9,26 +9,25 @@
 #' the resulting embeddings. For this primitive, the Hilbert space is associated with the
 #' Gaussian kernel.
 #' @import mclust
-#' @param G1 an igraph object
-#' @param G2 an igraph object
-#' @param dim dimension of the latent position that graphs are embeded into, defaulted to
-#' the maximum of two number of dimensions selected on two graphs by dimselect.R
+#' @param g1 an igraph object
+#' @param g2 an igraph object
+#' @param dim dimension of the latent position that graphs are embeded into.  Defaults to \code{NULL} which selects the optimal dimensionality using \link{}.
 #' @param sigma bandwidth of the rbf kernel for computing test statistic
-#' @param alpha Significance level of hypothesis testing
+#' @param alpha Significance level of hypothesis testing. Defaults to \code{.05}.
 #' @param bootstrap_sample Number of bootstrap samples when performing hypothesis tesing
-#' @param printResult logical indicating if output the result of hypothesis testing is to be printed
+#' @param verbose logical indicating whether to print output to console. Defaults to \code{FALSE}.
 #' @return \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from the same distribution and \eqn{T} far from 0 if the rows of
 #' \eqn{X} and \eqn{Y} are from different distribution.
 #' @references Tang, M., Athreya, A., Sussman, D.L., Lyzinski, V., Priebe, C.E.
 #' A nonparametric two-sample hypothesis testing problem for random graphs
-#' @author Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
+#' @author Eric Bridgeford, Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
 #' @export
 
-nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, printResult = FALSE)
+nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, verbose = FALSE)
 {
   # Check input format
-  nonpar.validateInput(G1, G2, dim, sigma, alpha, bootstrap_sample, printResult)
+  nonpar.validateInput(G1, G2, dim, sigma, alpha, bootstrap_sample, verbose)
 
   if (is.null(sigma)) {
     dim = select.dim(G1, G2)
@@ -47,7 +46,7 @@ nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sam
   if (p_val <= alpha) {
     reject = TRUE
   }
-  if (printResult) {
+  if (verbose) {
     if (reject) {
       print("Reject the nullhypothesis that two graphs are identically distributed.")
     } else {
@@ -259,5 +258,5 @@ nonpar.validateInput <- function(G1, G2, dim, sigma, alpha, bootstrap_sample, pr
       stop("The size of bootstrap sample is too small. Pick a larger value.")
     }
   }
-  if (!is.logical(printResult)) { stop("Error: Input 'plotF' must be a logical.")}
+  if (!is.logical(verbose)) { stop("Error: Input 'verbose' must be a logical.")}
 }

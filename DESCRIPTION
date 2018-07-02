@@ -25,7 +25,7 @@ Imports:
   clue,
   mclust,
   fpc,
-  rARPACK,
+  irlba,
   gridExtra,
   grid,
   ggpubr

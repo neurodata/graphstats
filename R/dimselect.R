@@ -19,14 +19,25 @@
 #' distributions, with different means, and we want to know their border. See
 #' examples below.
 #'
+#' @importFrom irlba irlba
 #' \code{dimselect} chooses how many coordinates to use in dimensionality reduction problems.
-#' @param sdev A numeric vector, the ordered singular values.
+#' @param X an object of class \link[igraph]{graph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
+#' or a one-dimensional vector of class \code{numeric} containing ordered singular values.
+#' If \code{X} is a \link[igraph]{graph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}. If
+#' \code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.
+#' \link[igraph]{embed_adjacency_matrix} if \code{X} is a \link[igraph]{graph} to obtain the singular values.
+#' @param k If \code{X} is of class \link[igraph]{graph} or a numeric/complex matrix or 2-D array, an integer scalar indicating
+#' the embedding dimensionality of the spectral embedding. Should have \code{k < length(V(X))} if \code{X} is of class
+#' \link[igraph]{graph}, or \code{k < min(dim(X))} if \code{X} is a numeric/complex matrix or 2-D array.
 #' @param n default value: 3; the number of returned elbows.
-#' @param threshold either FALSE or a number. If threshold is a number, then all
-#' the elements in d that are not larger than the threshold will be ignored.
-#' @param plot logical. When T, it depicts a scree plot with highlighted elbows.
-#' @return a vector of length n containing the positions of 'elbows'.
-#' @author Youngser Park \email{youngser@@jhu.edu}, Gabor Csardi \email{csardi.gabor@@gmail.com}
+#' @param threshold either \code{FALSE} or an object of class \code{numeric}. If threshold is of class \code{numeric}, then all
+#' the elements that are not larger than the threshold will be ignored.
+#' @param plot logical. When \code{TRUE}, the return object includes a plot depicting the elbows.
+#' @return list containing the following:
+#' \item{\code{value}}{The singular values associated with each elbow in \code{elbow}.}
+#' \item{\code{elbow}}{The indices of the elbows.}
+#' \item{\code{plot}}{If \code{plot} is \code{TRUE}, contains a scree plot annotated with the elbows.}
+#' @author Youngser Park \email{youngser@@jhu.edu}, Gabor Csardi \email{csardi.gabor@@gmail.com}, and Eric Bridgeford \email{ericwb95@@gmail.com}.
 #' @seealso \code{\link{embed_adjacency_matrix}}
 #' @references M. Zhu, and A. Ghodsi (2006). Automatic dimensionality selection
 #' from the scree plot via the use of profile likelihood. \emph{Computational
@@ -45,38 +56,61 @@
 #' lpvs <- matrix(rnorm(200), 10, 20)
 #' lpvs <- apply(lpvs, 2, function(x) { (abs(x) / sqrt(sum(x^2))) })
 #' RDP.graph  <- sample_dot_product(lpvs)
-#' dimselect( embed_adjacency_matrix(RDP.graph, 10)$D )
+#' gs.dim.select( embed_adjacency_matrix(RDP.graph, 10)$D )
 #'
 #' # Sample random vectors with the Dirichlet distribution
 #' lpvs.dir    <- sample_dirichlet(n=20, rep(1, 10))
 #' RDP.graph.2 <- sample_dot_product(lpvs.dir)
-#' dimselect( embed_adjacency_matrix(RDP.graph.2, 10)$D )
+#' gs.dim.select( embed_adjacency_matrix(RDP.graph.2, 10)$D )
 #'
 #' # Sample random vectors from hypersphere with radius 1.
 #' lpvs.sph    <- sample_sphere_surface(dim=10, n=20, radius=1)
 #' RDP.graph.3 <- sample_dot_product(lpvs.sph)
-#' dimselect( embed_adjacency_matrix(RDP.graph.3, 10)$D )
+#' gs.dim.select( embed_adjacency_matrix(RDP.graph.3, 10)$D )
 #'
 #' @export
-dimselect <- function(sdev, n = 3, threshold = FALSE, plot = FALSE, main="") {
+gs.dim.select <- function(X, k=NULL, n = 3, threshold = FALSE, plot = FALSE, main="") {
 
-  if (class(sdev) != 'numeric' && (class(sdev) != 'matrix') && (class(sdev) != 'array')) {
-    stop("Input object 'sdev' is not a one-dimensional numeric array.")
-  }
-  if (class(sdev) == 'matrix') {
-    m = dim(sdev)[1]
-    k = dim(sdev)[2]
-    if (m > 1 && k > 1) {
-      stop("Input object 'sdev' is not a one-dimensional numeric array.")
+  if (class(X) == 'graph') {
+    if (is.null(k)) {
+      stop("Since 'X' is of class 'graph', you must specify 'k', the number of dimensions to embed into.")
     }
+    d <- embed_adjacency_matrix(X, k)$D
+  } else if (class(X) == 'matrix' || class(X) == 'array') {
+
+    dim.X <- dim(X)
+    if (length(dim.X) > 2) {
+      stop("You have input an array with more than 2 dimensions.")
+    }
+    if (dim.X[1] > 1 && dim.X[2] > 1) {
+      if (is.null(k)) {
+        stop("Since 'X' is of class 'matrix' or 'array' and is 2-D, you must specify 'k', the number of dimensions to embed into.")
+      }
+      d <- irlba(X, nu=k)$d
+    } else {
+      tryCatch({
+        d <- as.numeric(X)
+      }, warning=function(w) {stop("Your input 'X' is a 1-D vector, array, or matrix, but has invalid entries and cannot be cast to numeric.")})
+    }
+  } else if (class(X) == 'numeric') {      tryCatch({
+    d <- as.numeric(X)
+  }, warning=function(w) {stop("Your input 'X' is a 1-D vector, array, or matrix, but has invalid entries and cannot be cast to numeric.")})
+  } else {
+    stop("Input object 'X' is not a graph, a matrix/complex matrix or 2-D array, array, nor a one-dimensional numeric array.")
   }
-  if (sum("numeric" == apply(as.array(sdev),1,class)) != length(sdev)) { stop("Input object 'sdev' contains non-numeric values.") }
-  d <- sort(sdev,decreasing=TRUE)
-  if (!is.logical(threshold))
+
+  if (sum("numeric" == apply(as.array(d),1,class)) != length(d)) { stop("Input object 'sdev' contains non-numeric values.") }
+  d <- sort(d, decreasing=TRUE)
+  if (is.numeric(threshold)) {
     d <- d[d > threshold]
-  p <- length(d)
-  if (p == 0) { stop(paste("Input object 'sdev' must have elements that are larger than the specified threshold value",
-                           threshold), "!", sep="") }
+    p <- length(d)
+    if (p == 0) {
+      stop(sprintf("The singular values do not have any elements larger than the threshold value, %f. The maximum singular value is %.3f.",
+                   threshold, max(d)))
+    }
+  } else {
+    p <- length(d)
+  }
 
   if (class(n) != "numeric") {
     stop("Input object 'n' is not a numeric value.")
@@ -84,11 +118,9 @@ dimselect <- function(sdev, n = 3, threshold = FALSE, plot = FALSE, main="") {
     stop("Input object 'n' is not a numeric value.")
   } else {
     if (n <= 0 || n >= length(d)) {
-      stop("Input object 'n' must be in the appropriate interval.")
+      stop("Input object 'n' must be in the appropriate interval. n must be between 0 and %d, but n is %d.", length(d), n)
     }
   }
-
-  if (!is.logical(plot)) { stop("Input object 'plot' is not a logical.") }
 
   lq <- rep(0.0, p)                     # log likelihood, function of q
   for (q in 1:p) {
@@ -102,19 +134,22 @@ dimselect <- function(sdev, n = 3, threshold = FALSE, plot = FALSE, main="") {
 
   q <- which.max(lq)
   if (n > 1 && q < (p-1)) {
-    q <- c(q, q + dimselect(d[(q+1):p], n-1, plot=FALSE))
+    q <- c(q, q + gs.dim.select(d[(q+1):p], n=n-1, plot=FALSE)$elbow)
   }
 
-  if (plot==TRUE) {
-    if (is.matrix(sdev)) {
-      sdv <- d # apply(sdev,2,sd)
-      plot(sdv,type="b",xlab="dim",ylab="stdev",main=main)
-      points(q,sdv[q],col=2,pch=19)
-    } else {
-      plot(sdev, type="b",main=main)
-      points(q,sdev[q],col=2,pch=19)
-    }
+  if (!is.logical(plot)) { stop("Input object 'plot' is not a logical.") }
+
+  out <- list(value=d[q], elbow=q)
+  if (plot) {
+    sv.obj <- data.frame(Dimension=1:p, Value=d)
+    elbow.obj <- data.frame(Dimension=q, Value=d[q])
+    plot <- ggplot(sv.obj, aes(x=Dimension, y=Value)) +
+      geom_line(color='blue') +
+      geom_point(data=elbow.obj, aes(x=Dimension, y=Value), color='red') +
+      xlab("Dimension") +
+      ylab("Singular Value")
+    out$plot <- plot
   }
 
-  return(q)
+  return(out)
 }

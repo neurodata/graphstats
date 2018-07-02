@@ -9,21 +9,21 @@ test_that("Too low, too high, or non-integer 'dim' value.", {
 
   # Less than 1, or greater than the number of vertices.
   dim <- 0
-  expect_error(lse(g, dim), "Number of dimensions 'dim' is less than 1.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' < 1.")
   dim <- -10
-  expect_error(lse(g, dim), "Number of dimensions 'dim' is less than 1.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' < 1.")
   dim <- n + 1
-  expect_error(lse(g, dim), "Num. Embedded dimensions 'dim' is greater than number of vertices.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' is greater than number of vertices.")
 
   # Not a single number.
   dim <- "string"
-  expect_error(lse(g, dim), "Input 'dim' is not a number.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' is not a number.")
   dim <- g
-  expect_error(lse(g, dim), "Input 'dim' has length > 1.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' has length > 1.")
   dim <- matrix(c(1, 0, 0, 1), nrow = 2)
-  expect_error(lse(g, dim), "Input 'dim' has length > 1.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' has length > 1.")
   dim <- c(5, 6, 7)
-  expect_error(lse(g, dim), "Input 'dim' has length > 1.")
+  expect_error(gs.embed.lse(g, dim), "The number of embedding dimensions 'k' has length > 1.")
 
 })
 
@@ -32,19 +32,19 @@ test_that("Incorrect input graph 'g'.", {
   # Not a graph or a matrix of any kind.
   g <- "string"
   dim <- 1
-  expect_error(lse(g, dim), "Input object 'g' is not an igraph object.")
+  expect_error(gs.embed.lse(g, dim), "Input object 'g' is not an igraph object.")
 
   # 'g' contains multiple graphs.
   A1 <- matrix(c(1, 0, 0, 1), nrow = 2)
   A2 <- matrix(c(1, 0, 0, 1), nrow = 2)
   A <- c(A1, A2)
   dim <- 1
-  expect_error(lse(A, dim), "Input object 'g' is not an igraph object.")
+  expect_error(gs.embed.lse(A, dim), "Input object 'g' is not an igraph object.")
 
   # Matrix, but not a valid adjacency (square) matrix.
   A <- matrix(c(1, 2, 3, 4, 5, 6), nrow = 2)
   dim <- 1
-  expect_error(lse(A, dim), "Non-square matrix, Non-square matrix")
+  expect_error(gs.embed.lse(A, dim), "Non-square matrix, Non-square matrix")
 })
 
 # General Functionality.
@@ -79,8 +79,8 @@ test_that("End-to-end testing.", {
 
     ## Embed both with ASE.
     dim <- 2
-    X_cp <- lse(g_cp, dim)
-    X_er <- lse(g_er, dim)
+    X_cp <- gs.embed.lse(g_cp, dim)
+    X_er <- gs.embed.lse(g_er, dim)
 
     ## Perform k-means clustering on embedded data.
     kmeans_cp <- kmeans(X_cp, 2)$cluster
@@ -91,7 +91,7 @@ test_that("End-to-end testing.", {
     ari_er <- mclust::adjustedRandIndex(kmeans_er, assignments)
     if (ari_cp > ari_er) {
       cp_is_better <- cp_is_better + 1
-    } else {
+    } egs.embed.lse {
       er_is_better <- er_is_better + 1
     }
 
