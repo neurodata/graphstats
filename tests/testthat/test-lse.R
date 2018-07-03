@@ -83,17 +83,14 @@ test_that("End-to-end testing.", {
     X_er <- gs.embed.lse(g_er, dim)
 
     ## Perform k-means clustering on embedded data.
-    kmeans_cp <- kmeans(X_cp, 2)$cluster
-    kmeans_er <- kmeans(X_er, 2)$cluster
+    kmeans_cp <- kmeans(X_cp$X, 2)$cluster
+    kmeans_er <- kmeans(X_er$X, 2)$cluster
 
     ## Check ARI of both clustering assignments.
     ari_cp <- mclust::adjustedRandIndex(kmeans_cp, assignments)
     ari_er <- mclust::adjustedRandIndex(kmeans_er, assignments)
-    if (ari_cp > ari_er) {
-      cp_is_better <- cp_is_better + 1
-    } egs.embed.lse {
-      er_is_better <- er_is_better + 1
-    }
+    if (ari_cp > ari_er) { cp_is_better <- cp_is_better + 1 }
+    else { er_is_better <- er_is_better + 1 }
 
   }
 

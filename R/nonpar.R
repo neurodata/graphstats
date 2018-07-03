@@ -21,9 +21,8 @@
 #' \eqn{X} and \eqn{Y} are from different distribution.
 #' @references Tang, M., Athreya, A., Sussman, D.L., Lyzinski, V., Priebe, C.E.
 #' A nonparametric two-sample hypothesis testing problem for random graphs
-#' @author Eric Bridgeford, Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
+#' @author Eric Bridgeford <ericwb95@@gmail.com>, Youngser Park <youngser@@jhu.edu>, Kemeng Zhang <kzhang@@jhu.edu>.
 #' @export
-
 nonpar <- function(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05, bootstrap_sample = 200, verbose = FALSE)
 {
   # Check input format

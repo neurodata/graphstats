@@ -81,7 +81,7 @@ read.mouse.graph <- function(csv) {
   return(ig.gobj)
 }
 
-read.human.graph(human) {
+read.human.graph <- function(human) {
   hemisphere.raw <- read.csv('../../ndmg-repos/DS01216_res-1x1x1_hemispheric_res-1x1x1.csv')
   tissue.raw <- read.csv('../../ndmg-repos/DS01216_res-1x1x1_tissue_res-1x1x1.csv')
   colnames(hemisphere.raw) <- c("id", "non-labelled", "left", "right")
@@ -94,7 +94,6 @@ read.human.graph(human) {
                                                  tissue=colnames(tissue.ss)[which(tissue.ss == max(tissue.ss))[1]],
                                                  hemisphere=colnames(hemisphere.ss)[which(hemisphere.ss == max(hemisphere.ss)[1])]))
   }
-
 }
 
 
@@ -134,8 +133,8 @@ read.celegans.merge <- function(gap, chem) {
   V1 <- V(gap)
   V2 <- V(chem)
 
-  Vss1 <- V1[V1$name %in% V2$name & V1$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTORNEURONS")]
-  Vss2 <- V2[V2$name %in% V1$name & V2$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTORNEURONS")]
+  Vss1 <- V1[V1$name %in% V2$name & V1$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
+  Vss2 <- V2[V2$name %in% V1$name & V2$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
 
   gap.ss <- induced_subgraph(gap, Vss1)
   chem.ss <- induced_subgraph(chem, Vss2)
@@ -146,6 +145,9 @@ read.celegans.merge <- function(gap, chem) {
   E(chem.ss)$chem <- E(chem.ss)$weight
   chem.ss <- delete_edge_attr(chem.ss, "weight")
   gcomb <- union(gap.ss, chem.ss)
+  V(gcomb)$type <- V(gcomb)$type_1
+  gcomb <- delete_vertex_attr(gcomb, "type_1")
+  gcomb <- delete_vertex_attr(gcomb, "type_2")
 
   E(gcomb)$chem[is.na(E(gcomb)$chem)] = 0
   E(gcomb)$gap[is.na(E(gcomb)$gap)] = 0

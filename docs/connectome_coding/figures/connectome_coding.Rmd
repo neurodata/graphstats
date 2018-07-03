@@ -508,11 +508,11 @@ gs.plot.sbm <- function(g, title="", edge.attr="dMRI", src.label="Source Communi
 ```
 
 ```{r}
-mouse.plot <- gs.plot.heatmap(mouse.duke, title="(A) Mouse dMRI Connectome", src.label="",
+mouse.plot <- gs.plot.heatmap(mouse.duke, title="(C) Mouse dMRI Connectome", src.label="",
                               tgt.label="", edge.attr="weight", edge.xfm="log10")
 fly.plot <- gs.plot.heatmap(fly.left, title="(B) Fly Mushroom Body Connectome", src.label="",
                             tgt.label="", degree=TRUE)
-celegans.plot <- gs.plot.grid(celegans.male, title="(C) Celegans Connectome", src.label="",
+celegans.plot <- gs.plot.grid(celegans.male, title="(A) Celegans Connectome", src.label="",
                               tgt.label="", edge.attr=c("chemical", "gap"), degree=TRUE)
 human.plot <- gs.plot.heatmap_overlay(human.mri, title="(D) Human MRI Connectome",
                                       src.label="", tgt.label="",
@@ -527,7 +527,26 @@ grid.arrange(celegans.plot, fly.plot, mouse.plot, human.plot, nrow=2)
 # SBM Plots
 
 ```{r}
-human.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attrs=NULL)
-human.sbm <- delete_vertices(human.sbm, "non-labelled")
-gs.plot.sbm(human.sbm, edge.attr="dMRI")
+human.dmri.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attr="dMRI")
+human.dmri.sbm <- delete_vertices(human.dmri.sbm, "non-labelled")
+human.dmri.sbm.plot <- gs.plot.sbm(human.dmri.sbm, edge.attr="dMRI", title="(D) Human dMRI SBM")
+human.fmri.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attr="fMRI")
+human.fmri.sbm <- delete_vertices(human.fmri.sbm, "non-labelled")
+human.fmri.sbm.plot <- gs.plot.sbm(human.fmri.sbm, edge.attr="fMRI", title="(D) Human fMRI SBM")
+
+mouse.sbm <- gs.sbm.fit(mouse.duke, community.attribute = "level1", edge.attr="weight")
+mouse.sbm <- delete_vertices(mouse.sbm, "white matter")
+mouse.sbm.plot <- gs.plot.sbm(mouse.sbm, edge.attr="weight", title="(C) Mouse dMRI SBM")
+
+fly.sbm <- gs.sbm.fit(fly.left, community.attribute = "type", edge.attr=NULL)
+fly.sbm.plot <- gs.plot.sbm(fly.sbm, edge.attr="weight", title="(B) Fly Mushroom Body SBM")
+
+celegans.gap.sbm <- gs.sbm.fit(celegans.male, community.attribute = "type", edge.attr="gap")
+celegans.chem.sbm <- gs.sbm.fit(celegans.male, community.attribute = "type", edge.attr="chem") 
+celegans.gap.sbm.plot <- gs.plot.sbm(celegans.gap.sbm, edge.attr="gap", title="(A.i) Celegans Gap SBM")
+celegans.chem.sbm.plot <- gs.plot.sbm(celegans.chem.sbm, edge.attr="chem", title="(A.ii) Celegans Chemical SBM")
+```
+
+```{r}
+grid.arrange(celegans.chem.sbm.plot, celegans.gap.sbm.plot, fly.sbm.plot, mouse.sbm.plot, human.fmri.sbm.plot, human.dmri.sbm.plot, nrow=2)
 ```

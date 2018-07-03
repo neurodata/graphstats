@@ -20,7 +20,6 @@
 #' examples below.
 #'
 #' @importFrom irlba irlba
-#' \code{dimselect} chooses how many coordinates to use in dimensionality reduction problems.
 #' @param X an object of class \link[igraph]{graph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
 #' or a one-dimensional vector of class \code{numeric} containing ordered singular values.
 #' If \code{X} is a \link[igraph]{graph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}. If
@@ -69,7 +68,7 @@
 #' gs.dim.select( embed_adjacency_matrix(RDP.graph.3, 10)$D )
 #'
 #' @export
-gs.dim.select <- function(X, k=NULL, n = 3, threshold = FALSE, plot = FALSE, main="") {
+gs.dim.select <- function(X, k=NULL, n = 3, threshold = FALSE, plot = FALSE) {
 
   if (class(X) == 'graph') {
     if (is.null(k)) {
