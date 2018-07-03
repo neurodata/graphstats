@@ -33,3 +33,5 @@ inst/*
 *.utf8.md
 *.knit.md
 .Rproj.user
+
+/tests/testthat/*null*
