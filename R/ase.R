@@ -21,10 +21,9 @@
 #' of them.)
 #'
 #' @param g The input graph, directed or undirected.
-#' @param dim An integer scalar. This value is the embedding dimension of the
-#' spectral embedding. Should be smaller than the number of vertices. The
-#' largest \code{k}-dimensional non-zero singular values are used for the spectral embedding.
-#' @return A list containing the following:
+#' @param k An integer scalar. Should be the case that \code{k < gorder(g)}. The
+#' largest \code{k}-dimensions are retained from the spectral embedding.
+#' @return A list containing the following:#' @return A list containing the following:
 #' \item{\code{X}}{an \code{n} by \code{k} matrix indicating the estimated latent positions, where \code{n} is the number of vertices of \code{g}.}
 #' \item{\code{Y}}{\code{NULL} if \code{g} is undirected. If \code{g} is directed, \code{Y} is a \code{n} by \code{k} matrix indicating the second half of the latent positions.}
 #' \item{D}{The eigenvalues (for undirected graphs) or the singular values (for directed graphs) associated with the latent positions.}

@@ -8,7 +8,7 @@
 #'
 #' @importFrom igraph embed_adjacency_matrix gorder graph_from_adjacency_matrix
 #' @param g The input graph, directed or undirected.
-#' @param k An integer scalar. Should be the case that \code{k < length(V(g))}. The
+#' @param k An integer scalar. Should be the case that \code{k < gorder(g)}. The
 #' largest \code{k}-dimensions are retained from the spectral embedding.
 #' @return A list containing the following:
 #' \item{\code{X}}{an \code{n} by \code{k} matrix indicating the estimated latent positions, where \code{n} is the number of vertices of \code{g}.}
