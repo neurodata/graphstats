@@ -578,16 +578,16 @@ grid.arrange(celegans.chem.sbm.plot, celegans.gap.sbm.plot, fly.sbm.plot, mouse.
 ```{r}
 human.dmri.dim <- gs.dim.select(human.mri, edge.attr="dMRI", plot=TRUE)
 human.fmri.dim <- gs.dim.select(human.mri, edge.attr="fMRI", plot=TRUE)
-human.dmri.ase <- gs.embed.ase(human.mri, k=gorder(human.mri)-1, edge.attr="dMRI")
-human.fmri.ase <- gs.embed.ase(human.mri, k=gorder(human.mri)-1, edge.attr="fMRI")
+human.dmri.ase <- gs.embed.ase(human.mri, k=10, edge.attr="dMRI")
+human.fmri.ase <- gs.embed.ase(human.mri, k=10, edge.attr="fMRI")
 mouse.dim <- gs.dim.select(mouse.duke, edge.attr="weight", plot=TRUE)
-mouse.ase <- gs.embed.ase(mouse.duke, k=gorder(mouse.duke)-1, edge.attr="weight")
+mouse.ase <- gs.embed.ase(mouse.duke, k=10, edge.attr="weight")
 fly.dim <- gs.dim.select(fly.left, edge.attr=NULL, plot=TRUE)
-fly.ase <- gs.embed.ase(fly.left, k=gorder(fly.left)-1)
+fly.ase <- gs.embed.ase(fly.left, k=10)
 celegans.chem.dim <- gs.dim.select(celegans.male, edge.attr="chem", plot=TRUE)
 celegans.gap.dim <- gs.dim.select(celegans.male, edge.attr="gap", plot=TRUE)
-celegans.chem.ase <- gs.embed.ase(celegans.male, k=gorder(celegans.male)-1, edge.attr="chem")
-celegans.gap.ase <- gs.embed.ase(celegans.male, k=gorder(celegans.male)-1, edge.attr="gap")
+celegans.chem.ase <- gs.embed.ase(celegans.male, k=10, edge.attr="chem")
+celegans.gap.ase <- gs.embed.ase(celegans.male, k=10, edge.attr="gap")
 ```
 
 ```{r}
@@ -649,3 +649,9 @@ celegans.gap.ase.plot.comb <- arrangeGrob(celegans.gap.dim$plot + ggtitle("(A.ii
 grid.arrange(celegans.chem.ase.plot.comb, celegans.gap.ase.plot.comb, fly.ase.plot.comb, mouse.ase.plot.comb,
              human.fmri.ase.plot.comb, human.dmri.ase.plot.comb, nrow=3)
 ```
+
+Color vertices by their label
+pairs plots
+LLG paper
+omni plots; similar to pairs plots but have a line joining matched vertices
+fly left; fly right with matched vertices btwn the 2
