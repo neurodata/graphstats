@@ -85,7 +85,7 @@ B_er  <- matrix(c(p), nrow = 1)
 
 g_er <- sample_sbm(num_class1 + num_class2, pref.matrix=B_er, block.sizes=c(num_class1 + num_class2))
 
-gs.plot.heatmap(g_er)
+gs.plot.heatmap(g_er, title="ER", src.label="Vertex", tgt.label="Vertex")
 
 ## Embed both with ASE; get singular values from adjacency matrix;
 ## select dimenstion with dimselect.
@@ -106,7 +106,7 @@ B_sbm <- matrix(c(0.8, 0.6,
 
 g_sbm <- sample_sbm(num_class1 + num_class2, pref.matrix=B_sbm, block.sizes=c(num_class1, num_class2))
 
-gs.plot.heatmap(g_sbm)
+gs.plot.heatmap(g_sbm, title="2-Block SBM", src.label="Vertex", tgt.label="Vertex")
 
 ## Embed both with ASE; get singular values from adjacency matrix;
 ## select dimenstion with dimselect.
@@ -140,6 +140,7 @@ getElbows(sigma_sbm, plot=TRUE)
 ### Fly Left Hemisphere, Small k
 
 ```{r}
+gs.plot.heatmap(fly.left, title="Fly Left Hemisphere", src.label="Source Vertex", tgt.label="Target Vertex")
 A_fly <- igraph::as_adj(fly.left)
 sigma_fly <- rARPACK::svds(A_fly, k=10)$d
 getElbows(sigma_fly, plot=TRUE)
