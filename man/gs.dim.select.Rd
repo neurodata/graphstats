@@ -4,18 +4,25 @@
 \alias{gs.dim.select}
 \title{Dimensionality selection for singular values using profile likelihood.}
 \usage{
-gs.dim.select(X, k = NULL, n = 3, threshold = FALSE, plot = FALSE)
+gs.dim.select(X, k = NULL, edge.attr = NULL, n = 3, threshold = FALSE,
+  plot = FALSE)
 }
 \arguments{
 \item{X}{an object of class \link[igraph]{graph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
 or a one-dimensional vector of class \code{numeric} containing ordered singular values.
-If \code{X} is a \link[igraph]{graph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}. If
-\code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.
-\link[igraph]{embed_adjacency_matrix} if \code{X} is a \link[igraph]{graph} to obtain the singular values.}
+\itemize{
+\item{If \code{X} is a \link[igraph]{graph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}.}
+\item{If \code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.}
+}}
 
-\item{k}{If \code{X} is of class \link[igraph]{graph} or a numeric/complex matrix or 2-D array, an integer scalar indicating
-the embedding dimensionality of the spectral embedding. Should have \code{k < length(V(X))} if \code{X} is of class
-\link[igraph]{graph}, or \code{k < min(dim(X))} if \code{X} is a numeric/complex matrix or 2-D array.}
+\item{k}{The embedding dimensionality. Defaults to \code{NULL}.
+\itemize{
+\item{If \code{X} is of class \link[igraph]{graph} or a numeric/complex matrix or 2-D array, an integer scalar indicating
+the embedding dimensionality of the spectral embedding. Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)}.}
+\item{If \code{X} is  \code{matrix} or 2-D \code{array}, should be the case that \code{k < min(dim(X))}. If \code{k==NULL}, defaults to \code{min(dim(X))}}
+}}
+
+\item{edge.attr}{the names of the attribute to use for weights if \code{X} is an object of class \link[igraph]{graph}. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.}
 
 \item{n}{default value: 3; the number of returned elbows.}
 

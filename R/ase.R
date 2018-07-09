@@ -23,7 +23,8 @@
 #' @param g The input graph, directed or undirected.
 #' @param k An integer scalar. Should be the case that \code{k < gorder(g)}. The
 #' largest \code{k}-dimensions are retained from the spectral embedding.
-#' @return A list containing the following:#' @return A list containing the following:
+#' @param edge.attr the names of the attribute to use for weights. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
+#' @return A list containing the following:
 #' \item{\code{X}}{an \code{n} by \code{k} matrix indicating the estimated latent positions, where \code{n} is the number of vertices of \code{g}.}
 #' \item{\code{Y}}{\code{NULL} if \code{g} is undirected. If \code{g} is directed, \code{Y} is a \code{n} by \code{k} matrix indicating the second half of the latent positions.}
 #' \item{D}{The eigenvalues (for undirected graphs) or the singular values (for directed graphs) associated with the latent positions.}
@@ -42,7 +43,7 @@
 #' RDP <- sample_dot_product(lpvs)
 #' embed <- embed_adjacency_matrix(RDP, 5)
 #' @export
-gs.embed.ase <- function(g, k) {
+gs.embed.ase <- function(g, k, edge.attr=NULL) {
 
   # Input validation.
   if (class(g) == "dgCMatrix" || class(g) == "matrix") { g = graph_from_adjacency_matrix(g) }
@@ -52,6 +53,25 @@ gs.embed.ase <- function(g, k) {
   if (k%%1 != 0) { stop("The number of embedding dimensions 'k' must be an integer.") }
   if (k < 1) { stop("The number of embedding dimensions 'k' < 1.") }
   if (k > gorder(g)) { stop("The number of embedding dimensions 'k' is greater than number of vertices.") }
+
+  edge.attrs <- names(get.edge.attribute(g))
+  if (!is.null(edge.attr)) {
+    # remove attributes other than the one requested so the specified is used for ase
+    if (!(edge.attr %in% edge.attrs)) {
+      stop("You have not passed a valid 'edge.attr' for your graph.")
+    }
+    for (ea in edge.attrs[edge.attrs != edge.attr]) {
+      g <- delete_edge_attr(g, ea)
+    }
+    wt <- get.edge.attribute(g, name=edge.attr)
+    g <- set.edge.attribute(g, name="weight", value=wt)
+    g <- delete_edge_attr(g, name=edge.attr)
+  } else if (!is.null(edge.attrs)) {
+    # user requests decomp of binary adjacency matrix
+    for (ea in edge.attrs) {
+      g <- delete_edge_attr(g, ea)
+    }
+  }
 
   # Produce matrix from igraph function.
   out <- embed_adjacency_matrix(g, k)

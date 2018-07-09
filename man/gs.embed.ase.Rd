@@ -4,16 +4,18 @@
 \alias{gs.embed.ase}
 \title{Spectral Embedding of Adjacency Matrices}
 \usage{
-gs.embed.ase(g, k)
+gs.embed.ase(g, k, edge.attr = NULL)
 }
 \arguments{
 \item{g}{The input graph, directed or undirected.}
 
 \item{k}{An integer scalar. Should be the case that \code{k < gorder(g)}. The
 largest \code{k}-dimensions are retained from the spectral embedding.}
+
+\item{edge.attr}{the names of the attribute to use for weights. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.}
 }
 \value{
-A list containing the following:#' @return A list containing the following:
+A list containing the following:
 \item{\code{X}}{an \code{n} by \code{k} matrix indicating the estimated latent positions, where \code{n} is the number of vertices of \code{g}.}
 \item{\code{Y}}{\code{NULL} if \code{g} is undirected. If \code{g} is directed, \code{Y} is a \code{n} by \code{k} matrix indicating the second half of the latent positions.}
 \item{D}{The eigenvalues (for undirected graphs) or the singular values (for directed graphs) associated with the latent positions.}

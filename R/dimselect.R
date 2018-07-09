@@ -20,14 +20,19 @@
 #' examples below.
 #'
 #' @importFrom irlba irlba
-#' @param X an object of class \link[igraph]{graph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
+#' @param X an object of class \link[igraph]{igraph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
 #' or a one-dimensional vector of class \code{numeric} containing ordered singular values.
-#' If \code{X} is a \link[igraph]{graph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}. If
-#' \code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.
-#' \link[igraph]{embed_adjacency_matrix} if \code{X} is a \link[igraph]{graph} to obtain the singular values.
-#' @param k If \code{X} is of class \link[igraph]{graph} or a numeric/complex matrix or 2-D array, an integer scalar indicating
-#' the embedding dimensionality of the spectral embedding. Should have \code{k < length(V(X))} if \code{X} is of class
-#' \link[igraph]{graph}, or \code{k < min(dim(X))} if \code{X} is a numeric/complex matrix or 2-D array.
+#' \itemize{
+#' \item{If \code{X} is a \link[igraph]{igraph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}.}
+#' \item{If \code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.}
+#' }
+#' @param k The embedding dimensionality. Defaults to \code{NULL}.
+#' \itemize{
+#' \item{If \code{X} is of class \link[igraph]{igraph} or a numeric/complex matrix or 2-D array, an integer scalar indicating
+#' the embedding dimensionality of the spectral embedding. Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
+#' \item{If \code{X} is  \code{matrix} or 2-D \code{array}, should be the case that \code{k < min(dim(X))}. If \code{k==NULL}, defaults to \code{min(dim(X))}}
+#' }
+#' @param edge.attr the names of the attribute to use for weights if \code{X} is an object of class \link[igraph]{igraph}. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
 #' @param n default value: 3; the number of returned elbows.
 #' @param threshold either \code{FALSE} or an object of class \code{numeric}. If threshold is of class \code{numeric}, then all
 #' the elements that are not larger than the threshold will be ignored.
@@ -68,13 +73,13 @@
 #' gs.dim.select( embed_adjacency_matrix(RDP.graph.3, 10)$D )
 #'
 #' @export
-gs.dim.select <- function(X, k=NULL, n = 3, threshold = FALSE, plot = FALSE) {
+gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, plot = FALSE) {
 
-  if (class(X) == 'graph') {
+  if (class(X) == 'igraph') {
     if (is.null(k)) {
-      stop("Since 'X' is of class 'graph', you must specify 'k', the number of dimensions to embed into.")
+      k = gorder(X) - 1
     }
-    d <- embed_adjacency_matrix(X, k)$D
+    d <- gs.embed.ase(X, k, edge.attr=edge.attr)$D
   } else if (class(X) == 'matrix' || class(X) == 'array') {
 
     dim.X <- dim(X)
@@ -83,7 +88,7 @@ gs.dim.select <- function(X, k=NULL, n = 3, threshold = FALSE, plot = FALSE) {
     }
     if (dim.X[1] > 1 && dim.X[2] > 1) {
       if (is.null(k)) {
-        stop("Since 'X' is of class 'matrix' or 'array' and is 2-D, you must specify 'k', the number of dimensions to embed into.")
+        k = min(dim.X)
       }
       d <- irlba(X, nu=k)$d
     } else {
@@ -146,7 +151,8 @@ gs.dim.select <- function(X, k=NULL, n = 3, threshold = FALSE, plot = FALSE) {
       geom_line(color='blue') +
       geom_point(data=elbow.obj, aes(x=Dimension, y=Value), color='red') +
       xlab("Dimension") +
-      ylab("Singular Value")
+      ylab("Singular Value") +
+      theme_bw()
     out$plot <- plot
   }
 
