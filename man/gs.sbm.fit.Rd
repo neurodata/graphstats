@@ -9,10 +9,10 @@ gs.sbm.fit(g, community.attribute, edge.attr = NULL, vertex.label = FALSE)
 \arguments{
 \item{g}{an \code{igraph} object. See \code{\link[igraph]{graph}} for details.}
 
-\item{edge.attr}{the name of the attribute to use for weights. Defaults to \code{NULL}.
+\item{edge.attr}{the names of the attribute to use for weights. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
 \itemize{
-\item{\code{is.null(edge.attr)} plots the graph as a binary adjacency matrix.}
-\item{\code{is.character(edge.attr)} plot the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
+\item{\code{is.null(edge.attr)} constructs sbm on the graph as a binary adjacency matrix.}
+\item{\code{is.character(edge.attr)} constructs sbm of the graph the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
 }}
 
 \item{vertex.label}{an attribute for naming the vertices. Defaults to \code{NULL}.

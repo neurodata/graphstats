@@ -5,23 +5,22 @@
 \title{Nonparametric two-sample testing using kernel-based test statistic}
 \usage{
 nonpar(G1, G2, dim = NULL, sigma = NULL, alpha = 0.05,
-  bootstrap_sample = 200, printResult = FALSE)
+  bootstrap_sample = 200, verbose = FALSE)
 }
 \arguments{
-\item{G1}{an igraph object}
-
-\item{G2}{an igraph object}
-
-\item{dim}{dimension of the latent position that graphs are embeded into, defaulted to
-the maximum of two number of dimensions selected on two graphs by dimselect.R}
+\item{dim}{dimension of the latent position that graphs are embeded into.  Defaults to \code{NULL} which selects the optimal dimensionality using \link{}.}
 
 \item{sigma}{bandwidth of the rbf kernel for computing test statistic}
 
-\item{alpha}{Significance level of hypothesis testing}
+\item{alpha}{Significance level of hypothesis testing. Defaults to \code{.05}.}
 
 \item{bootstrap_sample}{Number of bootstrap samples when performing hypothesis tesing}
 
-\item{printResult}{logical indicating if output the result of hypothesis testing is to be printed}
+\item{verbose}{logical indicating whether to print output to console. Defaults to \code{FALSE}.}
+
+\item{g1}{an igraph object}
+
+\item{g2}{an igraph object}
 }
 \value{
 \code{T} A scalar value \eqn{T} such that \eqn{T} is near 0 if the rows of
@@ -42,5 +41,5 @@ Tang, M., Athreya, A., Sussman, D.L., Lyzinski, V., Priebe, C.E.
 A nonparametric two-sample hypothesis testing problem for random graphs
 }
 \author{
-Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
+Eric Bridgeford <ericwb95@gmail.com>, Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
 }

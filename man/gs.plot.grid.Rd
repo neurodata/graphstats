@@ -41,6 +41,13 @@ gs.plot.grid(g, title = "", src.label = "Vertex", tgt.label = "Vertex",
 \item{\code{is.character(vertex.attr)} assumes a grouping of the vertices given for \code{V(g)} by \code{V(G)[[vertex.attr]]}, and groups the vertices in \code{V(g)} into ordered blocks with color-coding.}
 }}
 
+\item{edge.xfm}{transform the edge-weights. Defaults to \code{FALSE}. Can be a list of `edge.xfm` if you want to overlay different edge-attributes on the same plot in the plot with different transforms for each.
+\itemize{
+\item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
+\item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \code{\link[base]{log}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
+\item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \code{\link[base]{log10}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
+}}
+
 \item{eps}{if you specify an `edge.xfm` that is logarithmic, indicate the padding that zero entries should receive. Defaults to `.0001`. `eps` should be `<< min(edge-weight)`.}
 
 \item{degree}{Whether to plot the marginal vertex degrees. Defaults to `FALSE`.}

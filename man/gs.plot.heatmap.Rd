@@ -40,6 +40,13 @@ gs.plot.heatmap(g, title = "", src.label = "Vertex", tgt.label = "Vertex",
 \item{\code{vertex.attr==FALSE} assumes no grouping of the vertices, and adds no color accordingly.}
 \item{\code{is.character(vertex.attr)} assumes a grouping of the vertices given for \code{V(g)} by \code{V(G)[[vertex.attr]]}, and groups the vertices in \code{V(g)} into ordered blocks with color-coding.}
 }}
+
+\item{edge.xfm}{log-transform the edge-weights. Defaults to \code{FALSE}.
+\itemize{
+\item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
+\item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \link[base]{log} for details. Does not work if there are negative edge-weights.}
+\item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \link[base]{log10} for details. Does not work if there are negative edge-weights.}
+}}
 }
 \value{
 the graph/graphs as a plot.

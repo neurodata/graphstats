@@ -163,6 +163,43 @@ gs.sims.siem <- function(n, v, priors=c(0.5, 0.5),
   return(structure(list(graphs=graphs, Y=labels), class="Simulation"))
 }
 
+#' Sample Graph from Latent Position
+#'
+#' A function to simulate a binary graph given latent positions.
+#'
+#' @param X the latent positions, as a \code{n} by \code{k} matrix for \code{n} vertices and \code{k} blocks.
+#' @param Y the second half of the latent positions for directed graphs, as a \code{n} by \code{k} matrix for \code{n} vertices and \code{k} blocks. Defaults to \code{NULL}, which assumes that the sampled graph is symmetric.
+#' @return An \link[igraph]{graph} object with \code{n} vertices, with latent positions given by \code{X} if \code{G} is symmetric and \code{X}, \code{Y} if nonsymmetric.
+#'
+#' @author Eric Bridgeford
+#'
+#' @examples
+#' library(graphstats)
+#' data <- gs.sims.latent_pos(array(rnorm(100), dim=c(50, 2)))  # simulate 100 graphs with 10 vertices from the default model
+#' @export
+#'
+gs.sims.latent_pos <- function(X, Y=NULL) {
+  n <- dim(X)[1]; k <- dim(X)[2]
+  G <- matrix(0, dim=c(n, n))
+  if (is.null(Y)) {
+    P <- X %*% t(X)
+  } else {
+      if (!all(dim(X) == dim(Y))) {
+        stop("You have X and Y, but they do not have the same dimensionality.")
+      }
+    P <- X %*% t(Y)
+  }
+  for (i in 1:n) {
+    for (j in 1:n) {
+      G[i, j] <- rbinom(n=1, size=1, prob=P[i, j])
+    }
+  }
+  if (is.null(Y)) {
+    G[upper.tri(G, diag=FALSE)] <- 0
+    G <- G + t(G) - diag(G)
+  }
+  return(G)
+}
 
 #' Stochastic-Block Model Graphs
 #'

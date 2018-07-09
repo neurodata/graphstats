@@ -6,6 +6,7 @@ g_legend<-function(a.gplot){
   legend <- tmp$grobs[[leg]]
   return(legend)
 }
+
 #' Graph Heatmap plot
 #'
 #' A function that plots an igraph object, as a heatmap.
@@ -14,6 +15,8 @@ g_legend<-function(a.gplot){
 #' @import igraph
 #' @importFrom reshape2 melt
 #' @importFrom ggpubr as_ggplot
+#' @importFrom grid textGrob
+#' @importFrom grid gpar
 #' @param g input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.
 #' @param title the title for the square plot. Defaults to \code{""}.
 #' @param src.label the source label for the graph. Defaults to \code{"Vertex"}.
@@ -41,9 +44,8 @@ g_legend<-function(a.gplot){
 #' @param edge.xfm log-transform the edge-weights. Defaults to \code{FALSE}.
 #' \itemize{
 #' \item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
-#' \item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \code{\link[base]{log}} for details. Does not work if there are negative edge-weights.}
-#' \item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \code{\link[base]{log10}} for details. Does not work if there are negative edge-weights.}
-#' \item{\code{! (edge.xfm %in% c(FALSE, "log", "log10"))} assumes \code{edge.xfm} is a function, and transform the vertices with the provided function.}
+#' \item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \link[base]{log} for details. Does not work if there are negative edge-weights.}
+#' \item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \link[base]{log10} for details. Does not work if there are negative edge-weights.}
 #' }
 #' @return the graph/graphs as a plot.
 #' @author Eric Bridgeford
@@ -53,7 +55,7 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
                             degree=TRUE) {
   # load adjacency matrix as a dense matrix
   adj <- as_adjacency_matrix(g, attr=edge.attr, names=vertex.label, type="both", sparse=FALSE)
-  adj.data <- melt(adj)  # melt the graph to a data-frame with row and colnames preserved
+  adj.data <- reshape2::melt(adj)  # melt the graph to a data-frame with row and colnames preserved
   colnames(adj.data) <- c("Source", "Target", "Weight")
   alpha = 1
   hist.src <- apply(adj, c(1), nan.sum)
@@ -82,13 +84,17 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
   hist.dat <- rbind(data.frame(Vertex=1:dim(adj)[1], Degree=hist.src/max(hist.src), Type=wt.name, direction="Source"),
                     data.frame(Vertex=1:dim(adj)[1], Degree=hist.tgt/max(hist.tgt), Type=wt.name, direction="Target"))
 
+  thm = list(theme_void(),
+             guides(fill=FALSE),
+             theme(plot.margin=unit(rep(0,4), "lines")))
   plot.adj <- ggplot(adj.data, aes(x=Source, y=Target, alpha=Weight)) +
     geom_tile(fill=edge.colors) +
     xlab(src.label) +
     ylab(tgt.label) +
     ggtitle(title) +
     theme_bw() +
-    theme(rect=element_blank(), panel.grid=element_blank())
+    theme(rect=element_blank(), panel.grid=element_blank()) +
+    thm
   if (vertex.label) {
     plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
   }
@@ -105,14 +111,12 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
     thm = list(theme_void(),
                guides(fill=FALSE),
                theme(plot.margin=unit(rep(0,4), "lines"), legend.position=NaN))
-    top.plot <- ggplot(subset(hist.dat, direction == "Source"), aes(x=Vertex, y=Degree, fill=Type, color=Type, group=Type)) +
+    top.plot <- ggplot(subset(hist.dat, direction == "Source"), aes(x=Vertex, y=Degree, fill=Type, group=Type)) +
       geom_bar(stat = "identity", position="identity", alpha=alpha) +
-      scale_color_manual(values=edge.colors) +
       scale_fill_manual(values=edge.colors) +
       thm
-    right.plot <- ggplot(subset(hist.dat, direction == "Target"), aes(x=Vertex, y=Degree, fill=Type, color=Type, group=Type)) +
+    right.plot <- ggplot(subset(hist.dat, direction == "Target"), aes(x=Vertex, y=Degree, fill=Type, group=Type)) +
       geom_bar(stat = "identity", position="identity", alpha=alpha) +
-      scale_color_manual(values=edge.colors) +
       scale_fill_manual(values=edge.colors) +
       coord_flip() +
       thm
@@ -120,8 +124,9 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
     pleg <- g_legend(plot.adj)
     widths=c(0.6, 0.2, 0.2)
     heights=c(0.2, 0.8)
-    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot + ggtitle(title), empty, empty, plot.adj + theme(legend.position=NaN) + ggtitle(""), right.plot, pleg), byrow=TRUE,
-                                      ncol=3, nrow=2, widths=widths, heights=heights))
+    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3)),
+                                      left=tgt.label, bottom=src.label))
   }
   #if (is.character(vertex.attr)) {
   #  vertices <- colnames(adj)
@@ -179,7 +184,6 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
 #' \item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
 #' \item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \code{\link[base]{log}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
 #' \item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \code{\link[base]{log10}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
-#' \item{\code{! (edge.xfm %in% c(FALSE, "log", "log10"))} assumes \code{edge.xfm} is a function, and transform the vertices with the provided function.}
 #' }
 #' @param eps if you specify an `edge.xfm` that is logarithmic, indicate the padding that zero entries should receive. Defaults to `.0001`. `eps` should be `<< min(edge-weight)`.
 #' @param degree Whether to plot the marginal vertex degrees. Defaults to `FALSE`.
@@ -334,7 +338,6 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
 #' \item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
 #' \item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \code{\link[base]{log}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
 #' \item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \code{\link[base]{log10}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
-#' \item{\code{! (edge.xfm %in% c(FALSE, "log", "log10"))} assumes \code{edge.xfm} is a function, and transform the vertices with the provided function.}
 #' }
 #' @param eps if you specify an `edge.xfm` that is logarithmic, indicate the padding that zero entries should receive. Defaults to `.0001`. `eps` should be `<< min(edge-weight)`.
 #' @param degree Whether to plot the marginal vertex degrees. Defaults to `FALSE`.
