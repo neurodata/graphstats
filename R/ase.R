@@ -21,8 +21,7 @@
 #' of them.)
 #'
 #' @param g The input graph, directed or undirected.
-#' @param k An integer scalar. Should be the case that \code{k < gorder(g)}. The
-#' largest \code{k}-dimensions are retained from the spectral embedding.
+#' @param k The embedding dimensionality. Defaults to \code{NULL}. Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{floor(log2(gorder(X)))}.}
 #' @param edge.attr the names of the attribute to use for weights. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
 #' @return A list containing the following:
 #' \item{\code{X}}{an \code{n} by \code{k} matrix indicating the estimated latent positions, where \code{n} is the number of vertices of \code{g}.}
@@ -43,11 +42,15 @@
 #' RDP <- sample_dot_product(lpvs)
 #' embed <- embed_adjacency_matrix(RDP, 5)
 #' @export
-gs.embed.ase <- function(g, k, edge.attr=NULL) {
+gs.embed.ase <- function(g, k=NULL, edge.attr=NULL) {
 
   # Input validation.
   if (class(g) == "dgCMatrix" || class(g) == "matrix") { g = graph_from_adjacency_matrix(g) }
   if (class(g) != 'igraph') { stop("Input object 'g' is not an igraph object.") }
+
+  if (is.null(k)) {
+    k <- floor(log2(gorder(g)))
+  }
   if (length(k) > 1) { stop("The number of embedding dimensions 'k' has length > 1.") }
   if (class(k) != "numeric" && !is.integer(k)) { stop("The number of embedding dimensions 'k' is not a number.") }
   if (k%%1 != 0) { stop("The number of embedding dimensions 'k' must be an integer.") }

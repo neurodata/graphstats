@@ -28,8 +28,7 @@
 #' }
 #' @param k The embedding dimensionality. Defaults to \code{NULL}.
 #' \itemize{
-#' \item{If \code{X} is of class \link[igraph]{igraph} or a numeric/complex matrix or 2-D array, an integer scalar indicating
-#' the embedding dimensionality of the spectral embedding. Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
+#' \item{If \code{X} is of class \link[igraph]{igraph}, Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
 #' \item{If \code{X} is  \code{matrix} or 2-D \code{array}, should be the case that \code{k < min(dim(X))}. If \code{k==NULL}, defaults to \code{min(dim(X))}}
 #' }
 #' @param edge.attr the names of the attribute to use for weights if \code{X} is an object of class \link[igraph]{igraph}. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
@@ -77,7 +76,7 @@ gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, p
 
   if (class(X) == 'igraph') {
     if (is.null(k)) {
-      k = gorder(X) - 1
+      k = floor(log2(gorder(X)))
     }
     d <- gs.embed.ase(X, k, edge.attr=edge.attr)$D
   } else if (class(X) == 'matrix' || class(X) == 'array') {
@@ -88,7 +87,7 @@ gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, p
     }
     if (dim.X[1] > 1 && dim.X[2] > 1) {
       if (is.null(k)) {
-        k = min(dim.X)
+        k = floor(log2(min(dim.X)))
       }
       d <- irlba(X, nu=k)$d
     } else {

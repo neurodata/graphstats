@@ -4,13 +4,10 @@
 \alias{gs.embed.ase}
 \title{Spectral Embedding of Adjacency Matrices}
 \usage{
-gs.embed.ase(g, k, edge.attr = NULL)
+gs.embed.ase(g, k = NULL, edge.attr = NULL)
 }
 \arguments{
 \item{g}{The input graph, directed or undirected.}
-
-\item{k}{An integer scalar. Should be the case that \code{k < gorder(g)}. The
-largest \code{k}-dimensions are retained from the spectral embedding.}
 
 \item{edge.attr}{the names of the attribute to use for weights. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.}
 }

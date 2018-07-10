@@ -459,3 +459,76 @@ gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="V
   #}
   return(plot.adj)
 }
+
+#' Matrix Pairs Plot
+#'
+#' A function that plots a matrix as a pairs plot.
+#'
+#' @import ggplot2
+#' @param X input matrix as a 2-d data frame. Should be \code{[n, d]} dimensions for \code{n} points and \code{[d]} dimensions. The points (rows) rows
+#' of \code{X} points will be colored according to their \code{rownames} assignment.
+#' @param k the maximum number of dimensions you want to plot. Defaults to \code{NULL}, which plots all \code{d} dimensions.
+#' @param pt.label the name of the point labels. If the columns of \code{X} are named, will color the points
+#' @param x.label the x label for the pairs plot. Defaults to \code{""}.
+#' @param y.label the y label for the pairs plot. Defaults to \code{""}.
+#' @param title the title for the plot. Defaults to \code{""}.
+#' @param font.size the default font size for the plot text. Axis/legend text is \code{font.size - 2}. Defaults to \code{NULL}.
+#' \itemize{
+#' \item{\code{is.null(font.size)} uses the default sizing for all fonts.}
+#' \item{\code{!is.null(font.size)} uses \code{font.size} as the font sizing for the plots.}
+#' }
+#' @return the latent positions as a pairs plot.
+#' @author Eric Bridgeford
+#' @export
+gs.plot.matrix.pairs <- function(X, k=NULL, x.label="", y.label="", title="", pt.label="Point", font.size=NULL) {
+
+  # adapted from https://gastonsanchez.wordpress.com/2012/08/27/scatterplot-matrices-with-ggplot/
+  makePairs <- function(data) {
+    colnames(data) <- sapply(1:dim(data)[2], function(i) sprintf("Dimension %d", i))
+    grid <- expand.grid(x = 1:ncol(data), y = 1:ncol(data))
+    grid <- subset(grid, x != y)
+    all <- do.call("rbind", lapply(1:nrow(grid), function(i) {
+      xcol <- grid[i, "x"]
+      ycol <- grid[i, "y"]
+      data.frame(xvar = colnames(data)[ycol], yvar = colnames(data)[xcol],
+                 x = data[, xcol], y = data[, ycol], data)
+    }))
+    all$xvar <- factor(all$xvar, levels = colnames(data))
+    all$yvar <- factor(all$yvar, levels = colnames(data))
+    densities <- do.call("rbind", lapply(1:ncol(data), function(i) {
+      data.frame(xvar = colnames(data)[i], yvar = colnames(data)[i], x = data[, i])
+    }))
+    list(all=all, densities=densities)
+  }
+
+  gg1 <- makePairs(X)
+
+  # new data frame mega iris
+  mega_mtx = data.frame(gg1$all)
+
+  if (!is.null(rownames(X))) {
+    mega_mtx <- data.frame(gg1$all, label=rep(rownames(X), length=nrow(gg1$all)))
+  } else {
+    mega_mtx <- data.frame(gg1$all)
+  }
+
+  # pairs plot
+  pairs <- ggplot(mega_mtx, aes_string(x = "x", y = "y")) +
+    facet_grid(xvar ~ yvar, scales = "free") +
+    xlab(x.label) +
+    ylab(y.label) +
+    stat_density(aes(x = x, y = ..scaled.. * diff(range(x)) + min(x)),
+                 data = gg1$densities, position = "identity",
+                 colour = "grey20", geom = "line") +
+    ggtitle(title)
+  if (!is.null(rownames(X))) {
+    pairs <- pairs +
+      geom_point(aes(color=label), na.rm = TRUE, alpha=0.8) +
+      labs(color=pt.label)
+
+  } else {
+    pairs <- pairs +
+      geom_point(na.rm = TRUE, alpha=0.8)
+  }
+  return(pairs)
+}
