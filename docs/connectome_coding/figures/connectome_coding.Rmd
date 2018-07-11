@@ -650,8 +650,33 @@ grid.arrange(celegans.chem.ase.plot.comb, celegans.gap.ase.plot.comb, fly.ase.pl
              human.fmri.ase.plot.comb, human.dmri.ase.plot.comb, nrow=3)
 ```
 
+```{r}
+rownames(fly.ase$X) <- V(fly.left)$type
+gs.plot.matrix.pairs(fly.ase$X, pt.label="Type")
+
+rownames(celegans.chem.ase$X) <- V(celegans.male)$type
+gs.plot.matrix.pairs(celegans.chem.ase$X, pt.label="Type")
+
+rownames(celegans.gap.ase$X) <- V(celegans.male)$type
+gs.plot.matrix.pairs(celegans.gap.ase$X, pt.label="Type")
+
+rownames(mouse.ase$X) <- V(mouse.duke)$level1
+gs.plot.matrix.pairs(mouse.ase$X, pt.label="Region")
+
+rownames(human.dmri.ase$X) <- V(human.mri)$type
+gs.plot.matrix.pairs(human.dmri.ase$X, pt.label="Region")
+```
+
+Figure 3: Dimension1 vs Dimension2
+color coded by attribute
+
 Color vertices by their label
 pairs plots
 LLG paper
 omni plots; similar to pairs plots but have a line joining matched vertices
 fly left; fly right with matched vertices btwn the 2
+
+separate mouse connectome by left and right hemisphere
+use version of human lobe-wise assignment with desikan instead of brodmann
+produce pairs plots for all 6
+finish omni plots for fly, celegans, and human

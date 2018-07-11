@@ -37,9 +37,7 @@ n <- 60
 block.sizes <- c(n/2, n/2)
 blocks <- rep(c(1, 2), block.sizes)
 g <- igraph::sample_sbm(n, block_probs, block.sizes)
-gs.plot.plot_matrix(igraph::as_adjacency_matrix(g, sparse = FALSE),
-                    legend.name="Connection",
-                    ffactor = TRUE)
+gs.plot.heatmap(g)
 ```
 
 ## Embedding the Graph
@@ -49,12 +47,15 @@ Now, we call the function to embed the adjacency matrix in R^2. Ideally, we obse
 ```{r, fig.height=4, fig.width=4}
 # Embed graph into R^2.
 dim <- 2
-X <- ase(g, dim)
+X <- gs.embed.ase(g, dim)$X
 dat <- as.data.frame(X)
 
 # Display.
-p <- ggplot(dat) + geom_point(aes(x = V1, y = V2), color=blocks)
-p + xlab("PC Score 1") + ylab("PC Score 2")
+p <- ggplot(dat) +
+  geom_point(aes(x = V1, y = V2), color=blocks) +
+  xlab("PC Score 1") +
+  ylab("PC Score 2")
+print(p)
 ```
 
 
@@ -77,11 +78,13 @@ X_R <- X %*% R
 # Display.
 dat <- as.data.frame(X_R)
 vec <- as.data.frame(t(latent_vecs))
-p <- ggplot(dat) + geom_point(aes(x = V1, y = V2), color=blocks) +
+p <- ggplot(dat) +
+  geom_point(aes(x = V1, y = V2), color=blocks) +
   geom_point(data = vec, mapping = aes(x=V1, y=V2, shape=4), size = 5) + 
-  scale_shape_identity()
-
-p + xlab("PC Score 1") + ylab("PC Score 2")
+  scale_shape_identity() +
+  xlab("PC Score 1") +
+  ylab("PC Score 2")
+print(p)
 ```
 
 Here, the X's represent the original latent vectors, while the data can clearly rotated as shown to surround these vectors.
