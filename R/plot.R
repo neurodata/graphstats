@@ -490,8 +490,8 @@ gs.plot.matrix.pairs <- function(X, k=NULL, x.label="", y.label="", title="", pt
     all <- do.call("rbind", lapply(1:nrow(grid), function(i) {
       xcol <- grid[i, "x"]
       ycol <- grid[i, "y"]
-      data.frame(xvar = colnames(data)[ycol], yvar = colnames(data)[xcol],
-                 x = data[, xcol], y = data[, ycol], data)
+      suppressWarnings(data.frame(xvar = colnames(data)[ycol], yvar = colnames(data)[xcol],
+                        x = data[, xcol], y = data[, ycol], data))
     }))
     all$xvar <- factor(all$xvar, levels = colnames(data))
     all$yvar <- factor(all$yvar, levels = colnames(data))
@@ -520,15 +520,16 @@ gs.plot.matrix.pairs <- function(X, k=NULL, x.label="", y.label="", title="", pt
     stat_density(aes(x = x, y = ..scaled.. * diff(range(x)) + min(x)),
                  data = gg1$densities, position = "identity",
                  colour = "grey20", geom = "line") +
-    ggtitle(title)
+    ggtitle(title) +
+    theme_bw()
   if (!is.null(rownames(X))) {
     pairs <- pairs +
-      geom_point(aes(color=label), na.rm = TRUE, alpha=0.8) +
+      geom_point(aes(color=label), na.rm = TRUE, alpha=1/log10(dim(X)[1])) +
       labs(color=pt.label)
 
   } else {
     pairs <- pairs +
-      geom_point(na.rm = TRUE, alpha=0.8)
+      geom_point(na.rm = TRUE, alpha=1/log10(dim(X)[1]))
   }
   return(pairs)
 }
