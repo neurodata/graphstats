@@ -97,15 +97,16 @@ read.human.graph <- function(human) {
 }
 
 
-read.human.graph.brodmann <- function(human) {
-  dmri.graph <- read.graph('/data/sub-NDARAD481FXF_acq-64dir_dwi_brodmann_res-1x1x1_measure-spatial-ds.edgelist', format='ncol', directed=FALSE)
-  fmri.graph <- read.graph('/data/sub-NDARAD481FXF_task-rest_bold_brodmann_res-2x2x2_measure-correlation.edgelist', format='ncol', directed=FALSE)
+read.human.graph.brodmann <- function() {
+  dmri.graph <- read.graph('/data/sub-NDARAD481FXF_acq-64dir_dwi_desikan_res-1x1x1_measure-spatial-ds.edgelist', format='ncol', directed=FALSE)
+  fmri.graph <- read.graph('/data/sub-NDARAD481FXF_task-rest_bold_desikan_res-2x2x2_measure-correlation.edgelist', format='ncol', directed=FALSE)
 
   V.dmri <- V(dmri.graph)
   V.fmri <- V(fmri.graph)
 
-  lobes.raw <- read.csv('../data/brodmann_res-1x1x1_lobes_res-1x1x1.csv')
-  colnames(lobes.raw) <- c("id", "non-labelled", "frontal", "temporal", "parietal", "occiptal")
+  lobes.raw <- read.csv('../data/desikan_res-1x1x1_lobes_res-1x1x1.csv')
+  colnames(lobes.raw) <- c("id", "non-labeled", "frontal", "temporal", "occipital", "parietal", "midbrain", "frontal", "temporal", "occipital", "parietal")
+
   vertex.data <- data.frame()
   for (i in 1:dim(lobes.raw)[1]) {
     lobes.ss <- lobes.raw[i,][,colnames(lobes.raw) != "id"]
@@ -127,6 +128,66 @@ read.human.graph.brodmann <- function(human) {
 
   gcomb <- set_vertex_attr(gcomb, "lobe", index=vertex.data$id, value=as.character(vertex.data$lobe))
   return(gcomb)
+}
+
+read.human.graph.desikan <- function() {
+  dmri.graph <- read.graph('/data/sub-0025864_ses-1_dwi_desikan.edgelist', format='ncol', directed=FALSE)
+  fmri.graph <- read.graph('/data/sub-0025864_ses-1_bold_desikan-2mm.edgelist', format='ncol', directed=FALSE)
+
+  V.dmri <- V(dmri.graph)
+  V.fmri <- V(fmri.graph)
+
+  lobes.raw <- read.csv('/home/eric/Documents/research/ndmg-repos/desikan_res-1x1x1_lobes_res-1x1x1.csv')
+  lobes.raw <- lobes.raw[, -13]
+  lobes <- c("non-labeled", "frontal", "temporal", "occipital", "parietal", "midbrain", "frontal", "temporal", "occipital", "parietal", "midbrain")
+  hemispheres <- c("non-labeled", "right", "right", "right", "right", "right", "left", "left", "left", "left", "left")
+
+  vertex.data <- data.frame()
+  for (i in 1:dim(lobes.raw)[1]) {
+    lobes.ss <- lobes.raw[i,][,colnames(lobes.raw) != "p1reg"]
+    vertex.data <- rbind(vertex.data, data.frame(id=as.character(round(as.numeric(lobes.raw[i,]$p1reg))),
+                                                 lobe=lobes[which(lobes.ss == max(lobes.ss))[1]],
+                                                 hemisphere=hemispheres[which(lobes.ss == max(lobes.ss))[1]]))
+  }
+  V(dmri.graph)$name = as.character(round(as.numeric(V(dmri.graph)$name)))
+  V(fmri.graph)$name = as.character(round(as.numeric(V(fmri.graph)$name)))
+
+  E(dmri.graph)$dMRI <- E(dmri.graph)$weight
+  dmri.graph <- delete_edge_attr(dmri.graph, "weight")
+  E(fmri.graph)$fMRI <- E(fmri.graph)$weight
+  fmri.graph <- delete_edge_attr(fmri.graph, "weight")
+
+  gcomb <- union(fmri.graph, dmri.graph)
+
+  E(gcomb)$dMRI[is.na(E(gcomb)$dMRI)] = 0
+  E(gcomb)$fMRI[is.na(E(gcomb)$fMRI)] = 0
+
+  gcomb <- set_vertex_attr(gcomb, "lobe", index=vertex.data$id, value=as.character(vertex.data$lobe))
+  gcomb <- set_vertex_attr(gcomb, "hemisphere", index=vertex.data$id, value=as.character(vertex.data$hemisphere))
+  gcomb <- permute.vertices(gcomb, as.numeric(V(gcomb)$name))
+  return(gcomb)
+}
+
+fly.merge <- function(flyleft, flyright) {
+  V1 <- V(flyleft)
+  V2 <- V(flyright)
+
+  Vss1 <- V1[V1$name %in% V2$name]
+  Vss2 <- V2[V2$name %in% V1$name]
+
+  left.ss <- induced_subgraph(flyleft, Vss1)
+  right.ss <- induced_subgraph(flyright, Vss2)
+
+  E(left.ss)$left <- E(left.ss)
+
+  E(right.ss)$right <- E(right.ss)
+  gcomb <- union(left.ss, right.ss)
+  V(gcomb)$type <- V(gcomb)$type_1
+  gcomb <- delete_vertex_attr(gcomb, "type_1")
+  gcomb <- delete_vertex_attr(gcomb, "type_2")
+
+  E(gcomb)$right[is.na(E(gcomb)$right)] = 0
+  E(gcomb)$left[is.na(E(gcomb)$left)] = 0
 }
 
 read.celegans.merge <- function(gap, chem) {

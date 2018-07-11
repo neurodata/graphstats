@@ -550,10 +550,10 @@ grid.arrange(celegans.plot, fly.plot, mouse.plot, human.plot, nrow=2)
 
 ```{r}
 human.dmri.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attr="dMRI")
-human.dmri.sbm <- delete_vertices(human.dmri.sbm, "non-labelled")
+# human.dmri.sbm <- delete_vertices(human.dmri.sbm, "non-labeled")
 human.dmri.sbm.plot <- gs.plot.sbm(human.dmri.sbm, edge.attr="dMRI", title="(D.ii) Human dMRI")
 human.fmri.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attr="fMRI")
-human.fmri.sbm <- delete_vertices(human.fmri.sbm, "non-labelled")
+# human.fmri.sbm <- delete_vertices(human.fmri.sbm, "non-labeled")
 human.fmri.sbm.plot <- gs.plot.sbm(human.fmri.sbm, edge.attr="fMRI", title="(D.i) Human fMRI")
 
 mouse.sbm <- gs.sbm.fit(mouse.duke, community.attribute = "level1", edge.attr="weight")
@@ -648,6 +648,10 @@ celegans.gap.ase.plot.comb <- arrangeGrob(celegans.gap.dim$plot + ggtitle("(A.ii
 ```{r}
 grid.arrange(celegans.chem.ase.plot.comb, celegans.gap.ase.plot.comb, fly.ase.plot.comb, mouse.ase.plot.comb,
              human.fmri.ase.plot.comb, human.dmri.ase.plot.comb, nrow=3)
+```
+
+```{r}
+gs.plot.matrix.pairs(human.mri)
 ```
 
 Color vertices by their label
