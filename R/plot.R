@@ -468,7 +468,8 @@ gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="V
 #' @param X input matrix as a 2-d data frame. Should be \code{[n, d]} dimensions for \code{n} points and \code{[d]} dimensions. The points (rows) rows
 #' of \code{X} points will be colored according to their \code{rownames} assignment.
 #' @param k the maximum number of dimensions you want to plot. Defaults to \code{NULL}, which plots all \code{d} dimensions.
-#' @param pt.label the name of the point labels. If the columns of \code{X} are named, will color the points
+#' @param pt.color the color of the points. Defaults to \code{NULL}, which will not color the points (they will all be black).
+#' @param pt.shape the shape of the points. Defaults to \code{NULL}, which will not define a point shape (they will all be circles).
 #' @param x.label the x label for the pairs plot. Defaults to \code{""}.
 #' @param y.label the y label for the pairs plot. Defaults to \code{""}.
 #' @param title the title for the plot. Defaults to \code{""}.
@@ -480,7 +481,7 @@ gs.plot.heatmap_overlay <- function(g, title="",src.label="Vertex", tgt.label="V
 #' @return the latent positions as a pairs plot.
 #' @author Eric Bridgeford
 #' @export
-gs.plot.matrix.pairs <- function(X, k=NULL, x.label="", y.label="", title="", pt.label="Point", font.size=NULL) {
+gs.plot.matrix.pairs <- function(X, k=NULL, pt.color=NULL, pt.shape=NULL, x.label="", y.label="", title="", pt.label="Point", font.size=NULL) {
 
   # adapted from https://gastonsanchez.wordpress.com/2012/08/27/scatterplot-matrices-with-ggplot/
   makePairs <- function(data) {
@@ -496,7 +497,9 @@ gs.plot.matrix.pairs <- function(X, k=NULL, x.label="", y.label="", title="", pt
     all$xvar <- factor(all$xvar, levels = colnames(data))
     all$yvar <- factor(all$yvar, levels = colnames(data))
     densities <- do.call("rbind", lapply(1:ncol(data), function(i) {
-      data.frame(xvar = colnames(data)[i], yvar = colnames(data)[i], x = data[, i])
+      do.call("rbind", lapply(1:length(unique(pt.color)), function(j) {
+        data.frame(xvar = colnames(data)[i], yvar = colnames(data)[i], x = data[pt.color == unique(pt.color)[j], i], color=unique(pt.color)[j])
+      }))
     }))
     list(all=all, densities=densities)
   }
@@ -506,30 +509,19 @@ gs.plot.matrix.pairs <- function(X, k=NULL, x.label="", y.label="", title="", pt
   # new data frame mega iris
   mega_mtx = data.frame(gg1$all)
 
-  if (!is.null(rownames(X))) {
-    mega_mtx <- data.frame(gg1$all, label=rep(rownames(X), length=nrow(gg1$all)))
-  } else {
-    mega_mtx <- data.frame(gg1$all)
-  }
+  mega_mtx <- data.frame(gg1$all, color=rep(pt.color, length=nrow(gg1$all)),
+                         shape=rep(pt.shape, length=nrow(gg1$all)))
 
   # pairs plot
   pairs <- ggplot(mega_mtx, aes_string(x = "x", y = "y")) +
     facet_grid(xvar ~ yvar, scales = "free") +
     xlab(x.label) +
     ylab(y.label) +
-    stat_density(aes(x = x, y = ..scaled.. * diff(range(x)) + min(x)),
-                 data = gg1$densities, position = "identity",
-                 colour = "grey20", geom = "line") +
+    stat_density(aes(x = x, y = ..scaled.. * diff(range(x)) + min(x), color=color),
+                 data = gg1$densities, position = "identity", geom = "line") +
     ggtitle(title) +
-    theme_bw()
-  if (!is.null(rownames(X))) {
-    pairs <- pairs +
-      geom_point(aes(color=label), na.rm = TRUE, alpha=1/log10(dim(X)[1])) +
-      labs(color=pt.label)
+    theme_bw() +
+    geom_point(aes(color=color, shape=shape), na.rm=TRUE, alpha=1/log10(dim(X)[1]))
 
-  } else {
-    pairs <- pairs +
-      geom_point(na.rm = TRUE, alpha=1/log10(dim(X)[1]))
-  }
   return(pairs)
 }
