@@ -23,5 +23,5 @@ and towards another randomly generated doubly-stochastic matrix by
 \eqn{alpha}.
 }
 \author{
-Heather Gaddy Patsolic <hgaddy1@jhu.edu>
+Heather Gaddy Patsolic \href{mailto:hgaddy1@jhu.edu}{hgaddy1@jhu.edu}
 }

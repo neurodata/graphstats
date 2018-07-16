@@ -8,16 +8,18 @@ sg.bern.graph_estimator(samp, thresh = 0, smooth = TRUE)
 }
 \arguments{
 \item{samp}{a list or array of graphs with arbitrary labelling.
- - if samp is a list, then it should have s elements of dimensions
-     [n x n].
-- if samp is an array, then it should be of dimensions [n x n x s].}
+- if samp is a list, then it should have s elements of dimensions
+\link{n x n}.
+\itemize{
+\item if samp is an array, then it should be of dimensions \link{n x n x s}.
+}}
 
 \item{thresh=0:}{is the threshold below which we set edges to disconnected, and above which we set edges to connected.}
 
 \item{smooth=TRUE:}{whether to smooth p to avoid undesirable limits.}
 }
 \value{
-p [n x n] the p parameter per edge representing the probability of an edge existing.
+p \link{n x n} the p parameter per edge representing the probability of an edge existing.
 }
 \description{
 \code{sg.bern.graph_estimator} uses the method of moments to estimate the parameters of a beta

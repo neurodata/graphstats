@@ -40,5 +40,5 @@ Athreya, A., Fishkind, D. E., Levin, K., Lyzinski, V., Park, Y., Qin, Y., Sussma
 Statistical inference on random dot product graphs: a survey
 }
 \author{
-Eric Bridgeford <ericwb95@gmail.com>
+Eric Bridgeford \href{mailto:ericwb95@gmail.com}{ericwb95@gmail.com}
 }

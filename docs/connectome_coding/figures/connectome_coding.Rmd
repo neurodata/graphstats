@@ -16,6 +16,9 @@ require(gridExtra)
 require(ggpubr)
 require(reshape2)
 require(grid)
+require(scales)
+require(latex2exp)
+require(ggridges)
 
 nan.sum <- function(x) {sum(x, na.rm=TRUE)}
 
@@ -68,10 +71,10 @@ g_legend<-function(a.gplot){
 #' @author Eric Bridgeford
 #' @export
 gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
-                            font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001,
+                            font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001, fill.name="Type",
                             degree=TRUE) {
   # load adjacency matrix as a dense matrix
-  adj <- as_adjacency_matrix(g, attr=edge.attr, names=vertex.label, type="both", sparse=FALSE)
+  adj <- as.matrix(graphstats:::gs.as_adj(g, edge.attr=edge.attr))
   adj.data <- melt(adj)  # melt the graph to a data-frame with row and colnames preserved
   colnames(adj.data) <- c("Source", "Target", "Weight")
   alpha = 1
@@ -111,18 +114,22 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
     ggtitle(title) +
     theme_bw() +
     theme(rect=element_blank(), panel.grid=element_blank()) +
-    thm
+    thm +
+    labs(fill=fill.name, alpha=fill.name)
+  if (is.null(fill.name)) {
+    fill.name <- wt.name
+  }
   if (vertex.label) {
     plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
   }
   if (is.character(edge.attr)) {
     plot.adj <- plot.adj +
-      scale_fill_gradientn(colors=edge.colors, name=wt.name) +
-      guides(alpha=guide_legend(title=wt.name))
+      scale_fill_gradientn(colors=edge.colors, name=fill.name) +
+      guides(alpha=guide_legend(title=fill.name))
   } else {
     plot.adj <- plot.adj +
-      scale_fill_manual(values=edge.colors, name=wt.name) +
-      guides(alpha=guide_legend(title=wt.name))
+      scale_fill_manual(values=edge.colors, name=fill.name) +
+      guides(alpha=guide_legend(title=fill.name))
   }
   if (degree) {
     thm = list(theme_void(),
@@ -139,10 +146,10 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
       thm
     empty <- ggplot() + geom_blank() + thm
     pleg <- g_legend(plot.adj)
-    widths=c(0.6, 0.2, 0.2)
-    heights=c(0.2, 0.8)
-    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
-                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3)),
+    widths=c(0.7, 0.1, 0.2)
+    heights=c(0.1, 0.8)
+    plot.adj <- ggarrange(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3),x=0,hjust=0),
                                       left=tgt.label, bottom=src.label))
   }
   #if (is.character(vertex.attr)) {
@@ -172,11 +179,11 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
 #' @importFrom reshape2 melt
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom ggpubr as_ggplot
-#' @param g input graph, as an igraph object. See \code{\link[igraph]{graph}} for details.
+#' @param glist list of input graphs, as `igraph` objects, or a list of adjacency matrices. Each graph should have `n` vertices ordered properly, where `V(glist[[i]])[u]` corresponds to `V(glist[[j]])[u]`.
 #' @param title the title for the square plot. Defaults to \code{""}.
 #' @param src.label the source label for the graph. Defaults to \code{"Vertex"}.
 #' @param tgt.label the target label for the graph. Defaults to \code{"Vertex"}.
-#' @param edge.attr the name of the attribute to use for weights. Defaults to \code{NULL}. Can be a list of `edge.attr` if you want to overlay different edge-attributes on the same plot. Supports up to 4 edge-attributes at once.
+#' @param edge.attr If the graphs in `glist` are `igraph` objects, the name of the attribute to use for weights. Defaults to `NULL`.
 #' \itemize{
 #' \item{\code{is.null(edge.attr)} plots the graph as a binary adjacency matrix.}
 #' \item{\code{is.character(edge.attr)} plot the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
@@ -208,33 +215,37 @@ gs.plot.heatmap <- function(g, title="",src.label="Vertex", tgt.label="Vertex", 
 #' @return the graph/graphs as a plot.
 #' @author Eric Bridgeford
 #' @export
-gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
-                         font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001,
-                         degree=FALSE) {
-  if (!is.vector(edge.attr)) {
-    edge.attr <- list(edge.attr)
+gs.plot.grid <- function(glist, title="", src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
+                         graph.names=NULL, font.size=NULL, vertex.label=FALSE, edge.xfm=FALSE, eps=0.0001,
+                         degree=FALSE, pt.name="Type") {
+  ## IO Specing
+  if (length(edge.attr) < length(glist)) {
+    edge.attr=lapply(1:length(glist), function(i) edge.attr[1])
   }
-  if (length(edge.xfm) < length(edge.attr)) {
-    edge.xfm <- rep(edge.xfm[1], min(length(edge.attr)))
+  if (length(edge.xfm) < length(glist)) {
+    edge.xfm <- lapply(1:length(glist), function(i) edge.xfm[1])
   }
+  if (length(graph.names) < length(glist)) {
+    graph.names <- lapply(1:length(glist), function(i) graph.names[1])
+  }
+  graphs=lapply(1:length(glist), function(i) {
+    graphstats:::gs.as_adj(glist[[i]], edge.attr=edge.attr[i])
+  })
+  
+  ## meat and taters
   cvec <- c("#020202", "#f41711", "#94d6c9", "#5f8793")
-  cvec <- cvec[1:length(edge.attr)]
-  names(cvec) <- edge.attr
-  alpha <- 1/length(edge.attr)
+  cvec <- cvec[1:length(glist)]
+  names(cvec) <- graph.names
+  alpha <- 1/length(glist)
   plot.dat <- data.frame()
   hist.dat <- data.frame()
-  for (i in 1:length(edge.attr)) {
-    attr <- edge.attr[[i]]; xfm <- edge.xfm[i]
-    adj <- as_adjacency_matrix(g, attr=attr, names=vertex.label, type="both", sparse=FALSE)
-    adj.data <- melt(adj)  # melt the graph to a data-frame with row and colnames preserved
+  for (i in 1:length(glist)) {
+    attr <- edge.attr[[i]]; xfm <- edge.xfm[[i]]; wt.name <- graph.names[[i]]
+    adj = graphs[[i]]
+    adj.data <- melt(as.matrix(adj))  # melt the graph to a data-frame with row and colnames preserved
     colnames(adj.data) <- c("Source", "Target", "Weight")
     hist.src <- apply(adj, c(1), nan.sum)
     hist.tgt <- apply(adj, c(2), nan.sum)
-    if (is.null(attr)) {
-       wt.name = "Connection"
-    } else {
-      wt.name <- attr
-    }
     if (xfm != FALSE) {
       if (xfm == "log") {
         xfm=log
@@ -269,14 +280,11 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
     theme_bw() +
     theme(rect=element_blank(), panel.grid=element_blank()) +
     guides(color=guide_legend(order=2), size=guide_legend(order=1), alpha=FALSE) +
-    thm
-  plot.adj <- plot.adj + scale_color_manual(values=cvec)
+    thm +
+    scale_color_manual(values=cvec) +
+    labs(color=pt.name, group=pt.name)
   if (vertex.label) {
     plot.adj <- plot.adj + theme(axis.text.x = element_text(angle=60, hjust=1))
-  } else {
-    plot.adj <- plot.adj +
-      xlim(1, dim(adj)[1]) +
-      ylim(1, dim(adj)[1])
   }
   if (degree) {
     thm = list(theme_void(),
@@ -293,31 +301,12 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
       thm
     empty <- ggplot() + geom_blank() + thm
     pleg <- g_legend(plot.adj)
-    widths=c(0.6, 0.2, 0.2)
-    heights=c(0.2, 0.8)
-    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
-                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3)), left=tgt.label,
+    widths=c(0.7, 0.1, 0.2)
+    heights=c(0.1, 0.8)
+    plot.adj <- ggarrange(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3),x=0,hjust=0), left=tgt.label,
                                       bottom=src.label))
   }
-  #if (is.character(vertex.attr)) {
-  # reorder the vertices so that vertices in same group are together
-
-  #}
-  #if (is.character(vertex.attr)) {
-  #  vertices <- colnames(adj)
-  #  jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
-  #  V.gr <- factor(get.vertex.attribute(g, vertex.attr))  # group the vertices by their attribute
-  #  un.vertices <- levels(V.gr)
-  #  attr.colors <- jet.colors(length(un.vertices))
-  #  for (i in 1:length(attr.colors)) {
-  #    vertex.num <- min(which())
-  #    plot.adj <- plot.adj +
-  #      geom_rect()
-  #  }
-  #  plot.adj <- plot.adj +
-  #    geom_tile(data=adj.data, aes(x=Source, y=Target, fill=Fill1), show.legend=TRUE, alpha=0.2) +
-  #    geom_tile(data=adj.data, aes(x=Source, y=Target, fill=Fill2), show.legend=FALSE, alpha=0.2)
-  #}
   return(plot.adj)
 }
 
@@ -366,33 +355,37 @@ gs.plot.grid <- function(g, title="",src.label="Vertex", tgt.label="Vertex", edg
 #' @return the graph/graphs as a plot.
 #' @author Eric Bridgeford
 #' @export
-gs.plot.heatmap_overlay <- function(g, title="", src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
-                                    font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001,
+gs.plot.heatmap_overlay <- function(glist, title="", src.label="Vertex", tgt.label="Vertex", edge.attr=NULL,
+                                    font.size=NULL, vertex.label=FALSE, vertex.attr=FALSE, edge.xfm=FALSE, eps=0.0001, graph.names=NULL, fill.name="Type",
                                     degree=FALSE) {
-  if (!is.vector(edge.attr)) {
-    edge.attr <- list(edge.attr)
+  ## IO Specing
+  if (length(edge.attr) < length(glist)) {
+    edge.attr=lapply(1:length(glist), function(i) edge.attr[1])
   }
-  if (length(edge.xfm) < length(edge.attr)) {
-    edge.xfm <- rep(edge.xfm[1], min(length(edge.attr)))
+  if (length(edge.xfm) < length(glist)) {
+    edge.xfm <- lapply(1:length(glist), function(i) edge.xfm[1])
   }
+  if (length(graph.names) < length(glist)) {
+    graph.names <- lapply(1:length(glist), function(i) graph.names[1])
+  }
+  graphs=lapply(1:length(glist), function(i) {
+    graphstats:::gs.as_adj(glist[[i]], edge.attr=edge.attr[i])
+  })
+  
+  ## meat and taters
   cvec <- c("#020202", "#f41711", "#94d6c9", "#5f8793")
-  cvec <- cvec[1:length(edge.attr)]
-  names(cvec) <- edge.attr
-  alpha <- 1/(length(edge.attr))
+  cvec <- cvec[1:length(glist)]
+  names(cvec) <- graph.names
+  alpha <- 1/length(glist)
   plot.dat <- data.frame()
   hist.dat <- data.frame()
-  for (i in 1:length(edge.attr)) {
-    attr <- edge.attr[[i]]; xfm <- edge.xfm[i]
-    adj <- as_adjacency_matrix(g, attr=attr, names=vertex.label, type="both", sparse=FALSE)
-    adj.data <- melt(adj)  # melt the graph to a data-frame with row and colnames preserved
+  for (i in 1:length(glist)) {
+    attr <- edge.attr[[i]]; xfm <- edge.xfm[[i]]; wt.name <- graph.names[[i]]
+    adj = graphs[[i]]
+    adj.data <- melt(as.matrix(adj))  # melt the graph to a data-frame with row and colnames preserved
     colnames(adj.data) <- c("Source", "Target", "Weight")
     hist.src <- apply(adj, c(1), nan.sum)
     hist.tgt <- apply(adj, c(2), nan.sum)
-    if (is.null(attr)) {
-      wt.name = "Connection"
-    } else {
-      wt.name <- attr
-    }
     if (xfm != FALSE) {
       if (xfm == "log") {
         xfm=log
@@ -420,21 +413,22 @@ gs.plot.heatmap_overlay <- function(g, title="", src.label="Vertex", tgt.label="
   thm = list(theme_void(),
                guides(fill=FALSE),
                theme(plot.margin=unit(rep(0,4), "lines")))
-  plot.adj <- ggplot(subset(plot.dat, Type == edge.attr[1]), aes(x=Source, y=Target, fill=Type, alpha=Weight, color=Type, group=Type), alpha=alpha) +
+  plot.adj <- ggplot(subset(plot.dat, Type == graph.names[1]), aes(x=Source, y=Target, fill=Type, alpha=Weight, color=Type, group=Type), alpha=alpha) +
     geom_tile() +
     xlab(src.label) +
     ylab(tgt.label) +
     ggtitle(title) +
     theme_bw() +
     theme(rect=element_blank(), panel.grid=element_blank()) +
-    thm
-  plot.adj <- plot.adj + scale_color_manual(values=cvec) +
-    scale_fill_manual(values=cvec)
+    thm +
+    scale_color_manual(values=cvec) +
+    scale_fill_manual(values=cvec) +
+    labs(fill=fill.name, color=fill.name, group=fill.name)
 
-  if (length(edge.attr) > 1) {
-    for (i in 2:length(edge.attr)) {
+  if (length(graph.names) > 1) {
+    for (i in 2:length(graph.names)) {
       plot.adj <- plot.adj +
-        geom_point(data=subset(plot.dat, Type == edge.attr[i]), aes(x=Source, y=Target, size=Weight, fill=Type, color=Type, group=Type), alpha=1)
+        geom_point(data=subset(plot.dat, Type == graph.names[i]), aes(x=Source, y=Target, size=Weight, fill=Type, color=Type, group=Type), alpha=0.6)
     }
     plot.adj <- plot.adj +
       scale_size_continuous(range = c(0,2))
@@ -457,10 +451,10 @@ gs.plot.heatmap_overlay <- function(g, title="", src.label="Vertex", tgt.label="
       thm
     empty <- ggplot() + geom_blank() + thm
     pleg <- g_legend(plot.adj)
-    widths=c(0.6, 0.2, 0.2)
-    heights=c(0.2, 0.8)
-    plot.adj <- as_ggplot(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
-                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3)),
+    widths=c(0.7, 0.1, 0.2)
+    heights=c(0.1, 0.8)
+    plot.adj <- ggarrange(arrangeGrob(grobs=list(top.plot, empty, empty, plot.adj + theme(legend.position=NaN, title=element_blank()), right.plot, pleg), byrow=TRUE,
+                                      ncol=3, nrow=2, widths=widths, heights=heights, top=textGrob(title, gp=gpar(cex=1.3),x=0,hjust=0),
                                       left=tgt.label, bottom=src.label))
   }
   #if (is.character(vertex.attr)) {
@@ -485,26 +479,24 @@ gs.plot.heatmap_overlay <- function(g, title="", src.label="Vertex", tgt.label="
   return(plot.adj)
 }
 
-gs.plot.sbm <- function(g, title="", edge.attr="dMRI", src.label="Source Community", tgt.label="Target Community") {
-  V.comm <- V(g)$community
-  names(V.comm) <- names(V(g))
-  Vlist <- do.call(c, V.comm)  # get the full list of vertices ordered by community
-  Vlist.comm <- do.call(c, lapply(names(V.comm), function(comm) rep(comm, length(V.comm[[comm]]))))
-  P.mtx <- matrix(0, nrow=length(Vlist.comm), ncol=length(Vlist.comm))
-  colnames(P.mtx) <- Vlist.comm
-  rownames(P.mtx) <- Vlist.comm
-  edge.vals <- get.edge.attribute(g, edge.attr)
-  g.es <- E(g)
-  for (i in 1:length(g.es)) {
-    vtxs <- ends(g, g.es[i])
-    P.mtx[rownames(P.mtx) == vtxs[1], colnames(P.mtx) == vtxs[2]] <- edge.vals[i]
+gs.plot.sbm <- function(g, title="", edge.attr=NULL, src.label="Source Community", tgt.label="Target Community") {
+  P <- graphstats:::gs.as_adj(g$P, edge.attr=edge.attr)
+  comm <- sort(g$v.communities)
+  P.mtx <- matrix(NaN, nrow=length(comm), ncol=length(comm))
+  uncomm <- unique(comm)
+  for (i in 1:length(uncomm)) {
+    for (j in 1:length(uncomm)) {
+      P.mtx[comm==uncomm[i], comm==uncomm[j]] <- P[i, j]
+    }
   }
-  rownames(P.mtx) <- Vlist; colnames(P.mtx) <- Vlist
-  melted.p <- melt(P.mtx); names(melted.p) <- c("source", "target", edge.attr)
-  vertices.data <- data.frame(id=Vlist, community=Vlist.comm)
-  sbm.adjg <- graph_from_data_frame(melted.p, vertices=vertices.data)
-  hmap.sbm <- gs.plot.heatmap(sbm.adjg, title=title, src.label=src.label, tgt.label=tgt.label,
-                              degree=FALSE, edge.attr = edge.attr)
+  pos.lab <- sapply(unique(comm), function(c) {
+    mean(which(comm == c))
+  })
+  hmap.sbm <- gs.plot.heatmap(graphstats:::gs.as_graph(P.mtx), title=title, src.label=src.label, tgt.label=tgt.label,
+                              degree=FALSE, edge.attr = "weight") +
+    theme(axis.text.x=element_text(), axis.text.y=element_text(), legend.position=NaN) +
+    scale_x_continuous(labels=names(pos.lab), breaks=as.numeric(pos.lab)) +
+    scale_y_continuous(labels=names(pos.lab), breaks=as.numeric(pos.lab))
   return(hmap.sbm)
 }
 
@@ -529,71 +521,295 @@ gs.plot.latent_pos <- function(X, title="",x.label="Dimension", y.label="Vertex"
 }
 ```
 
+# Remap VTX Attrs
+
 ```{r}
-mouse.plot <- gs.plot.heatmap(mouse.duke, title="(C) Mouse dMRI Connectome", src.label="",
-                              tgt.label="", edge.attr="weight", edge.xfm="log10")
-fly.plot <- gs.plot.heatmap(fly.left, title="(B) Fly Mushroom Body Connectome", src.label="",
+data("human.dmri")
+data("human.fmri")
+data("human.female.dmri")
+data("human.male.dmri")
+data("mouse.dmri")
+data("celegans.herm.chem")
+data("celegans.herm.gap")
+data("celegans.male.chem")
+data("celegans.male.gap")
+data("fly.mushroom.left")
+data("fly.mushroom.right")
+```
+
+```{r, echo=FALSE, eval=FALSE}
+# Human
+human.mri.hem <- c("R", "L")
+names(human.mri.hem) <- c("right", "left")
+human.mri.lobe <- c("M", "F", "O", "P", "T")
+names(human.mri.lobe) <- c("midbrain", "frontal", "occipital", "parietal", "temporal")
+V(human.dmri)$hemisphere <- as.character(human.mri.hem[V(human.dmri)$hemisphere])
+V(human.fmri)$hemisphere <- as.character(human.mri.hem[V(human.fmri)$hemisphere])
+V(human.male.dmri)$hemisphere <- as.character(human.mri.hem[V(human.male.dmri)$hemisphere])
+V(human.female.dmri)$hemisphere <- as.character(human.mri.hem[V(human.female.dmri)$hemisphere])
+V(human.dmri)$lobe <- as.character(human.mri.lobe[V(human.dmri)$lobe])
+V(human.fmri)$lobe <- as.character(human.mri.lobe[V(human.fmri)$lobe])
+V(human.male.dmri)$lobe <- as.character(human.mri.lobe[V(human.male.dmri)$lobe])
+V(human.female.dmri)$lobe <- as.character(human.mri.lobe[V(human.female.dmri)$lobe])
+V(human.dmri)$region <- paste0(V(human.dmri)$hemisphere, V(human.dmri)$lobe)
+V(human.fmri)$region <- paste0(V(human.fmri)$hemisphere, V(human.fmri)$lobe)
+V(human.male.dmri)$region <- paste0(V(human.male.dmri)$hemisphere, V(human.male.dmri)$lobe)
+V(human.female.dmri)$region <- paste0(V(human.female.dmri)$hemisphere, V(human.female.dmri)$lobe)
+human.dmri <- permute.vertices(human.dmri, V(human.dmri)$name[sort(V(human.dmri)$region, decreasing=TRUE, index=TRUE)$ix])
+human.fmri <- permute.vertices(human.fmri, V(human.fmri)$name[sort(V(human.fmri)$region, decreasing=TRUE, index=TRUE)$ix])
+human.male.dmri <- permute.vertices(human.male.dmri, V(human.male.dmri)$name[sort(V(human.male.dmri)$region, decreasing=TRUE, index=TRUE)$ix])
+human.female.dmri <- permute.vertices(human.female.dmri, V(human.female.dmri)$name[sort(V(human.female.dmri)$region, index=TRUE)$ix])
+
+# Mouse
+mouse.mri.hem <- c("R", "L")
+names(mouse.mri.hem) <- c("Right", "Left")
+mouse.mri.level1 <- c("F", "M", "H", "W")
+names(mouse.mri.level1) <- c("forebrain", "midbrain", "hindbrain", "white matter")
+V(mouse.dmri)$hemisphere <- as.character(mouse.mri.hem[V(mouse.dmri)$hemisphere])
+V(mouse.dmri)$level1 <- as.character(mouse.mri.level1[V(mouse.dmri)$level1])
+V(mouse.dmri)$region <- paste0(V(mouse.dmri)$hemisphere, V(mouse.dmri)$level1)
+mouse.dmri <- permute.vertices(mouse.dmri, V(mouse.dmri)$name[sort(V(mouse.dmri)$region, index=TRUE)$ix])
+mouse.dmri <- set.graph.attribute(mouse.dmri, "hemisphere", mouse.mri.hem)
+mouse.dmri <- set.graph.attribute(mouse.dmri, "level1", mouse.mri.level1)
+# C Elegans
+celegans.hem <- c("R", "L", "B")
+reassign.hem <- function(graph) {
+  V(graph)$hemisphere <- sapply(V(graph)$name, function(neuron) {
+    split.n <- strsplit(neuron, "")[[1]]
+    if (split.n[length(split.n)] == "L") {
+      return("L")
+    } else if (split.n[length(split.n)] == "R") {
+      return("R")
+    } else {
+      return("B")
+    }
+  })
+  return(graph)
+}
+celegans.type <- c("S", "I", "M")
+names(celegans.type) <- c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")
+V(celegans.male.chem)$type <- celegans.type[V(celegans.male.chem)$type]
+V(celegans.male.gap)$type <- celegans.type[V(celegans.male.gap)$type]
+V(celegans.herm.chem)$type <- celegans.type[V(celegans.herm.chem)$type]
+V(celegans.herm.gap)$type <- celegans.type[V(celegans.herm.gap)$type]
+celegans.male.chem <- reassign.hem(celegans.male.chem)
+celegans.herm.chem <- reassign.hem(celegans.herm.chem)
+celegans.male.gap <- reassign.hem(celegans.male.gap)
+celegans.herm.gap <- reassign.hem(celegans.herm.gap)
+V(celegans.male.chem)$region <- paste0(V(celegans.male.chem)$hemisphere, V(celegans.male.chem)$type)
+V(celegans.herm.chem)$region <- paste0(V(celegans.herm.chem)$hemisphere, V(celegans.herm.chem)$type)
+V(celegans.male.gap)$region <- paste0(V(celegans.male.gap)$hemisphere, V(celegans.male.gap)$type)
+V(celegans.herm.gap)$region <- paste0(V(celegans.herm.gap)$hemisphere, V(celegans.herm.gap)$type)
+celegans.male.chem <- permute.vertices(celegans.male.chem, (1:gorder(celegans.male.chem))[sort(V(celegans.male.chem)$region, index=TRUE)$ix])
+celegans.male.gap <- permute.vertices(celegans.male.gap, (1:gorder(celegans.male.gap))[sort(V(celegans.male.gap)$region, index=TRUE)$ix])
+celegans.herm.chem <- permute.vertices(celegans.herm.chem, (1:gorder(celegans.herm.chem))[sort(V(celegans.herm.chem)$region, index=TRUE)$ix])
+celegans.herm.gap <- permute.vertices(celegans.herm.gap, (1:gorder(celegans.herm.gap))[sort(V(celegans.herm.gap)$region, index=TRUE)$ix])
+
+# Fly
+fly.type <- c("K", "O", "I", "P")
+names(fly.type) <- c("KC", "MBON", "MBIN", "PN")
+V(fly.left)$type <- fly.type[V(fly.left)$type]
+fly.left <- permute.vertices(fly.left, (1:gorder(fly.left))[sort(V(fly.left)$type, index=TRUE)$ix])
+V(fly.right)$type <- fly.type[V(fly.right)$type]
+fly.right <- permute.vertices(fly.right, (1:gorder(fly.right))[sort(V(fly.right)$type, index=TRUE)$ix])
+# use_data(human.dmri, overwrite=TRUE)
+# use_data(human.fmri, overwrite=TRUE)
+# use_data(mouse.dmri, overwrite=TRUE)
+# use_data(celegans.herm.chem, overwrite=TRUE)
+# use_data(celegans.herm.gap, overwrite=TRUE)
+# use_data(celegans.male.chem, overwrite=TRUE)
+# use_data(celegans.male.gap, overwrite=TRUE)
+# use_data(fly.left, overwrite=TRUE)
+# use_data(fly.right, overwrite=TRUE)
+```
+
+# Basic Plots
+
+```{r}
+mouse.zip <- gs.poisson.fit.zip(mouse.dmri, edge.attr="weight")
+human.dmri.zip <- gs.poisson.fit.zip(human.dmri, edge.attr="weight")
+human.fmri.zip <- gs.poisson.fit.zip(human.fmri, edge.attr="weight")
+celegans.herm.chem.zip <- gs.poisson.fit.zip(celegans.herm.chem, edge.attr="weight")
+celegans.herm.gap.zip <- gs.poisson.fit.zip(celegans.herm.gap, edge.attr="weight")
+fly.left.zip <- gs.poisson.fit.zip(fly.mushroom.left)
+
+mouse.plot <- gs.plot.heatmap(gs.edge.log(mouse.dmri, edge.attr="weight", output.type="graph"), title="(C) Mouse dMRI Connectome", src.label="",
+                              tgt.label="", edge.attr="weight", fill.name = "log(Weight)")
+fly.plot <- gs.plot.heatmap(fly.mushroom.left, title="(B) Fly Mushroom Body Connectome", src.label="",
                             tgt.label="", degree=TRUE)
-celegans.plot <- gs.plot.grid(celegans.male, title="(A) Celegans Connectome", src.label="",
-                              tgt.label="", edge.attr=c("chem", "gap"), degree=TRUE)
-human.plot <- gs.plot.heatmap_overlay(human.mri, title="(D) Human MRI Connectome",
-                                      src.label="", tgt.label="",
-                                      edge.attr=c("fMRI", "dMRI"),
-                                      degree=TRUE)
+celegans.plot <- gs.plot.grid(list(celegans.herm.chem, celegans.herm.gap),
+                              graph.names=c("chem", "gap"),
+                              title="(A) C. Elegans Connectome", src.label="",
+                              tgt.label="", edge.attr="weight", degree=TRUE)
+human.plot <- gs.plot.heatmap_overlay(list(human.fmri, human.dmri), title="(D) Human MRI Connectome",
+                                      src.label="", tgt.label="", graph.names=c("fMRI", "dMRI"),
+                                      edge.attr="weight", degree=TRUE)
+# edge.dens <- rbind(
+#   # Mouse edges
+#   data.frame(label="C. Elegans Chem",
+#              edges=E(celegans.herm.chem)$weight[E(celegans.herm.chem)$weight != 0]/max(E(celegans.herm.chem)$weight)),
+#   data.frame(label="C. Elegans Gap",
+#              edges=E(celegans.herm.gap)$weight[E(celegans.herm.gap)$weight != 0]/max(E(celegans.herm.gap)$weight)),
+#   data.frame(label="Fly",
+#              edges=rep(1, length(E(fly.mushroom.left)))),
+#   data.frame(label="Mouse dMRI",
+#              edges=E(mouse.dmri)$weight[E(mouse.dmri)$weight != 0]/max(E(mouse.dmri)$weight)),
+#   data.frame(label="Human dMRI",
+#              edges=E(human.dmri)$weight[E(human.dmri)$weight != 0]/max(E(human.dmri)$weight)),
+#   data.frame(label="Human fMRI",
+#              edges=E(human.fmri)$weight[E(human.fmri)$weight != 0]/max(E(human.fmri)$weight))
+# )
+edge.dens <- rbind(
+  # Mouse edges
+  data.frame(label="C. Elegans Chem",
+             edges=E(celegans.herm.chem)$weight[E(celegans.herm.chem)$weight != 0]),#/max(E(celegans.herm.chem)$weight)),
+  data.frame(label="C. Elegans Gap",
+             edges=E(celegans.herm.gap)$weight[E(celegans.herm.gap)$weight != 0]),#/max(E(celegans.herm.gap)$weight)),
+  # data.frame(label="Fly",
+  #            edges=rep(1, 100*length(E(fly.mushroom.left)))),
+  data.frame(label="Mouse dMRI",
+             edges=E(mouse.dmri)$weight[E(mouse.dmri)$weight != 0]),#/max(E(mouse.dmri)$weight)),
+  data.frame(label="Human dMRI",
+             edges=E(human.dmri)$weight[E(human.dmri)$weight != 0]),#/max(E(human.dmri)$weight)),
+  data.frame(label="Human fMRI",
+             edges=E(human.fmri)$weight[E(human.fmri)$weight != 0])#/max(E(human.fmri)$weight))
+)
+
+edge.dens$edges <- log10(edge.dens$edges)
+conn.order <- c("C. Elegans Chem", "C. Elegans Gap", "Fly", "Mouse dMRI", "Human dMRI", "Human fMRI")
+edge.dens$label <- factor(edge.dens$label, levels=conn.order)
+col.conn <- colors()[c(373, 137, 285, 146, 128, 29)]
+shape.conn=c(16, 17, 16, 17, 16, 16)
+names(col.conn) <- conn.order; names(shape.conn) <- conn.order
+edge.dens.plot <- ggplot(edge.dens, aes(x=edges, y=label, height=..scaled.., fill=label)) +
+  geom_density_ridges(stat = "density", alpha=0.6) +
+  scale_fill_manual(values=col.conn, name="Connectome") +
+  scale_color_manual(values=col.conn, name="Connectome") +
+  xlab(TeX("$log_{10}\\left(Edge\\, Weight\\right)$")) +
+  ylab("Connectome") +
+  theme_bw() +
+  ggtitle("(E) Distribution of Non-Zero Edge Weights") +
+  theme(legend.position=NaN, plot.margin=unit(c(0,0,0,0),"mm"))
+
+zip.dat <- data.frame(label=factor(c("C. Elegans Chem", "C. Elegans Gap", "Human dMRI", "Human fMRI", "Fly", "Mouse dMRI"), levels=),
+                      fnz=c(celegans.herm.chem.zip$ne.nz/(celegans.herm.chem.zip$n^2),
+                            celegans.herm.gap.zip$ne.nz/(celegans.herm.gap.zip$n^2),
+                            human.dmri.zip$ne.nz/(human.dmri.zip$n^2),
+                            human.fmri.zip$ne.nz/(human.fmri.zip$n^2),
+                            fly.left.zip$ne.nz/(fly.left.zip$n^2),
+                            mouse.zip$ne.nz/(mouse.zip$n^2)),
+                      mean=log10(c(celegans.herm.chem.zip$lambda, celegans.herm.gap.zip$lambda, human.dmri.zip$lambda,
+                            human.fmri.zip$lambda, fly.left.zip$lambda, mouse.zip$lambda)))
+
+nnz.edge.plot <- ggplot(zip.dat, aes(x=fnz, y=0, color=label, shape=label)) +
+  geom_point(size=5) +
+  geom_line(data=data.frame(x=c(0, 1), y=0), aes(x=x, y=y, color=NULL, shape=NULL), color='black') +
+  xlab("") + ylab("") +
+  scale_color_manual(values=col.conn) +
+  scale_shape_manual(values=shape.conn) +
+  theme_bw() +
+  ggtitle("(F) Fraction of Non-Zero Edges") +
+  ylim(c(-.05, .05)) +
+  theme(axis.title.y=element_text(color="#FFFFFF"), axis.text.y=element_text(color="#FFFFFF"),
+        axis.ticks.y=element_line(color="#FFFFFF"), panel.border=element_rect(color="#FFFFFF"),
+        panel.grid=element_line(color="#FFFFFF"), panel.grid.major.x=element_line(color="#000000"),
+        axis.ticks.x=element_line(color="#FFFFFF"),
+        legend.position=NaN, plot.margin=unit(c(0,0,0,0),"mm"))
+
+leg.edges <- g_legend(ggplot(rbind(edge.dens, data.frame(label="Fly", edges=c(1,1,0))), aes(x=edges, y=label, height=..scaled.., fill=label, shape=label)) +
+  geom_density_ridges(stat = "density", alpha=0.6) +
+  scale_fill_manual(values=col.conn, name="Connectome") +
+  scale_color_manual(values=col.conn, name="Connectome") +
+  xlab(TeX("$log_{10}\\left(Edge\\, Weight\\right)$")) +
+  ylab("Connectome") +
+  theme_bw() +
+  geom_point(aes(x=edges, y=label, height=NULL), size=3) +
+  scale_shape_manual(values=shape.conn, name="Connectome"))
+edges.plot <- arrangeGrob(arrangeGrob(edge.dens.plot, nnz.edge.plot, heights=c(0.7, 0.3)), leg.edges, widths=c(0.8, 0.2))
+  
+  
+
+data.plot <- ggplot(zip.dat, aes(x=fnz, y=mean, color=label, shape=label)) +
+  geom_point(size=3) +
+  xlab("Fraction of Non-Zero Edges") +
+  ylab(TeX("$log_{10}\\left(Mean \\, Non-Zero\\, Edge\\, Weight\\right)$")) +
+  theme_bw() +
+  ggtitle("(E) Network Properties") +
+  scale_color_manual(name="Connectome", values=color) +
+  scale_shape_manual(name="Connectome", values=shape)
 ```
 
 ```{r}
-grid.arrange(celegans.plot, fly.plot, mouse.plot, human.plot, nrow=2)
+grid.arrange(arrangeGrob(celegans.plot, fly.plot, mouse.plot, human.plot, nrow=2), edges.plot, nrow=2, heights=c(0.7, 0.3))
+```
+
+```{r}
+human.dmri <- gs.edge.ptr(human.dmri, edge.attr="weight", output.type="graph")
+human.male.dmri <- gs.edge.ptr(human.male.dmri, edge.attr="weight", output.type="graph")
+human.female.dmri <- gs.edge.ptr(human.female.dmri, edge.attr="weight", output.type="graph")
+human.fmri <- gs.edge.ptr(human.fmri, edge.attr="weight", output.type="graph")
+mouse.dmri <- gs.edge.log(mouse.dmri, edge.attr="weight", output.type="graph")
+mouse.dmri.ptr <- gs.edge.ptr(mouse.dmri, edge.attr="weight", output.type="graph")
+celegans.male.chem <- gs.edge.ptr(celegans.male.chem, edge.attr="weight", output.type="graph")
+celegans.herm.chem <- gs.edge.ptr(celegans.herm.chem, edge.attr="weight", output.type="graph")
+celegans.herm.gap <- gs.edge.ptr(celegans.herm.gap, edge.attr="weight", output.type="graph")
+celegans.male.gap <- gs.edge.ptr(celegans.male.gap, edge.attr="weight", output.type="graph")
 ```
 
 # SBM Plots
 
 ```{r}
-human.dmri.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attr="dMRI")
-# human.dmri.sbm <- delete_vertices(human.dmri.sbm, "non-labeled")
-human.dmri.sbm.plot <- gs.plot.sbm(human.dmri.sbm, edge.attr="dMRI", title="(D.ii) Human dMRI")
-human.fmri.sbm <- gs.sbm.fit(human.mri, community.attribute = "lobe", edge.attr="fMRI")
-# human.fmri.sbm <- delete_vertices(human.fmri.sbm, "non-labeled")
-human.fmri.sbm.plot <- gs.plot.sbm(human.fmri.sbm, edge.attr="fMRI", title="(D.i) Human fMRI")
 
-mouse.sbm <- gs.sbm.fit(mouse.duke, community.attribute = "level1", edge.attr="weight")
-mouse.sbm <- delete_vertices(mouse.sbm, "white matter")
+human.dmri.sbm <- gs.sbm.fit(human.dmri, edge.attr="weight", communities = V(human.dmri)$region, output.type="graph")
+# human.dmri.sbm <- delete_vertices(human.dmri.sbm, "non-labeled")
+human.dmri.sbm.plot <- gs.plot.sbm(human.dmri.sbm, edge.attr="weight", title="(D.i) Human dMRI")
+human.fmri.sbm <- gs.sbm.fit(human.fmri, edge.attr="weight", communities = V(human.fmri)$region, output.type="graph")
+# human.fmri.sbm <- delete_vertices(human.fmri.sbm, "non-labeled")
+human.fmri.sbm.plot <- gs.plot.sbm(human.fmri.sbm, edge.attr="weight", title="(D.ii) Human fMRI")
+
+mouse.sbm <- gs.sbm.fit(gs.edge.log(mouse.dmri, edge.attr="weight", output.type="graph"), edge.attr="weight", communities = V(mouse.dmri)$region, output.type="graph")
 mouse.sbm.plot <- gs.plot.sbm(mouse.sbm, edge.attr="weight", title="(C) Mouse dMRI")
 
-fly.sbm <- gs.sbm.fit(fly.left, community.attribute = "type", edge.attr=NULL)
-fly.sbm.plot <- gs.plot.sbm(fly.sbm, edge.attr="weight", title="(B) Fly Mushroom Body")
+fly.sbm <- gs.sbm.fit(fly.mushroom.left, communities=V(fly.mushroom.left)$type, output.type="graph")
+fly.sbm.plot <- gs.plot.sbm(fly.sbm, edge.attr="weight", title="(B) Fly Left Mushroom Body")
 
-celegans.gap.sbm <- gs.sbm.fit(celegans.male, community.attribute = "type", edge.attr="gap")
-celegans.chem.sbm <- gs.sbm.fit(celegans.male, community.attribute = "type", edge.attr="chem") 
-celegans.gap.sbm.plot <- gs.plot.sbm(celegans.gap.sbm, edge.attr="gap", title="(A.ii) Celegans Gap")
-celegans.chem.sbm.plot <- gs.plot.sbm(celegans.chem.sbm, edge.attr="chem", title="(A.i) Celegans Chemical")
+celegans.gap.sbm <- gs.sbm.fit(celegans.herm.gap, communities=V(celegans.male.gap)$region, edge.attr="weight", output.type="graph")
+celegans.chem.sbm <- gs.sbm.fit(celegans.herm.chem, communities=V(celegans.male.chem)$region, edge.attr="weight", output.type="graph") 
+celegans.gap.sbm.plot <- gs.plot.sbm(celegans.gap.sbm, edge.attr="weight", title="(A.ii) C. Elegans Herm. Gap")
+celegans.chem.sbm.plot <- gs.plot.sbm(celegans.chem.sbm, edge.attr="weight", title="(A.i) C. Elegans Herm. Chemical")
 ```
 
 ```{r}
-grid.arrange(celegans.chem.sbm.plot, celegans.gap.sbm.plot, fly.sbm.plot, mouse.sbm.plot, human.fmri.sbm.plot, human.dmri.sbm.plot, nrow=3)
+tdat=melt(matrix(runif(1000, -.05, 1.05), nrow=10, ncol=10))
+plt = ggplot(tdat, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradientn(colors=c("#FFFFFF", "#020202"), name="Weight", breaks=c(0, 0.5, 1),
+                       labels=c("0", "0.5", "1"))
+leg <- g_legend(plt)
+grid.arrange(arrangeGrob(arrangeGrob(celegans.chem.sbm.plot, celegans.gap.sbm.plot, fly.sbm.plot, mouse.sbm.plot, human.dmri.sbm.plot, human.fmri.sbm.plot, nrow=2, as.table=FALSE), leg, nrow=1, widths=c(0.9, 0.1)))
 ```
 
 # Spectral Embeddings
 
 ```{r}
-human.dmri.dim <- gs.dim.select(ptr(as_adjacency_matrix(human.mri, sparse=FALSE, attr="dMRI")), edge.attr="weight", plot=TRUE)
-human.fmri.dim <- gs.dim.select(ptr(as_adjacency_matrix(human.mri, sparse=FALSE, attr="fMRI")), edge.attr="weight", plot=TRUE)
-human.dmri.ase <- gs.embed.ase(ptr(as_adjacency_matrix(human.mri, sparse=FALSE, attr="dMRI")), edge.attr="weight")
-human.fmri.ase <- gs.embed.ase(ptr(as_adjacency_matrix(human.mri, sparse=FALSE, attr="fMRI")), edge.attr="weight")
-mouse.dim <- gs.dim.select(ptr(as_adjacency_matrix(mouse.duke, sparse=FALSE, attr="weight")), edge.attr="weight", plot=TRUE)
-mouse.ase <- gs.embed.ase(ptr(as_adjacency_matrix(mouse.duke, sparse=FALSE, attr="weight")), edge.attr="weight")
+human.dmri.dim <- gs.dim.select(human.dmri, edge.attr="weight", plot=TRUE)
+human.fmri.dim <- gs.dim.select(human.fmri, edge.attr="weight", plot=TRUE)
+human.dmri.ase <- gs.embed.ase(human.dmri, edge.attr="weight")
+human.fmri.ase <- gs.embed.ase(gs.edge.ptr(human.fmri), edge.attr="weight")
+mouse.dim <- gs.dim.select(gs.edge.log(mouse.dmri), edge.attr="weight", plot=TRUE)
+mouse.ase <- gs.embed.ase(gs.edge.log(mouse.dmri), edge.attr="weight")
 fly.dim <- gs.dim.select(fly.left, edge.attr=NULL, plot=TRUE)
 fly.ase <- gs.embed.ase(fly.left)
-celegans.chem.dim <- gs.dim.select(ptr(as_adjacency_matrix(celegans.male, sparse=FALSE, attr="chem")), edge.attr="weight", plot=TRUE)
-celegans.gap.dim <- gs.dim.select(ptr(as_adjacency_matrix(celegans.male, sparse=FALSE, attr="gap")), edge.attr="weight", plot=TRUE)
-celegans.chem.ase <- gs.embed.ase(ptr(as_adjacency_matrix(celegans.male, sparse=FALSE, attr="chem")), edge.attr="weight")
-celegans.gap.ase <- gs.embed.ase(ptr(as_adjacency_matrix(celegans.male, sparse=FALSE, attr="gap")), edge.attr="weight")
+celegans.chem.dim <- gs.dim.select(celegans.male.chem, edge.attr="weight", plot=TRUE)
+celegans.gap.dim <- gs.dim.select(celegans.male.gap, edge.attr="weight", plot=TRUE)
+celegans.chem.ase <- gs.embed.ase(gs.edge.ptr(celegans.male.chem), edge.attr="weight")
+celegans.gap.ase <- gs.embed.ase(gs.edge.ptr(celegans.male.gap), edge.attr="weight")
 ```
 
 ```{r}
 human.dmri.ase.plot <- gs.plot.latent_pos(human.dmri.ase$X)
 human.dmri.ase.plot <- human.dmri.ase.plot + theme(legend.position=NaN)
-human.dmri.ase.plot.comb <- arrangeGrob(human.dmri.dim$plot + ggtitle("(D.ii) Human dMRI") +
+human.dmri.ase.plot.comb <- arrangeGrob(human.dmri.dim$plot + ggtitle("(D.i) Human dMRI") +
                                         theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
                                      theme(axis.title.x=element_text(color="#FFFFFF"),
                                            axis.title.y=element_text(color="#FFFFFF")),
@@ -602,7 +818,7 @@ human.dmri.ase.plot.comb <- arrangeGrob(human.dmri.dim$plot + ggtitle("(D.ii) Hu
                                            axis.title.y=element_text(color="#FFFFFF")), nrow=2, heights=c(0.3, 0.7))
 human.fmri.ase.plot <- gs.plot.latent_pos(human.fmri.ase$X)
 human.fmri.ase.plot <- human.fmri.ase.plot + theme(legend.position=NaN)
-human.fmri.ase.plot.comb <- arrangeGrob(human.fmri.dim$plot + ggtitle("(D.i) Human fMRI") +
+human.fmri.ase.plot.comb <- arrangeGrob(human.fmri.dim$plot + ggtitle("(D.ii) Human fMRI") +
                                         theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
                                      theme(axis.title.x=element_text(color="#FFFFFF"),
                                            axis.title.y=element_text(color="#FFFFFF")),
@@ -631,12 +847,12 @@ fly.ase.plot.comb <- arrangeGrob(fly.dim$plot + ylab("") + ggtitle("(B) Fly Mush
 
 celegans.chem.ase.plot <- gs.plot.latent_pos(celegans.chem.ase$X)
 celegans.chem.ase.plot <- celegans.chem.ase.plot + theme(legend.position=NaN)
-celegans.chem.ase.plot.comb <- arrangeGrob(celegans.chem.dim$plot + ggtitle("(A.i) Celegans Chemical") +
+celegans.chem.ase.plot.comb <- arrangeGrob(celegans.chem.dim$plot + ggtitle("(A.i) C. Elegans Chemical") +
                                      theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()),
                                    celegans.chem.ase.plot, nrow=2, heights=c(0.3, 0.7))
 celegans.gap.ase.plot <- gs.plot.latent_pos(celegans.gap.ase$X)
 celegans.gap.ase.plot <- celegans.gap.ase.plot + theme(legend.position=NaN)
-celegans.gap.ase.plot.comb <- arrangeGrob(celegans.gap.dim$plot + ggtitle("(A.ii) Celegans Gap") +
+celegans.gap.ase.plot.comb <- arrangeGrob(celegans.gap.dim$plot + ggtitle("(A.ii) C. Elegans Gap") +
                                      theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
                                      theme(axis.title.x=element_text(color="#FFFFFF"),
                                            axis.title.y=element_text(color="#FFFFFF")),
@@ -646,114 +862,264 @@ celegans.gap.ase.plot.comb <- arrangeGrob(celegans.gap.dim$plot + ggtitle("(A.ii
 ```
 
 ```{r}
-grid.arrange(celegans.chem.ase.plot.comb, celegans.gap.ase.plot.comb, fly.ase.plot.comb, mouse.ase.plot.comb,
-             human.fmri.ase.plot.comb, human.dmri.ase.plot.comb, nrow=3)
+grid.arrange(celegans.chem.ase.plot.comb, fly.ase.plot.comb, human.dmri.ase.plot.comb, celegans.gap.ase.plot.comb, mouse.ase.plot.comb,
+             human.fmri.ase.plot.comb, nrow=2)
 ```
 
 ```{r}
-rownames(fly.ase$X) <- V(fly.left)$type
-gs.plot.matrix.pairs(fly.ase$X, pt.color=V(fly.left)$type, pt.shape=V(fly.left)$type,
+gs.plot.matrix.pairs(gs.embed.ase(fly.mushroom.left)$X, pt.color=V(fly.mushroom.left)$type, pt.shape=V(fly.mushroom.left)$type,
                      pt.label="Type")
 
-gs.plot.matrix.pairs(celegans.chem.ase$X, pt.color=V(celegans.male)$type,
-                     pt.shape=V(celegans.male)$type, pt.label="Type")
+gs.plot.matrix.pairs(gs.embed.ase(celegans.herm.gap, edge.attr="weight")$X,
+                     pt.color=V(celegans.herm.gap)$type,
+                     pt.shape=V(celegans.herm.gap)$hemisphere, pt.label="Type")
 
-rownames(celegans.gap.ase$X) <- V(celegans.male)$type
-gs.plot.matrix.pairs(celegans.gap.ase$X, pt.label="Type")
+gs.plot.matrix.pairs(gs.embed.ase(celegans.herm.chem, edge.attr="weight")$X,
+                     pt.color=V(celegans.herm.chem)$type,
+                     pt.shape=V(celegans.herm.chem)$hemisphere, pt.label="Type")
 
-rownames(mouse.ase$X) <- V(mouse.duke)$level1
-gs.plot.matrix.pairs(mouse.ase$X, pt.label="Region")
+gs.plot.matrix.pairs(gs.embed.ase(mouse.dmri, edge.attr="weight")$X, pt.color=V(mouse.dmri)$level1,
+                     pt.shape=V(mouse.dmri)$hemisphere, pt.label="Type")
 
-rownames(human.dmri.ase$X) <- V(human.mri)$lobe
-gs.plot.matrix.pairs(human.dmri.ase$X, pt.color=V(human.mri)$lobe, pt.shape=V(human.mri)$hemisphere,
+gs.plot.matrix.pairs(gs.embed.ase(human.dmri, edge.attr="weight")$X, pt.color=V(human.dmri)$lobe,
+                     pt.shape=V(human.dmri)$hemisphere,
                      pt.label="Region")
-rownames(human.fmri.ase$X) <- V(human.mri)$lobe
-gs.plot.matrix.pairs(human.fmri.ase$X, pt.color=V(human.mri)$lobe, pt.shape=V(human.mri)$hemisphere,
+gs.plot.matrix.pairs(gs.embed.ase(human.fmri, edge.attr="weight")$X, pt.color=V(human.fmri)$lobe,
+                     pt.shape=V(human.fmri)$hemisphere,
                      pt.label="Region")
 ```
 
 ## Best
 
 ```{r}
-plot.dim <- function(X, dims, pt.color=NULL, pt.shape=NULL, color.title="", shape.title="", title="") {
+plot.dim <- function(X, dims, pt.grouping=NULL, pt.label=NULL, pt.color=NULL, pt.shape=NULL, color.title="", shape.title="", title="", pt.size=1.5) {
   data = data.frame(X1=X[, dims[1]], X2=X[, dims[2]])
-  if (!is.null(pt.color)) {
+  if (!is.null(pt.color) & !is.null(pt.shape)) {
+    data = cbind(data, data.frame(color=pt.color, shape=pt.shape))
+    pt.class = paste(pt.color, pt.shape, sep="...")
+  } else if (!is.null(pt.color)) {
     data = cbind(data, data.frame(color=pt.color))
-  }
-  if (!is.null(pt.shape)) {
+    pt.class = pt.color
+  } else if (!is.null(pt.shape)) {
     data = cbind(data, data.frame(shape=pt.shape))
+    pt.class=pt.shape
+  } 
+  if (!is.null(pt.grouping)) {
+    data = cbind(data, data.frame(group=pt.grouping))
+    pt.class=pt.color
   }
-  plot <- ggplot(data, aes(x=X1, y=X2)) +
+  qda_class <- MASS::qda(X[, dims], pt.class)
+  qda_class_df <- do.call(expand.grid, lapply(dims, function(i) {
+    minX = min(X[,i]); maxX = max(X[,i])
+    pt.dist = (maxX - minX)/1000
+    seq(minX, maxX, pt.dist)
+  })); names(qda_class_df) <- NULL
+  qda_pred <- predict(qda_class, as.matrix(qda_class_df))
+  lhat <- sum(pt.class == predict(qda_class, X[, dims])$class)/length(pt.class)
+  lhat.chance <- max(qda_class$prior)
+  names(qda_class_df) <- c("X1", "X2")
+  qda_class_df$label <- qda_pred$class
+  # Add in a ratio between biggest and second biggest
+  # posteriors to help determin boundaries
+  qda_class_df$post_ratio <- qda_pred$post %>%
+     apply(1,function(x){
+         r <- sort(x,decreasing=TRUE); 
+         r[2]/r[1]
+     })
+  post_ratio_threshold <- 0.95
+  if (!is.null(pt.color) & !is.null(pt.shape)) {
+    if (is.null(pt.grouping)) {
+      unsep <- do.call(rbind, strsplit(as.character(qda_class_df$label), "[...]"))
+      qda_class_df$color <- unsep[,1]; qda_class_df$shape <- unsep[,4]
+    } else {
+      qda_class_df$color <- qda_class_df$label; qda_class_df$shape <- NULL
+    }
+  } else if (!is.null(pt.color)) {
+    qda_class_df$color <- qda_class_df$label
+  } else if (!is.null(pt.shape)) {
+    qda_class_df$shape <- qda_class_df$label
+  }
+    
+  resamp <- sample(1:dim(data)[1])
+  data <- data[resamp,]
+  if (!is.null(pt.color) & !is.null(pt.shape)) {
+    plot <- ggplot(data, aes(x=X1, y=X2, fill=color, color=color, shape=shape)) +
+      labs(color=color.title, shape=shape.title, fill=color.title)
+  } else if (!is.null(pt.color)) {
+    plot <- ggplot(data, aes(x=X1, y=X2, fill=color, color=color)) +
+      labs(color=color.title, fill=color.title)
+  } else if (!is.null(pt.shape)) {
+    plot <- ggplot(data, aes(x=X1, y=X2, color=shape, shape=shape)) +
+      labs(shape=shape.title, fill=color.title)
+  } else {
+    plot <- ggplot(data, aes(x=X1, y=X2))
+  }
+  print("Misclassification:")
+  print(lhat)
+  print(lhat.chance)
+  plot <- plot +
+    geom_point(alpha=1/log(dim(X)[1], base=20), size=pt.size) +
+    geom_raster(data=qda_class_df, aes(shape=NULL), alpha=0.3) +
+    geom_raster(data=qda_class_df %>% 
+            dplyr::filter(post_ratio>post_ratio_threshold), aes(shape=NULL), fill="black",alpha=0.5)+
     xlab(sprintf("Dimension %d", dims[1])) +
     ylab(sprintf("Dimension %d", dims[2])) +
     ggtitle(title) +
     theme_bw()
-  if (!is.null(pt.color) & !is.null(pt.shape)) {
+  if (!is.null(pt.grouping)) {
     plot <- plot +
-      geom_point(aes(color=color, shape=shape), alpha=1/log10(dim(X)[1]))
-  } else if (!is.null(pt.color)) {
-    plot <- plot +
-      geom_point(aes(color=color), alpha=1/log10(dim(X)[1])) +
-      labs(color=color.title)
-  } else if (!is.null(pt.shape)) {
-    plot <- plot +
-      geom_point(aes(color=shape), alpha=1/log10(dim(X)[1])) +
-      labs(shape=shape.title)
-  } else {
-    plot <- plot +
-      geom_point(alpha=1/log10(dim(X)[1]))
+      geom_line(aes(group=group))
   }
   return(plot)
 }
-celegans.chem.best <- c(7, 8)
-frontal = c("MOTOR", "SESORY/INTER")
-celegans.chem.ase.plot <- plot.dim(celegans.chem.ase$X, celegans.chem.best,
-                                   pt.color=frontal[as.numeric(V(celegans.male)$type == "INTERNEURONS") + 1],
-                                   color.title="Neuron Type",
-                                   title="(A.i) Celegans Chem")
-celegans.gap.best <- c(5, 8)
-celegans.gap.ase.plot <- plot.dim(celegans.gap.ase$X, celegans.gap.best,
-                                  pt.color=frontal[as.numeric(V(celegans.male)$type == "INTERNEURONS") + 1],
-                                  color.title="Neuron Type",
-                                  title="(A.ii) Celegans Gap")
+celegans.chem.best <- c(1, 2)
+frontal = c("Non-M", "M")
+celegans.chem.ase.plot <- plot.dim(gs.embed.ase(celegans.herm.chem, edge.attr="weight")$X, celegans.chem.best,
+                                   pt.color=frontal[as.numeric(V(celegans.herm.chem)$type == "M") + 1],
+                                   color.title="Neuron Type", shape.title="Hemisphere",
+                                   title="(A.i) C. Elegans Herm. Chemical")
+celegans.gap.best <- c(1, 2)
+celegans.gap.ase.plot <- plot.dim(gs.embed.ase(celegans.herm.gap, edge.attr="weight")$X, celegans.gap.best,
+                                   pt.color=frontal[as.numeric(V(celegans.herm.chem)$type == "M") + 1],
+                                  color.title="Neuron Type", shape.title="Hemis.",
+                                  title="(A.ii) C. Elegans Herm. Gap")
 
 fly.best=c(1,3)
-fly.ase.plot <- plot.dim(fly.ase$X, fly.best, pt.color=V(fly.left)$type, title="(B) Fly Connectome")
+fly.ase.plot <- plot.dim(gs.embed.ase(fly.mushroom.left)$X, fly.best, pt.color=V(fly.mushroom.left)$type, color.title="Region", title="(B) Fly Left Mushroom Body")
 
-mouse.best=c(1, 3)
+mouse.best=c(4, 2)
+mouse.ase.plot <- plot.dim(gs.embed.ase(mouse.dmri, edge.attr="weight")$X, mouse.best, pt.color=V(mouse.dmri)$level1, pt.shape=V(mouse.dmri)$hemisphere, title="(C) Mouse dMRI", color.title="Structure", shape.title="Hemisphere")
 
 human.dmri.best = c(2, 3)
-frontal = c("frontal", "non-frontal")
-human.dmri.ase.plot <- plot.dim(human.dmri.ase$X, human.dmri.best,
-                         pt.color=frontal[as.numeric(V(human.mri)$lobe == "frontal") + 1],
-                         pt.shape=V(human.mri)$hemisphere,
-                         title="(D.ii) Human dMRI")
+frontal = c("non-F", "F")
+human.dmri.ase.plot <- plot.dim(gs.embed.ase(human.dmri, edge.attr="weight")$X, human.dmri.best,
+                         pt.color=frontal[as.numeric(V(human.dmri)$lobe == "F") + 1],
+                         pt.shape=V(human.dmri)$hemisphere,
+                         title="(D.i) Human dMRI", color.title="Lobe", shape.title="Hemis.")
+human.fmri.best = c(2, 3)
+human.fmri.ase.plot <- plot.dim(gs.embed.ase(human.fmri, edge.attr="weight")$X, human.fmri.best,
+                         pt.shape=NULL,
+                         pt.color=V(human.fmri)$lobe,
+                         title="(D.ii) Human fMRI", color.title="Lobe")
 
+class.dat <- data.frame(performance=c(.742, .485, .761, .706, .900, .614), chance=c(.603, .603, .483, .267, .300, .414))
+class.dat <- t(class.dat)
+colnames(class.dat) <- c("(A.i)", "(A.ii)", "(B)", "(C)", "(D.i)", "(D.ii)")
+
+table.plot <- tableGrob(class.dat, theme=theme_bw())
 ```
 
 ```{r}
-A.wormgap <- get.adjacency(celegans.male, attr="gap", sparse=FALSE)
-A.ptr.wormgap <- get.adjacency(ptr(A.wormgap), attr="weight", sparse=FALSE)
-A.wormchem <- get.adjacency(celegans.male, attr="chem", sparse=FALSE)
-A.ptr.wormchem <- get.adjacency(ptr(A.wormchem), attr="weight", sparse=FALSE)
-M.worm <- gs.omni(A.ptr.wormgap, A.ptr.wormchem)
-M.worm <- graph_from_adjacency_matrix(M.worm, weighted=TRUE)
-V(M.worm)$modality <- c(rep("gap", dim(A.wormgap)[1]), rep("chem", dim(A.wormgap)[1]))
-V(M.worm)$type <- c(V(celegans.male)$type, V(celegans.male)$type)
-M.worm.ase <- gs.embed.ase(M.worm, edge.attr="weight")
-gs.plot.matrix.pairs(M.worm.ase$X, pt.shape=V(M.worm)$type, pt.color=V(M.worm)$modality, pt.label="Region")
+grid.arrange(celegans.chem.ase.plot, fly.ase.plot, human.dmri.ase.plot, celegans.gap.ase.plot, mouse.ase.plot,
+          human.fmri.ase.plot, nrow=2)
+```
 
-A.hum.dmri <- get.adjacency(human.mri, attr="dMRI", sparse=FALSE)
-A.ptr.hum.dmri <- get.adjacency(ptr(A.hum.dmri), attr="weight", sparse=FALSE)
-A.hum.fmri <- get.adjacency(human.mri, attr="fMRI", sparse=FALSE)
-A.ptr.hum.fmri <- get.adjacency(ptr(A.hum.fmri), attr="weight", sparse=FALSE)
-M.hum <- gs.omni(A.ptr.hum.fmri, A.ptr.hum.fmri)
-M.hum <- graph_from_adjacency_matrix(M.hum, weighted=TRUE)
-V(M.hum)$modality <- c(rep("dMRI", dim(A.hum.dmri)[1]), rep("fMRI", dim(A.hum.fmri)[1]))
-V(M.hum)$lobe <- c(V(human.mri)$lobe, V(human.mri)$lobe)
-V(M.hum)$hemisphere <- c(V(human.mri)$hemisphere, V(human.mri)$hemisphere)
-M.hum.ase <- gs.embed.ase(M.hum, edge.attr="weight")
-gs.plot.matrix.pairs(M.worm.ase$X, pt.color=V(M.hum)$lobe, pt.shape=V(M.hum)$modality, pt.label="Region")
+```{r}
+## Worm Modality
+A.ptr.wormgap <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(celegans.herm.gap, edge.attr="weight")), edge.attr="weight")
+A.ptr.wormchem <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(celegans.herm.chem, edge.attr="weight")), edge.attr="weight")
+M.worm.mod <- gs.omni(A.ptr.wormgap, A.ptr.wormchem)
+M.worm.mod <- graph_from_adjacency_matrix(M.worm.mod, weighted=TRUE)
+V(M.worm.mod)$modality <- c(rep("G", dim(A.ptr.wormgap)[1]), rep("C", dim(A.ptr.wormchem)[1]))
+V(M.worm.mod)$type <- c(V(celegans.herm.gap)$type, V(celegans.herm.chem)$type)
+V(M.worm.mod)$id <- c(1:dim(A.ptr.wormgap)[1], 1:dim(A.ptr.wormgap)[1])
+M.worm.mod.ase <- gs.embed.ase(M.worm.mod, edge.attr="weight")
+gs.plot.matrix.pairs(M.worm.ase$X, pt.shape=V(M.worm.mod)$type, pt.color=V(M.worm.mod)$modality, pt.label="Region")
+## Worm Sex
+A.ptr.wormherm <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(celegans.herm.chem, edge.attr="weight")), edge.attr="weight")
+A.ptr.wormmale <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(celegans.male.chem, edge.attr="weight")), edge.attr="weight")
+M.worm.sex <- gs.omni(A.ptr.wormherm, A.ptr.wormmale)
+M.worm.sex <- graph_from_adjacency_matrix(M.worm.sex, weighted=TRUE)
+V(M.worm.sex)$sex <- c(rep("H", dim(A.ptr.wormgap)[1]), rep("M", dim(A.ptr.wormchem)[1]))
+V(M.worm.sex)$type <- c(V(celegans.herm.gap)$type, V(celegans.herm.chem)$type)
+V(M.worm.sex)$id <- c(1:dim(A.ptr.wormgap)[1], 1:dim(A.ptr.wormgap)[1])
+M.worm.sex.ase <- gs.embed.ase(M.worm.sex, edge.attr="weight")
+gs.plot.matrix.pairs(M.worm.sex.ase$X, pt.shape=V(M.worm.sex)$type, pt.color=V(M.worm.sex)$sex, pt.label="Region")
+
+## Human Modality
+A.ptr.hum.dmri <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(human.dmri, edge.attr="weight")), edge.attr="weight")
+A.ptr.hum.fmri <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(human.fmri, edge.attr="weight")), edge.attr="weight")
+M.hum.mod <- gs.omni(A.ptr.hum.dmri, A.ptr.hum.fmri)
+M.hum.mod <- graph_from_adjacency_matrix(M.hum.mod, weighted=TRUE)
+V(M.hum.mod)$modality <- c(rep("dMRI", dim(A.ptr.hum.dmri)[1]), rep("fMRI", dim(A.ptr.hum.fmri)[1]))
+V(M.hum.mod)$lobe <- c(V(human.dmri)$lobe, V(human.fmri)$lobe)
+V(M.hum.mod)$hemisphere <- c(V(human.dmri)$hemisphere, V(human.fmri)$hemisphere)
+M.hum.mod.ase <- gs.embed.ase(M.hum.mod, edge.attr="weight")
+V(M.hum.mod)$id <- c(1:dim(A.ptr.hum.dmri)[1], 1:dim(A.ptr.hum.fmri)[1])
+gs.plot.matrix.pairs(M.hum.mod.ase$X, pt.color=V(M.hum.mod)$modality, pt.shape=V(M.hum.mod)$hemisphere, pt.label="Region")
+## Human Sex
+A.ptr.male.dmri <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(human.male.dmri, edge.attr="weight")), edge.attr="weight")
+A.ptr.female.dmri <- graphstats:::gs.as_adj(gs.edge.ptr(graphstats:::gs.as_adj(human.female.dmri, edge.attr="weight")), edge.attr="weight")
+M.hum.sex <- gs.omni(A.ptr.male.dmri, A.ptr.female.dmri)
+M.hum.sex <- graph_from_adjacency_matrix(M.hum.sex, weighted=TRUE)
+V(M.hum.sex)$sex <- c(rep("Male", dim(A.ptr.male.dmri)[1]), rep("Female", dim(A.ptr.female.dmri)[1]))
+V(M.hum.sex)$lobe <- c(V(human.dmri)$lobe, V(human.fmri)$lobe)
+V(M.hum.sex)$hemisphere <- c(V(human.male.dmri)$hemisphere, V(human.female.dmri)$hemisphere)
+V(M.hum.sex)$id <- c(1:dim(A.ptr.male.dmri)[1], 1:dim(A.ptr.female.dmri)[1])
+M.hum.sex.ase <- gs.embed.ase(M.hum.sex, edge.attr="weight")
+gs.plot.matrix.pairs(M.hum.sex.ase$X, pt.color=V(M.hum.sex)$sex, pt.shape=V(M.hum.sex)$hemisphere, pt.label="Region")
+```
+
+```{r}
+worm.best = c(1, 2)
+frontal = c("Non-M", "M")
+worm.mod.ase.plot <- plot.dim(M.worm.mod.ase$X, worm.best,
+                          pt.shape=V(M.worm.mod)$modality,
+                          pt.color=frontal[as.numeric(V(M.worm.mod)$type == "M") + 1],
+                          title="(A.i) C. Elegans Cross-Modality", color.title="Neuron Type",
+                          shape.title="Synapse Type", pt.grouping=V(M.worm.mod)$id)
+
+worm.best = c(1, 2)
+frontal = c("Non-M", "M")
+worm.sex.ase.plot <- plot.dim(M.worm.sex.ase$X, worm.best,
+                          pt.shape=V(M.worm.sex)$sex,
+                          pt.color=frontal[as.numeric(V(M.worm.sex)$type == "M") + 1],
+                          title="(A.ii) C. Elegans Cross-Sex", color.title="Neuron Type",
+                          shape.title="Sex", pt.grouping=V(M.worm.sex)$id)
+
+human.mri.best = c(2, 3)
+human.mri.mod.ase.plot <- plot.dim(M.hum.mod.ase$X, human.mri.best,
+                         pt.shape=V(M.hum.mod)$modality,
+                         pt.color=V(M.hum.mod)$lobe,
+                         title="(B.i) Human Cross-Modality", color.title="Lobe",
+                         shape.title="Modality", pt.grouping=V(M.hum.mod)$id)
+
+human.mri.best = c(2, 3)
+frontal = c("non-F", "F")
+human.dmri.sex.ase.plot <- plot.dim(M.hum.sex.ase$X, human.mri.best,
+                         pt.shape=V(M.hum.sex)$sex,
+                         pt.color=frontal[as.numeric(V(M.hum.sex)$lobe == "F") + 1],
+                         title="(B.ii) Human Cross-Sex", color.title="Lobe",
+                         shape.title="Sex", pt.grouping=V(M.hum.sex)$id)
+load("~/Downloads/newFig15.Rbin")
+require(plyr)
+dd.all$type <- revalue(dd.all$type, c("KC"="K", "MBIN"="I", "MBON"="O", "PN"="P"))
+dd.all$type <- ordered(dd.all$type, levels=c("I", "K", "O", "P"))
+dd3$type <- revalue(dd3$type, c("KC"="K", "MBIN"="I", "MBON"="O", "PN"="P"))
+dd3$type <- ordered(dd3$type, levels=c("I", "K", "O", "P"))
+dd3$type2 <- revalue(dd3$type2, c("KC"="K", "MBIN"="I", "MBON"="O", "PN"="P"))
+dd3$type2 <- ordered(dd3$type2, levels=c("I", "K", "O", "P"))
+dd4$type <- revalue(dd4$type, c("KC"="K", "MBIN"="I", "MBON"="O", "PN"="P"))
+dd4$type <- ordered(dd4$type, levels=c("I", "K", "O", "P"))
+means$col <- revalue(means$col, c("KC"="K", "MBIN"="I", "MBON"="O", "PN"="P"))
+means$col <- ordered(means$col, levels=c("I", "K", "O", "P"))
+cols <- c("#F8766D", "#7CAE00", "#00BFC4", "#C77CFF")
+names(cols) <- c("I", "K", "O", "P")
+p5 <- ggplot(dd.all,aes(x=x,y=y)) +
+  geom_polygon(data=cir, aes(x, y, group=id), fill="darkolivegreen1", colour="darkolivegreen2", alpha=1) +
+  geom_point(aes(color=type,fill=type),size=2,alpha=0.5) +
+  facet_wrap(~side) +
+  stat_ellipse(data=dd3,geom="polygon",aes(fill=type2,color=type2), alpha=.2, show.legend=FALSE) +
+  geom_line(data=dd4,color="darkgreen",size=1.5) +
+  geom_point(data=means, aes(x=x,y=y,color=col),size=5,show.legend=FALSE) +
+  xlab("Dimension 2") + ylab("Dimension 3") +
+  theme_bw() +
+  scale_fill_manual(values = cols) +
+  scale_color_manual(values=cols)
+```
+
+```{r}
+grid.arrange(worm.mod.ase.plot, worm.sex.ase.plot, human.mri.mod.ase.plot, human.dmri.sex.ase.plot, nrow=2)
 ```
 
 Figure 3: Dimension1 vs Dimension2

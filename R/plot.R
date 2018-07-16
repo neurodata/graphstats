@@ -44,8 +44,8 @@ g_legend<-function(a.gplot){
 #' @param edge.xfm log-transform the edge-weights. Defaults to \code{FALSE}.
 #' \itemize{
 #' \item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
-#' \item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \link[base]{log} for details. Does not work if there are negative edge-weights.}
-#' \item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \link[base]{log10} for details. Does not work if there are negative edge-weights.}
+#' \item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See `\link[base]{log}` for details. Does not work if there are negative edge-weights.}
+#' \item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See `\link[base]{log10}` for details. Does not work if there are negative edge-weights.}
 #' }
 #' @return the graph/graphs as a plot.
 #' @author Eric Bridgeford

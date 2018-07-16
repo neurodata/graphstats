@@ -9,13 +9,15 @@ sg.bern.xval_classifier(samp, Y, nedges, coherent = FALSE, tstat = "fisher",
 }
 \arguments{
 \item{samp}{a list or array of graphs with arbitrary labelling.
- - if samp is a list, then it should have s elements of dimensions
-     [n x n].
-- if samp is an array, then it should be of dimensions [n x n x s].}
+- if samp is a list, then it should have s elements of dimensions
+\link{n x n}.
+\itemize{
+\item if samp is an array, then it should be of dimensions \link{n x n x s}.
+}}
 
-\item{Y}{[s] the class labels.}
+\item{Y}{\link{s} the class labels.}
 
-\item{nedges}{[z] an array where each element is the number of edges to look for, arbitrarily breaking ties as necessary.}
+\item{nedges}{\link{z} an array where each element is the number of edges to look for, arbitrarily breaking ties as necessary.}
 
 \item{coherent=FALSE}{if FALSE, estimate an incoherent subgraph, otherwise an integer indicating the number of vertices in the coherent subgraph.}
 
@@ -26,9 +28,9 @@ sg.bern.xval_classifier(samp, Y, nedges, coherent = FALSE, tstat = "fisher",
 \item{folds=NaN}{the number of folds to do if xval is set to kfold.}
 }
 \value{
-subgraph [n x n] an array indicating whether an edge is present or not present in the subgraph.
+subgraph \link{n x n} an array indicating whether an edge is present or not present in the subgraph.
 
-p [n x n x c] the probability per edge of being connected per class for c classes.
+p \link{n x n x c} the probability per edge of being connected per class for c classes.
 }
 \description{
 \code{sg.bern.xval_classifier} Bernoulli Subgraph Classifier with Cross Validation to determine the optimal subgraph.

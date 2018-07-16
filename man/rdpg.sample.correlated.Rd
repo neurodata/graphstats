@@ -20,5 +20,5 @@ two graphs whose adjacency matrix entries are correlated with \code{rho}.
 Samples a pair of correlated \eqn{G(X)} random dot product graphs
 }
 \author{
-Minh Tang <scent.of.time@gmail.com>
+Minh Tang \href{mailto:scent.of.time@gmail.com}{scent.of.time@gmail.com}
 }

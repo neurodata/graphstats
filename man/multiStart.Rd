@@ -34,5 +34,5 @@ times and generates an average probability matrix for matched vertex
 over the \code{R} restarts
 }
 \author{
-Heather Gaddy Patsolic <hgaddy1@jhu.edu>
+Heather Gaddy Patsolic \href{mailto:hgaddy1@jhu.edu}{hgaddy1@jhu.edu}
 }

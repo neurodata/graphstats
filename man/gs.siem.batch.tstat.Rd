@@ -7,9 +7,11 @@
 gs.siem.batch.tstat(models, Z, i = 1, j = 2, return = "full")
 }
 \arguments{
-\item{models}{[[n]] a list of the models fit to each of the n samples.}
+\item{models}{[[n]] a list of the models fit to each of the n samples.
 
-\item{Z}{[n] an array of the labels associated with each model.}
+[[n]: R:[n}
+
+\item{Z}{\link{n} an array of the labels associated with each model.}
 
 \item{i=1}{the first edge set to use in the comparison.}
 

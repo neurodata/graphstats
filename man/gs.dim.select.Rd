@@ -8,20 +8,16 @@ gs.dim.select(X, k = NULL, edge.attr = NULL, n = 3, threshold = FALSE,
   plot = FALSE)
 }
 \arguments{
-\item{X}{an object of class \link[igraph]{igraph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
-or a one-dimensional vector of class \code{numeric} containing ordered singular values.
-\itemize{
-\item{If \code{X} is a \link[igraph]{igraph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}.}
-\item{If \code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.}
-}}
+\item{X}{an object of class \code{\link[igraph]{igraph}}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
+or a one-dimensional vector of class \code{"numeric"} containing ordered singular values. Non-numeric inputs are embedded using \code{\link[irlba]{irlba}}.}
 
 \item{k}{The embedding dimensionality. Defaults to \code{NULL}.
 \itemize{
-\item{If \code{X} is of class \link[igraph]{igraph}, Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
+\item{If \code{X} is of class \code{\link[igraph]{igraph}}, Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
 \item{If \code{X} is  \code{matrix} or 2-D \code{array}, should be the case that \code{k < min(dim(X))}. If \code{k==NULL}, defaults to \code{min(dim(X))}}
 }}
 
-\item{edge.attr}{the names of the attribute to use for weights if \code{X} is an object of class \link[igraph]{igraph}. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.}
+\item{edge.attr}{the names of the attribute to use for weights if \code{X} is an object of class \code{\link[igraph]{igraph}}. Should be in \code{names(get.edge.attribute(graph))}. Defaults to \code{NULL}, which assumes the graph is binary.}
 
 \item{n}{default value: 3; the number of returned elbows.}
 
@@ -32,9 +28,11 @@ the elements that are not larger than the threshold will be ignored.}
 }
 \value{
 list containing the following:
+\describe{
 \item{\code{value}}{The singular values associated with each elbow in \code{elbow}.}
 \item{\code{elbow}}{The indices of the elbows.}
 \item{\code{plot}}{If \code{plot} is \code{TRUE}, contains a scree plot annotated with the elbows.}
+}
 }
 \description{
 Select the number of significant singular values, by finding the
@@ -62,7 +60,7 @@ examples below.
 # Generate the two groups of singular values with
 # Gaussian mixture of two components that have different means
 sing.vals  <- c( rnorm (10, mean=1, sd=1), rnorm(10, mean=3, sd=1) )
-dim.chosen <- dimselect(sing.vals)
+dim.chosen <- gs.dim.select(sing.vals)
 dim.chosen
 
 # Sample random vectors with multivariate normal distribution
@@ -89,7 +87,7 @@ from the scree plot via the use of profile likelihood. \emph{Computational
 Statistics and Data Analysis}, Vol. 51, 918--930.
 }
 \seealso{
-\code{\link{embed_adjacency_matrix}}
+\code{\link{gs.embed.ase}}
 }
 \author{
 Youngser Park \email{youngser@jhu.edu}, Gabor Csardi \email{csardi.gabor@gmail.com}, and Eric Bridgeford \email{ericwb95@gmail.com}.

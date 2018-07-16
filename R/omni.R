@@ -9,7 +9,7 @@
 #'
 #' @param A1 the first \code{[n, n]} matrix.
 #' @param A2 the second \code{[n, n]} matrix.
-#' @return the omnibus matrix, as an object of class \link[igraph]{igraph}. The vertices are concatenated to form one
+#' @return the omnibus matrix, as an object of class `\link[igraph]{igraph}`. The vertices are concatenated to form one
 #' @author Youngser Park
 #' @export
 gs.omni <- function(A1, A2) {

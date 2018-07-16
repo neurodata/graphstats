@@ -20,28 +20,26 @@
 #' examples below.
 #'
 #' @importFrom irlba irlba
-#' @param X an object of class \link[igraph]{igraph}, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
-#' or a one-dimensional vector of class \code{numeric} containing ordered singular values.
-#' \itemize{
-#' \item{If \code{X} is a \link[igraph]{igraph}, the graph is embedded into \code{k} dimensions with \link[igraph]{embed_adjacency_matrix}.}
-#' \item{If \code{X} is a \code{matrix} or 2-D \code{array}, the matrix is embedded into \code{k} dimensions with \link[base]{svd}.}
-#' }
+#' @param X an object of class `\link[igraph]{igraph}`, a numeric/complex matrix or 2-D array with \code{n} rows and \code{d} columns,
+#' or a one-dimensional vector of class \code{"numeric"} containing ordered singular values. Non-numeric inputs are embedded using `\link[irlba]{irlba}`.
 #' @param k The embedding dimensionality. Defaults to \code{NULL}.
 #' \itemize{
-#' \item{If \code{X} is of class \link[igraph]{igraph}, Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
+#' \item{If \code{X} is of class `\link[igraph]{igraph}`, Should have \code{k < length(V(X))}. If \code{k==NULL}, defaults to \code{gorder(X)-1}.}
 #' \item{If \code{X} is  \code{matrix} or 2-D \code{array}, should be the case that \code{k < min(dim(X))}. If \code{k==NULL}, defaults to \code{min(dim(X))}}
 #' }
-#' @param edge.attr the names of the attribute to use for weights if \code{X} is an object of class \link[igraph]{igraph}. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
+#' @param edge.attr the names of the attribute to use for weights if \code{X} is an object of class `\link[igraph]{igraph}`. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
 #' @param n default value: 3; the number of returned elbows.
 #' @param threshold either \code{FALSE} or an object of class \code{numeric}. If threshold is of class \code{numeric}, then all
 #' the elements that are not larger than the threshold will be ignored.
 #' @param plot logical. When \code{TRUE}, the return object includes a plot depicting the elbows.
 #' @return list containing the following:
+#' \describe{
 #' \item{\code{value}}{The singular values associated with each elbow in \code{elbow}.}
 #' \item{\code{elbow}}{The indices of the elbows.}
 #' \item{\code{plot}}{If \code{plot} is \code{TRUE}, contains a scree plot annotated with the elbows.}
+#' }
 #' @author Youngser Park \email{youngser@@jhu.edu}, Gabor Csardi \email{csardi.gabor@@gmail.com}, and Eric Bridgeford \email{ericwb95@@gmail.com}.
-#' @seealso \code{\link{embed_adjacency_matrix}}
+#' @seealso \code{\link{gs.embed.ase}}
 #' @references M. Zhu, and A. Ghodsi (2006). Automatic dimensionality selection
 #' from the scree plot via the use of profile likelihood. \emph{Computational
 #' Statistics and Data Analysis}, Vol. 51, 918--930.
@@ -51,7 +49,7 @@
 #' # Generate the two groups of singular values with
 #' # Gaussian mixture of two components that have different means
 #' sing.vals  <- c( rnorm (10, mean=1, sd=1), rnorm(10, mean=3, sd=1) )
-#' dim.chosen <- dimselect(sing.vals)
+#' dim.chosen <- gs.dim.select(sing.vals)
 #' dim.chosen
 #'
 #' # Sample random vectors with multivariate normal distribution
@@ -74,33 +72,29 @@
 #' @export
 gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, plot = FALSE) {
 
-  if (class(X) == 'igraph') {
-    if (is.null(k)) {
-      k = floor(log2(gorder(X)))
+  if (class(X) != "numeric" || class(X) != "matrix" || class(X) != "array" || class(X) != "igraph") {
+    stop("You have passed neither a 2-D matrix/array, an igraph object, nor a 1-D numeric vector.")
+  }
+  if (class(X) != 'numeric') {
+    if (class(X) == "graph") {
+      X <- gs.as_adj(X, edge.attr=edge.attr)
     }
-    d <- gs.embed.ase(X, k, edge.attr=edge.attr)$D
-  } else if (class(X) == 'matrix' || class(X) == 'array') {
-
-    dim.X <- dim(X)
     if (length(dim.X) > 2) {
       stop("You have input an array with more than 2 dimensions.")
     }
-    if (dim.X[1] > 1 && dim.X[2] > 1) {
-      if (is.null(k)) {
-        k = floor(log2(min(dim.X)))
-      }
-      d <- irlba(X, nu=k)$d
-    } else {
-      tryCatch({
-        d <- as.numeric(X)
-      }, warning=function(w) {stop("Your input 'X' is a 1-D vector, array, or matrix, but has invalid entries and cannot be cast to numeric.")})
+    if (is.null(k)) {
+      k <- floor(log2(min(dim(X))))
     }
-  } else if (class(X) == 'numeric') {      tryCatch({
-    d <- as.numeric(X)
-  }, warning=function(w) {stop("Your input 'X' is a 1-D vector, array, or matrix, but has invalid entries and cannot be cast to numeric.")})
-  } else {
-    stop("Input object 'X' is not a graph, a matrix/complex matrix or 2-D array, array, nor a one-dimensional numeric array.")
+    if (dim.X[1] > 1 && dim.X[2] > 1) {
+      d <- gs.embed(X, k)$D
+    } else {
+      d <- X
+    }
   }
+  tryCatch({
+    d <- as.numeric(d)
+  }, warning=function(w) {stop("The singular values have invalid entries and cannot be cast to numeric.")})
+
 
   if (sum("numeric" == apply(as.array(d),1,class)) != length(d)) { stop("Input object 'sdev' contains non-numeric values.") }
   d <- sort(d, decreasing=TRUE)

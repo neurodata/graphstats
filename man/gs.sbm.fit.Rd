@@ -4,30 +4,37 @@
 \alias{gs.sbm.fit}
 \title{Stochastic Block Model}
 \usage{
-gs.sbm.fit(g, community.attribute, edge.attr = NULL, vertex.label = FALSE)
+gs.sbm.fit(g, communities, edge.attr = NULL, output.type = "matrix")
 }
 \arguments{
-\item{g}{an \code{igraph} object. See \code{\link[igraph]{graph}} for details.}
+\item{g}{an \code{\link[igraph]{igraph}} object or an \code{nxn} adjacency matrix with \code{n} vertices.}
 
-\item{edge.attr}{the names of the attribute to use for weights. Should be in `names(get.edge.attribute(graph))`. Defaults to \code{NULL}, which assumes the graph is binary.
-\itemize{
-\item{\code{is.null(edge.attr)} constructs sbm on the graph as a binary adjacency matrix.}
-\item{\code{is.character(edge.attr)} constructs sbm of the graph the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
+\item{communities}{an \code{n} vector containing the community label for each of the \code{n} vertices in \code{g}.}
+
+\item{edge.attr}{if \code{g} is a \code{\link[igraph]{igraph}}, the name of the attribute to use for weights. Defaults to \code{NULL}, which assumes the graph is binary.
+\describe{
+\item{\code{is.null(edge.attr)}}{constructs sbm on the graph as a binary adjacency matrix.}
+\item{\code{is.character(edge.attr)}}{constructs sbm of the graph the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{get.edge.attribute(g, attr=edge.attr)}.}
 }}
 
-\item{vertex.label}{an attribute for naming the vertices. Defaults to \code{NULL}.
-\itemize{
-\item{\code{vertex.label==FALSE} name the vertices \code{V(g)} sequentially, as 1, 2, ... n.}
-\item{\code{vertex.label==TRUE} name the vertices \code{V(g)} as \code{V(g)$name}.}
+\item{output.type}{the type of output to produce for the between community expectations. Defaults to \code{matrix}.
+\describe{
+\item{\code{"matrix"}}{produces a matrix for the between-communitity interactions.}
+\item{\code{"graph"}}{produces an \code{\link[igraph]{igraph}} object for the between-community interactions.}
 }}
 }
 \value{
-the probability matrix for each block, as an \code{igraph} object.
-Vertices will be the unique communities for attribute \code{community.attribute}. Each vertex in the resulting graph will have an attribute \code{community} indicating the vertices in \code{graph} that
-comprise the particular community the vertex summarizes See \code{\link[igraph]{graph}} for details.
+An object of class \code{SBM} containing the following:
+\describe{
+\item{\code{n.v}}{the number of vertices in the graph.}
+\item{\code{v.communities}}{the community each vertex is assigned to.}
+\item{\code{P}}{a representation of the between-community edge probabilities (unweighted) or expectations (weighted).}
+}
 }
 \description{
-A function to fit a stochastic block model to a weighted or unweighted graph.
+A function to fit the 3 parameter (number of vertices, community assignment for each vertex, and matrix community interactions)
+Stochastic Block Model to a weighted or unweighted graph. The community interactions for pairs of unique communities is either a probability
+matrix (unweighted graph) or an edge-expectation matrix (weighted graph).
 }
 \author{
 Eric Bridgeford

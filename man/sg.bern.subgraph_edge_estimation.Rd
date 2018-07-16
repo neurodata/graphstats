@@ -7,14 +7,14 @@
 sg.bern.subgraph_edge_estimation(tstats, e, coherent = FALSE)
 }
 \arguments{
-\item{tstats}{[n x n] the test-statistic results.}
+\item{tstats}{\link{n x n} the test-statistic results.}
 
 \item{e}{the number of edges to look for, arbitrarily breaking ties as necessary.}
 
 \item{coherent=FALSE}{if FALSE, estimate an incoherent subgraph, otherwise an integer indicating the number of vertices in the coherent subgraph.}
 }
 \value{
-edges [n*n] the edges in the graph ordered by test statistic depending on the estimator type.
+edges \link{n*n} the edges in the graph ordered by test statistic depending on the estimator type.
 }
 \description{
 \code{sg.bern.subgraph_classifier} orders the edges by test statistic results depending on the estimator type specified.

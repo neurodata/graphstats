@@ -8,7 +8,6 @@
 #' @author Youngser Park <youngser@jhu.edu>
 #' @export
 #' @import igraph
-
 ptr <- function(g)
 {
   if (class(g) != "igraph") {

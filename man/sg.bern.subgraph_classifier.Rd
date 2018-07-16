@@ -8,18 +8,20 @@ sg.bern.subgraph_classifier(test, edges, p, pi, classes)
 }
 \arguments{
 \item{test}{the test array to generate labels for.
-- if test is an array, then it should be of dimensions [n x n x s].}
+\itemize{
+\item if test is an array, then it should be of dimensions \link{n x n x s}.
+}}
 
-\item{p}{[n x n x c] the probability per edge of being connected per class for c classes.}
+\item{p}{\link{n x n x c} the probability per edge of being connected per class for c classes.}
 
-\item{pi}{[c] the pi vector probability of each class occuring.}
+\item{pi}{\link{c} the pi vector probability of each class occuring.}
 
 \item{classes}{the labels for the classes as ordered in the pi and p arrays.}
 }
 \value{
-edges [e] the edges present in the subgraph.
+edges \link{e} the edges present in the subgraph.
 
-Yhat [s] the predicted class for each test example.
+Yhat \link{s} the predicted class for each test example.
 }
 \description{
 \code{sg.bern.subgraph_classifier} classifies arbitrary data given the estimators of a subgraph.

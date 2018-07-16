@@ -79,5 +79,5 @@ Fishkind, D. E., Adali, S., Priebe, C. E. (2012). Seeded Graph Matching
 Online: \url{http://arxiv.org/abs/1209.0367}
 }
 \author{
-Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>
+Youngser Park \href{mailto:youngser@jhu.edu}{youngser@jhu.edu}, Kemeng Zhang \href{mailto:kzhang@jhu.edu}{kzhang@jhu.edu}
 }

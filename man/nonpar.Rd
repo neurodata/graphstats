@@ -41,5 +41,5 @@ Tang, M., Athreya, A., Sussman, D.L., Lyzinski, V., Priebe, C.E.
 A nonparametric two-sample hypothesis testing problem for random graphs
 }
 \author{
-Eric Bridgeford <ericwb95@gmail.com>, Youngser Park <youngser@jhu.edu>, Kemeng Zhang <kzhang@jhu.edu>.
+Eric Bridgeford \href{mailto:ericwb95@gmail.com}{ericwb95@gmail.com}, Youngser Park \href{mailto:youngser@jhu.edu}{youngser@jhu.edu}, Kemeng Zhang \href{mailto:kzhang@jhu.edu}{kzhang@jhu.edu}.
 }

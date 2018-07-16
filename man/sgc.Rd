@@ -44,10 +44,12 @@ sgc(g, dmax = 2, elb = 1, abs = FALSE, lcc = TRUE, embed = "ASE",
 }
 \description{
 It does
-1. do a pass-to-rank for a weighted graph (\eqn{PTR}, no-op for an unweighted graph),
-2. do a graph spectral embedding (\code{ASE} or \code{LSE}) with a _diagonal augmentation_,
-3. do a _dimension reduction_ (\eqn{ZG}) and merge left and right vectors (no-op for an undirected graph),
-4. cluster vertices (\eqn{GMM} or \eqn{Kmeans}).
+\enumerate{
+\item do a pass-to-rank for a weighted graph (\eqn{PTR}, no-op for an unweighted graph),
+\item do a graph spectral embedding (\code{ASE} or \code{LSE}) with a \emph{diagonal augmentation},
+\item do a \emph{dimension reduction} (\eqn{ZG}) and merge left and right vectors (no-op for an undirected graph),
+\item cluster vertices (\eqn{GMM} or \eqn{Kmeans}).
+}
 }
 \examples{
 library(igraph)
@@ -62,5 +64,5 @@ A consistent adjacency spectral embedding for stochastic blockmodel graphs,
 Journal of the American Statistical Association, Vol. 107, No. 499, pp. 1119-1128, 2012.
 }
 \author{
-Youngser Park <youngser@jhu.edu>
+Youngser Park \href{mailto:youngser@jhu.edu}{youngser@jhu.edu}
 }

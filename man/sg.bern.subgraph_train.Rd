@@ -8,24 +8,26 @@ sg.bern.subgraph_train(samp, Y, e, coherent = FALSE, tstat = "fisher")
 }
 \arguments{
 \item{samp}{a list or array of graphs with arbitrary labelling.
- - if samp is a list, then it should have s elements of dimensions
-     [n x n].
-- if samp is an array, then it should be of dimensions [n x n x s].}
+- if samp is a list, then it should have s elements of dimensions
+\link{n x n}.
+\itemize{
+\item if samp is an array, then it should be of dimensions \link{n x n x s}.
+}}
 
-\item{Y}{[s] the class labels.}
+\item{Y}{\link{s} the class labels.}
 
-\item{e}{[1] the number of edges in the subgraph.}
+\item{e}{\link{1} the number of edges in the subgraph.}
 
 \item{coherent=FALSE}{if FALSE, estimate an incoherent subgraph, otherwise an integer indicating the number of vertices in the coherent subgraph.}
 
 \item{tstat="fisher"}{the test statistic to use. options are fisher's exact ("fisher") and chi-squared ("chisq").}
 }
 \value{
-edges [n x n] an ordering of the edges in the subgraph by test statistic results.
+edges \link{n x n} an ordering of the edges in the subgraph by test statistic results.
 
-p [n x n x c] the probability per edge of being connected per class for c classes.
+p \link{n x n x c} the probability per edge of being connected per class for c classes.
 
-pi [c] the probability of seeing a given class.
+pi \link{c} the probability of seeing a given class.
 }
 \description{
 \code{sg.bern.xval_classifier} Trains a Model for identification of the edges in a subgraph.

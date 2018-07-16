@@ -169,7 +169,7 @@ gs.sims.siem <- function(n, v, priors=c(0.5, 0.5),
 #'
 #' @param X the latent positions, as a \code{n} by \code{k} matrix for \code{n} vertices and \code{k} blocks.
 #' @param Y the second half of the latent positions for directed graphs, as a \code{n} by \code{k} matrix for \code{n} vertices and \code{k} blocks. Defaults to \code{NULL}, which assumes that the sampled graph is symmetric.
-#' @return An \link[igraph]{graph} object with \code{n} vertices, with latent positions given by \code{X} if \code{G} is symmetric and \code{X}, \code{Y} if nonsymmetric.
+#' @return An `\link[igraph]{graph}` object with \code{n} vertices, with latent positions given by \code{X} if \code{G} is symmetric and \code{X}, \code{Y} if nonsymmetric.
 #'
 #' @author Eric Bridgeford
 #'
@@ -177,7 +177,6 @@ gs.sims.siem <- function(n, v, priors=c(0.5, 0.5),
 #' library(graphstats)
 #' data <- gs.sims.latent_pos(array(rnorm(100), dim=c(50, 2)))  # simulate 100 graphs with 10 vertices from the default model
 #' @export
-#'
 gs.sims.latent_pos <- function(X, Y=NULL) {
   n <- dim(X)[1]; k <- dim(X)[2]
   G <- matrix(0, dim=c(n, n))

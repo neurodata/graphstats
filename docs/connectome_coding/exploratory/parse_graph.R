@@ -131,11 +131,10 @@ read.human.graph.brodmann <- function() {
 }
 
 read.human.graph.desikan <- function() {
-  dmri.graph <- read.graph('/data/sub-0025864_ses-1_dwi_desikan.edgelist', format='ncol', directed=FALSE)
-  fmri.graph <- read.graph('/data/sub-0025864_ses-1_bold_desikan-2mm.edgelist', format='ncol', directed=FALSE)
-
-  V.dmri <- V(dmri.graph)
-  V.fmri <- V(fmri.graph)
+  dmri.graph <- read.graph('/data/average_dMRI_3228.edgelist', format='ncol', directed=FALSE)
+  fmri.graph <- read.graph('/data/average_fMRI_1790.edgelist', format='ncol', directed=FALSE)
+  dmri.male <- read.graph('/data/average_dMRI_male_613.edgelist', format='ncol', directed=FALSE)
+  dmri.female <- read.graph('/data/average_dMRI_female_612.edgelist', format='ncol', directed=FALSE)
 
   lobes.raw <- read.csv('/home/eric/Documents/research/ndmg-repos/desikan_res-1x1x1_lobes_res-1x1x1.csv')
   lobes.raw <- lobes.raw[, -13]
@@ -149,23 +148,12 @@ read.human.graph.desikan <- function() {
                                                  lobe=lobes[which(lobes.ss == max(lobes.ss))[1]],
                                                  hemisphere=hemispheres[which(lobes.ss == max(lobes.ss))[1]]))
   }
-  V(dmri.graph)$name = as.character(round(as.numeric(V(dmri.graph)$name)))
-  V(fmri.graph)$name = as.character(round(as.numeric(V(fmri.graph)$name)))
-
-  E(dmri.graph)$dMRI <- E(dmri.graph)$weight
-  dmri.graph <- delete_edge_attr(dmri.graph, "weight")
-  E(fmri.graph)$fMRI <- E(fmri.graph)$weight
-  fmri.graph <- delete_edge_attr(fmri.graph, "weight")
-
-  gcomb <- union(fmri.graph, dmri.graph)
-
-  E(gcomb)$dMRI[is.na(E(gcomb)$dMRI)] = 0
-  E(gcomb)$fMRI[is.na(E(gcomb)$fMRI)] = 0
-
-  gcomb <- set_vertex_attr(gcomb, "lobe", index=vertex.data$id, value=as.character(vertex.data$lobe))
-  gcomb <- set_vertex_attr(gcomb, "hemisphere", index=vertex.data$id, value=as.character(vertex.data$hemisphere))
-  gcomb <- permute.vertices(gcomb, as.numeric(V(gcomb)$name))
-  return(gcomb)
+  graphs <- lapply(list(dmri.graph, fmri.graph, dmri.male, dmri.female), function(graph) {
+    graph <- permute.vertices(graph, as.numeric(V(graph)$name))
+    graph <- set_vertex_attr(graph, "lobe", index=vertex.data$id, value=as.character(vertex.data$lobe))
+    graph <- set_vertex_attr(graph, "hemisphere", index=vertex.data$id, value=as.character(vertex.data$hemisphere))
+  })
+  return(graphs[[1]], graphs[[2]], graphs[[3]], graphs[[4]])
 }
 
 fly.merge <- function(flyleft, flyright) {
@@ -190,15 +178,22 @@ fly.merge <- function(flyleft, flyright) {
   E(gcomb)$left[is.na(E(gcomb)$left)] = 0
 }
 
-read.celegans.merge <- function(gap, chem) {
-  V1 <- V(gap)
-  V2 <- V(chem)
+read.celegans.merge <- function(gap.male, gap.herm, chem.male, chem.herm) {
+  V1 <- V(gap.male)
+  V2 <- V(gap.herm)
+  V3 <- V(chem.male)
+  V4 <- V(chem.herm)
 
-  Vss1 <- V1[V1$name %in% V2$name & V1$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
-  Vss2 <- V2[V2$name %in% V1$name & V2$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
+  Vss1 <- V1[V1$name %in% V2$name & V1$name %in% V3$name & V1$name %in% V4$name & V1$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
+  Vss2 <- V2[V2$name %in% V1$name & V2$name %in% V3$name & V2$name %in% V4$name & V2$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
+  Vss3 <- V3[V3$name %in% V1$name & V3$name %in% V2$name & V3$name %in% V4$name & V3$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
+  Vss4 <- V4[V4$name %in% V1$name & V4$name %in% V2$name & V4$name %in% V3$name & V4$type %in% c("SENSORY NEURONS", "INTERNEURONS", "MOTOR NEURONS")]
 
-  gap.ss <- induced_subgraph(gap, Vss1)
-  chem.ss <- induced_subgraph(chem, Vss2)
+  gap.male.ss <- induced_subgraph(gap.male, Vss1)
+  gap.herm.ss <- induced_subgraph(gap.herm, Vss2)
+
+  chem.male.ss <- induced_subgraph(chem.male, Vss3)
+  chem.herm.ss <- induced_subgraph(chem.herm, Vss4)
 
   E(gap.ss)$gap <- E(gap.ss)$weight
   gap.ss <- delete_edge_attr(gap.ss, "weight")

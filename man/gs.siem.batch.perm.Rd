@@ -8,9 +8,11 @@ gs.siem.batch.perm(models, Z, i = 1, j = 2, tstat = gs.siem.batch.tstat,
   nperm = 1000)
 }
 \arguments{
-\item{models}{[[n]] a list of the models fit to each of the n samples.}
+\item{models}{[[n]] a list of the models fit to each of the n samples.
 
-\item{Z}{[n] an array of the labels associated with each model.}
+[[n]: R:[n}
+
+\item{Z}{\link{n} an array of the labels associated with each model.}
 
 \item{i=1}{the first edge set to use in the comparison.}
 
@@ -25,7 +27,7 @@ tstat.alt the test statistic given the current Z orderings.
 
 tstat.null the test statistics of each permutation of the Z orderings.
 
-P the estimator of E[tstat.null >= tstat.alt.]
+P the estimator of E\link{tstat.null >= tstat.alt.}
 }
 \description{
 A function that computes a test statistic associated with a particular arrangement of graphs

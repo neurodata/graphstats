@@ -7,13 +7,13 @@
 sg.bern.subgraph_estimator(samp, Y)
 }
 \arguments{
-\item{samp}{[n x n x s] an array of graph samples. Should be binary (0 or 1).}
+\item{samp}{\link{n x n x s} an array of graph samples. Should be binary (0 or 1).}
 
-\item{Y}{[s] the class labels.}
+\item{Y}{\link{s} the class labels.}
 }
 \value{
-cont_matrix [n, n, c, 2] a contingency table for each edge, where each contingency
-        table has either connected or unconnected for each class.
+cont_matrix \link{n, n, c, 2} a contingency table for each edge, where each contingency
+table has either connected or unconnected for each class.
 }
 \description{
 \code{sg.beta.subgraph_estimator} A function to produce estimators for bernoulli graphs needed to compute subgraphs.

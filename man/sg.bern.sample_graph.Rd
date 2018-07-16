@@ -8,7 +8,7 @@ sg.bern.sample_graph(p, s = 10, type = "array", rewire = NaN,
   directed = FALSE)
 }
 \arguments{
-\item{p}{a [n x n] matrix indicating the alphas of each edge.}
+\item{p}{a \link{n x n} matrix indicating the alphas of each edge.}
 
 \item{type}{an option of "list" or "array" (default) for the format of the output.}
 
@@ -18,8 +18,8 @@ sg.bern.sample_graph(p, s = 10, type = "array", rewire = NaN,
 }
 \value{
 sample the graph observations from the given beta distribution.
-    - if type == "list", returns a p element list of [n x m] observations.
-    - if type == "array" (default), returns a [n x m x s] element array where the 3rd dimension indexes the observations.
+- if type == "list", returns a p element list of \link{n x m} observations.
+- if type == "array" (default), returns a \link{n x m x s} element array where the 3rd dimension indexes the observations.
 }
 \description{
 \code{sg.bern.sample_graph} A function to sample from a graph-valued RV where each edge follows a bernoulli distribution.

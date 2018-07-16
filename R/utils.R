@@ -10,7 +10,7 @@
 gs.as_adj <- function(g, edge.attr=NULL) {
   if (class(g) == "igraph") {
     # construct an adjacency matrix from the initial igraph
-    A <- as_adj(g, type="both", attr=edge.attr)
+    A <- as.matrix(as_adj(g, type="both", attr=edge.attr))
   } else {
     # not igraph object, so assume it's a matrix
     tryCatch({
@@ -24,11 +24,31 @@ gs.as_adj <- function(g, edge.attr=NULL) {
   return(A)
 }
 
+#' Output Helper
+#'
+#' Produces an output with the desired type.
+#' @importFrom igraph graph_from_adjacency_matrix get.vertex.attribute set.vertex.attribute
+#' @param A the n x n adjacency matrix.
+#' @param gref a reference graph to use for adding vertex attributes.
+#' @param edge.attr the edge attribute to (optionally) add weights from the adjacency matrix to.
+#' @param output.type "matrix" or "graph".
+#' @keywords internal
+#' @author Eric Bridgeford
+gs.output <- function(A, gref=NULL, edge.attr=NULL, output.type="matrix") {
+  if (output.type == "graph") {
+    if (class(gref) != "igraph") {
+      gref=NULL
+    }
+    A <- gs.as_graph(A, gref=gref, edge.attr=edge.attr)
+  }
+  return(A)
+}
+
 #' To Graph Helper
 #'
 #' reconstruct a matrix from an adjacency matrix using vertex attributes retained from
 #' a reference graph that was passed as input.
-#' @importFrom igraph
+#' @importFrom igraph graph_from_adjacency_matrix get.vertex.attribute set.vertex.attribute
 #' @param A the n x n adjacency matrix.
 #' @param gref a reference graph to use for adding vertex attributes.
 #' @param edge.attr the edge attribute to (optionally) add weights from the adjacency matrix to.
@@ -39,11 +59,11 @@ gs.as_graph <- function(A, gref=NULL, edge.attr=NULL) {
   ## IO specing
   # not igraph object, so assume it's a matrix
   tryCatch({
-    A <- as.matrix(g)
+    A <- as.matrix(A)
   }, error=function(e) stop("You have not passed an object that can be cast as a 'matrix'."))
   dimA = dim(A)
   if (dimA[1] != dimA[2]) {
-    stop("You have not passed a symmetric matrix.")
+    stop("You have not passed a square matrix.")
   }
 
   ## meat and taters

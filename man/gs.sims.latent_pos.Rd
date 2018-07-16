@@ -12,7 +12,7 @@ gs.sims.latent_pos(X, Y = NULL)
 \item{Y}{the second half of the latent positions for directed graphs, as a \code{n} by \code{k} matrix for \code{n} vertices and \code{k} blocks. Defaults to \code{NULL}, which assumes that the sampled graph is symmetric.}
 }
 \value{
-An \link[igraph]{graph} object with \code{n} vertices, with latent positions given by \code{X} if \code{G} is symmetric and \code{X}, \code{Y} if nonsymmetric.
+An \code{\link[igraph]{graph}} object with \code{n} vertices, with latent positions given by \code{X} if \code{G} is symmetric and \code{X}, \code{Y} if nonsymmetric.
 }
 \description{
 A function to simulate a binary graph given latent positions.

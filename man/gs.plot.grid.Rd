@@ -17,7 +17,7 @@ gs.plot.grid(g, title = "", src.label = "Vertex", tgt.label = "Vertex",
 
 \item{tgt.label}{the target label for the graph. Defaults to \code{"Vertex"}.}
 
-\item{edge.attr}{the name of the attribute to use for weights. Defaults to \code{NULL}. Can be a list of `edge.attr` if you want to overlay different edge-attributes on the same plot. Supports up to 4 edge-attributes at once.
+\item{edge.attr}{the name of the attribute to use for weights. Defaults to \code{NULL}. Can be a list of \code{edge.attr} if you want to overlay different edge-attributes on the same plot. Supports up to 4 edge-attributes at once.
 \itemize{
 \item{\code{is.null(edge.attr)} plots the graph as a binary adjacency matrix.}
 \item{\code{is.character(edge.attr)} plot the graph as a weighted adjacency matrix, with edge-weights for \code{E(g)} given by \code{E(g)[[edge.attr]]}.}
@@ -41,16 +41,16 @@ gs.plot.grid(g, title = "", src.label = "Vertex", tgt.label = "Vertex",
 \item{\code{is.character(vertex.attr)} assumes a grouping of the vertices given for \code{V(g)} by \code{V(G)[[vertex.attr]]}, and groups the vertices in \code{V(g)} into ordered blocks with color-coding.}
 }}
 
-\item{edge.xfm}{transform the edge-weights. Defaults to \code{FALSE}. Can be a list of `edge.xfm` if you want to overlay different edge-attributes on the same plot in the plot with different transforms for each.
+\item{edge.xfm}{transform the edge-weights. Defaults to \code{FALSE}. Can be a list of \code{edge.xfm} if you want to overlay different edge-attributes on the same plot in the plot with different transforms for each.
 \itemize{
 \item{\code{edge.xfm==FALSE} do not transform the edge-weights.}
-\item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \code{\link[base]{log}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
-\item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \code{\link[base]{log10}} for details. Does not work if there are negative edge-weights. Pads with `eps << min(edge-weight)` if there are entries of zero in the graph.}
+\item{\code{edge.xfm == "log"} transform the edge values, using the natural-logarithm operation. See \code{\link[base]{log}} for details. Does not work if there are negative edge-weights. Pads with \code{eps << min(edge-weight)} if there are entries of zero in the graph.}
+\item{\code{edge.xfm == "log10"} transform the edge values, using the logarithm-base-10 operation. See \code{\link[base]{log10}} for details. Does not work if there are negative edge-weights. Pads with \code{eps << min(edge-weight)} if there are entries of zero in the graph.}
 }}
 
-\item{eps}{if you specify an `edge.xfm` that is logarithmic, indicate the padding that zero entries should receive. Defaults to `.0001`. `eps` should be `<< min(edge-weight)`.}
+\item{eps}{if you specify an \code{edge.xfm} that is logarithmic, indicate the padding that zero entries should receive. Defaults to \code{.0001}. \code{eps} should be \code{<< min(edge-weight)}.}
 
-\item{degree}{Whether to plot the marginal vertex degrees. Defaults to `FALSE`.}
+\item{degree}{Whether to plot the marginal vertex degrees. Defaults to \code{FALSE}.}
 }
 \value{
 the graph/graphs as a plot.
