@@ -19,6 +19,7 @@ require(grid)
 require(scales)
 require(latex2exp)
 require(ggridges)
+require(gtable)
 
 nan.sum <- function(x) {sum(x, na.rm=TRUE)}
 
@@ -633,15 +634,15 @@ celegans.herm.chem.zip <- gs.poisson.fit.zip(celegans.herm.chem, edge.attr="weig
 celegans.herm.gap.zip <- gs.poisson.fit.zip(celegans.herm.gap, edge.attr="weight")
 fly.left.zip <- gs.poisson.fit.zip(fly.mushroom.left)
 
-mouse.plot <- gs.plot.heatmap(gs.edge.log(mouse.dmri, edge.attr="weight", output.type="graph"), title="(C) Mouse dMRI Connectome", src.label="",
+mouse.plot <- gs.plot.heatmap(gs.edge.log(mouse.dmri, edge.attr="weight", output.type="graph"), title="(C) Mouse dMRI", src.label="",
                               tgt.label="", edge.attr="weight", fill.name = "log(Weight)")
-fly.plot <- gs.plot.heatmap(fly.mushroom.left, title="(B) Fly Mushroom Body Connectome", src.label="",
+fly.plot <- gs.plot.heatmap(fly.mushroom.left, title="(B) Fly Left Mushroom Body", src.label="",
                             tgt.label="", degree=TRUE)
 celegans.plot <- gs.plot.grid(list(celegans.herm.chem, celegans.herm.gap),
                               graph.names=c("chem", "gap"),
-                              title="(A) C. Elegans Connectome", src.label="",
+                              title="(A) C. Elegans Hermaphrodite (G + C)", src.label="",
                               tgt.label="", edge.attr="weight", degree=TRUE)
-human.plot <- gs.plot.heatmap_overlay(list(human.fmri, human.dmri), title="(D) Human MRI Connectome",
+human.plot <- gs.plot.heatmap_overlay(list(human.fmri, human.dmri), title="(D) Human (d + f) MRI",
                                       src.label="", tgt.label="", graph.names=c("fMRI", "dMRI"),
                                       edge.attr="weight", degree=TRUE)
 # edge.dens <- rbind(
@@ -662,22 +663,22 @@ human.plot <- gs.plot.heatmap_overlay(list(human.fmri, human.dmri), title="(D) H
 edge.dens <- rbind(
   # Mouse edges
   data.frame(label="C. Elegans Chem",
-             edges=E(celegans.herm.chem)$weight[E(celegans.herm.chem)$weight != 0]),#/max(E(celegans.herm.chem)$weight)),
+             edges=E(celegans.herm.chem)$weight[E(celegans.herm.chem)$weight != 0]),
   data.frame(label="C. Elegans Gap",
-             edges=E(celegans.herm.gap)$weight[E(celegans.herm.gap)$weight != 0]),#/max(E(celegans.herm.gap)$weight)),
+             edges=E(celegans.herm.gap)$weight[E(celegans.herm.gap)$weight != 0]),
   # data.frame(label="Fly",
   #            edges=rep(1, 100*length(E(fly.mushroom.left)))),
   data.frame(label="Mouse dMRI",
-             edges=E(mouse.dmri)$weight[E(mouse.dmri)$weight != 0]),#/max(E(mouse.dmri)$weight)),
+             edges=E(mouse.dmri)$weight[E(mouse.dmri)$weight != 0]/max(E(mouse.dmri)$weight)),
   data.frame(label="Human dMRI",
-             edges=E(human.dmri)$weight[E(human.dmri)$weight != 0]),#/max(E(human.dmri)$weight)),
+             edges=E(human.dmri)$weight[E(human.dmri)$weight != 0]/max(E(human.dmri)$weight)),
   data.frame(label="Human fMRI",
-             edges=E(human.fmri)$weight[E(human.fmri)$weight != 0])#/max(E(human.fmri)$weight))
+             edges=E(human.fmri)$weight[E(human.fmri)$weight != 0]/max(E(human.fmri)$weight))
 )
 
 edge.dens$edges <- log10(edge.dens$edges)
 conn.order <- c("C. Elegans Chem", "C. Elegans Gap", "Fly", "Mouse dMRI", "Human dMRI", "Human fMRI")
-edge.dens$label <- factor(edge.dens$label, levels=conn.order)
+edge.dens$label <- ordered(edge.dens$label, levels=rev(conn.order))
 col.conn <- colors()[c(373, 137, 285, 146, 128, 29)]
 shape.conn=c(16, 17, 16, 17, 16, 16)
 names(col.conn) <- conn.order; names(shape.conn) <- conn.order
@@ -759,7 +760,6 @@ celegans.male.gap <- gs.edge.ptr(celegans.male.gap, edge.attr="weight", output.t
 # SBM Plots
 
 ```{r}
-
 human.dmri.sbm <- gs.sbm.fit(human.dmri, edge.attr="weight", communities = V(human.dmri)$region, output.type="graph")
 # human.dmri.sbm <- delete_vertices(human.dmri.sbm, "non-labeled")
 human.dmri.sbm.plot <- gs.plot.sbm(human.dmri.sbm, edge.attr="weight", title="(D.i) Human dMRI")
@@ -988,7 +988,7 @@ fly.best=c(1,3)
 fly.ase.plot <- plot.dim(gs.embed.ase(fly.mushroom.left)$X, fly.best, pt.color=V(fly.mushroom.left)$type, color.title="Region", title="(B) Fly Left Mushroom Body")
 
 mouse.best=c(4, 2)
-mouse.ase.plot <- plot.dim(gs.embed.ase(mouse.dmri, edge.attr="weight")$X, mouse.best, pt.color=V(mouse.dmri)$level1, pt.shape=V(mouse.dmri)$hemisphere, title="(C) Mouse dMRI", color.title="Structure", shape.title="Hemisphere")
+mouse.ase.plot <- plot.dim(gs.embed.ase(mouse.dmri, edge.attr="weight")$X, mouse.best, pt.color=V(mouse.dmri)$level1, pt.shape=V(mouse.dmri)$hemisphere, title="(C) Mouse dMRI", color.title="Structure", shape.title="Hemis.")
 
 human.dmri.best = c(2, 3)
 frontal = c("non-F", "F")
@@ -1002,16 +1002,27 @@ human.fmri.ase.plot <- plot.dim(gs.embed.ase(human.fmri, edge.attr="weight")$X, 
                          pt.color=V(human.fmri)$lobe,
                          title="(D.ii) Human fMRI", color.title="Lobe")
 
-class.dat <- data.frame(performance=c(.742, .485, .761, .706, .900, .614), chance=c(.603, .603, .483, .267, .300, .414))
+class.dat <- data.frame(performance=c(".74", ".49", ".76", ".71", ".90", ".61"), chance=c(".60", ".60", ".48", ".26", ".30", ".41"))
 class.dat <- t(class.dat)
 colnames(class.dat) <- c("(A.i)", "(A.ii)", "(B)", "(C)", "(D.i)", "(D.ii)")
+rownames(class.dat) <- c("classifier accuracy", "chance accuracy")
 
-table.plot <- tableGrob(class.dat, theme=theme_bw())
+padding <- unit(5,"mm")
+title=textGrob("(E) Classifier Performance", gp=gpar(fontsize=16))
+table.plot <- tableGrob(class.dat, theme=ttheme_minimal())
+tab <- gtable_add_rows(
+     table.plot, 
+     heights = grobHeight(title) + padding,
+     pos = 0)
+tab <- gtable_add_grob(
+    tab, 
+    title,
+    1, 1, 1, ncol(table.plot))
 ```
 
 ```{r}
-grid.arrange(celegans.chem.ase.plot, fly.ase.plot, human.dmri.ase.plot, celegans.gap.ase.plot, mouse.ase.plot,
-          human.fmri.ase.plot, nrow=2)
+grid.arrange(arrangeGrob(celegans.chem.ase.plot, fly.ase.plot, human.dmri.ase.plot, celegans.gap.ase.plot, mouse.ase.plot,
+          human.fmri.ase.plot, nrow=2), tab, nrow=2, heights=c(.8, .2))
 ```
 
 ```{r}
