@@ -179,7 +179,7 @@ gs.sims.siem <- function(n, v, priors=c(0.5, 0.5),
 #' @export
 gs.sims.latent_pos <- function(X, Y=NULL) {
   n <- dim(X)[1]; k <- dim(X)[2]
-  G <- matrix(0, dim=c(n, n))
+  G <- matrix(0, nrow = n, ncol = n)
   if (is.null(Y)) {
     P <- X %*% t(X)
   } else {
@@ -195,7 +195,7 @@ gs.sims.latent_pos <- function(X, Y=NULL) {
   }
   if (is.null(Y)) {
     G[upper.tri(G, diag=FALSE)] <- 0
-    G <- G + t(G) - diag(G)
+    G <- G + t(G) - diag(diag(G), n)
   }
   return(G)
 }
