@@ -72,7 +72,7 @@
 #' @export
 gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, plot = FALSE) {
 
-  if (class(X) != "numeric" || class(X) != "matrix" || class(X) != "array" || class(X) != "igraph") {
+  if (class(X) != "numeric" && class(X) != "matrix" && class(X) != "array" && class(X) != "igraph") {
     stop("You have passed neither a 2-D matrix/array, an igraph object, nor a 1-D numeric vector.")
   }
   if (class(X) != 'numeric') {
