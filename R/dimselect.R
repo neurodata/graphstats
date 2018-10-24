@@ -85,7 +85,7 @@ gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, p
     if (is.null(k)) {
       k <- floor(log2(min(dim(X))))
     }
-    if (dim.X[1] > 1 && dim.X[2] > 1) {
+    if (dim(X)[1] > 1 && dim(X)[2] > 1) {
       d <- gs.embed(X, k)$D
     } else {
       d <- X
