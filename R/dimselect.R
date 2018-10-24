@@ -79,7 +79,7 @@ gs.dim.select <- function(X, k=NULL, edge.attr=NULL, n = 3, threshold = FALSE, p
     if (class(X) == "graph") {
       X <- gs.as_adj(X, edge.attr=edge.attr)
     }
-    if (length(dim.X) > 2) {
+    if (length(dim(X)) > 2) {
       stop("You have input an array with more than 2 dimensions.")
     }
     if (is.null(k)) {
